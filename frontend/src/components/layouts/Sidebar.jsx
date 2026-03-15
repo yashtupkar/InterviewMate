@@ -9,7 +9,8 @@ import {
   FiMessageCircle, 
   FiHelpCircle,
   FiLogOut,
-  FiPlus
+  FiPlus,
+  FiUsers
 } from "react-icons/fi";
 import { useUser, SignOutButton } from "@clerk/clerk-react";
 
@@ -21,6 +22,7 @@ const Sidebar = () => {
     { name: "Overview", icon: <FiTrendingUp />, path: "/dashboard", active: location.pathname === "/dashboard" },
     { name: "Create Interview", icon: <FiPlus />, path: "/dashboard/setup", active: location.pathname === "/dashboard/setup" }, 
     { name: "Interviews", icon: <FiMessageSquare />, path: "/dashboard/interviews", active: location.pathname === "/dashboard/interviews" },
+    { name: "Group Discussion", icon: <FiUsers />, path: "/gd/setup", active: location.pathname.startsWith("/gd") },
   ];
 
   const exposureItems = [

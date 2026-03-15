@@ -14,6 +14,9 @@ import InterviewResult from "./pages/InterviewResult";
 import DashboardOverview from "./pages/DashboardOverview";
 import Layout from "./components/layouts/layout";
 import { InterviewProvider } from "./context/InterviewContext";
+import GroupDiscussionSetup from "./pages/GroupDiscussionSetup";
+import GroupDiscussionSession from "./pages/GroupDiscussionSession";
+import GroupDiscussionResult from "./pages/GroupDiscussionResult";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -88,6 +91,17 @@ function App() {
         element={<InterviewSession />}
       />
 
+
+      {/* Group Discussion Routes (Standalone, No Sidebar) */}
+      <Route path="/gd/setup" element={<GroupDiscussionSetup />} />
+      <Route
+        path="/gd/session/:sessionId"
+        element={<GroupDiscussionSession />}
+      />
+      <Route
+        path="/gd/result/:sessionId"
+        element={<GroupDiscussionResult />}
+      />
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

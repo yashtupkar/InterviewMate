@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const userRoutes = require('./routes/user');
 const ApiError = require('./utils/ApiError');
 const vapiInterviewRouter = require('./routes/vapiInterviewRoutes');
+const gdRouter = require('./routes/gdRoutes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(express.json());
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/vapi-interview', vapiInterviewRouter);
+app.use('/api/group-discussion', gdRouter);
 
 // Health Check
 app.get('/api/health', (req, res) => {
