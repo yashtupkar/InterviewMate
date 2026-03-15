@@ -4,10 +4,12 @@
  */
 
 const MODELS = [
-  "google/gemini-3-flash-preview",   // free tier, no credits needed
-  "google/gemini-2.5-flash",        // free tier fallback
-  "google/gemini-3.1-flash-lite-preview",       // paid fallback
-  "openai/gpt-4o-mini-2024-07-18",                  // paid fallback
+  "google/gemini-3.1-flash-lite-preview",
+  // Fastest 2026 free model
+  "google/gemini-2.5-flash-lite",
+  "google/gemini-2.5-flash",      // High quality free backup
+  // Legacy free backup
+  "meta-llama/llama-3.3-70b-instruct", // Quality fallback
 ];
 
 async function fetchWithTimeout(url, options, timeoutMs) {
@@ -60,7 +62,7 @@ async function callOpenRouter(prompt, temperature = 0.7, timeoutMs = 30000) {
       if (!response.ok) {
         const err = await response.text();
         console.warn(`[GDAnalyzer] ${model} failed (${response.status}): ${err} — trying next...`);
-        continue; // try next model instead of throwing
+        continue;
       }
 
       const data = await response.json();
@@ -74,29 +76,19 @@ async function callOpenRouter(prompt, temperature = 0.7, timeoutMs = 30000) {
 
 /**
  * Opening statement — the VERY FIRST agent to speak opens the GD.
- * Must introduce the topic and share a clear stance.
  */
 const getOpeningStatement = async (agent, topic) => {
-  const prompt = `You are ${agent.name} and you are OPENING a group discussion on: "${topic}".
+  const prompt = `You are ${agent.name} opening a GD on: "${topic}".
+Personality: ${agent.personality}
 
-Your personality: ${agent.personality}
+STRICT TASK: Open the discussion in ONE SENTENCE. 
+- Take a sharp stance immediately. 
+- Use a verbal filler like "Look," "Honestly," or "Actually."
+- NO GREETINGS. NO "I am listening."
 
-You are the FIRST speaker. Your job right now:
-1. State the topic clearly in one sentence.
-2. Immediately share YOUR own stance or perspective on it — are you for it, against it, or nuanced?
-3. Give ONE strong reason or example to support your initial stance.
+Example: "Honestly, remote work is clearly more productive because it cuts out the office politics and commute stress."
 
-CRITICAL — you MUST NOT say any of the following:
-- "I am listening" / "I'm listening"
-- "let's get started" / "welcome"
-- "great topic" / "interesting topic"
-- Any form of greeting or introduction of yourself
-- Asking others what they think (don't hand the floor to others yet)
-
-Just speak your mind directly, as if you are confidently opening a real debate room.
-Keep it to 3-4 spoken sentences. No markdown, no bullet points.
-
-Respond ONLY with ${agent.name}'s spoken words.`;
+Respond ONLY with that one sentence.`;
 
   const text = await callOpenRouter(prompt, 0.85, 25000);
   return (text || "").trim();
@@ -111,24 +103,16 @@ const getAgentResponse = async (agent, topic, transcriptLines, userLastMessage) 
     .map((t) => `${t.speaker}: ${t.text}`)
     .join("\n");
 
-  const prompt = `You are ${agent.name} in a live group discussion on: "${topic}".
+  const prompt = `You are ${agent.name} in a GD on: "${topic}".
+Current Context: ${transcriptStr}
+${userLastMessage ? `User said: "${userLastMessage}"` : ""}
 
-Your personality: ${agent.personality}
+TASK: Counter or support the last point in ONE SHORT SENTENCE.
+- Be opinionated. 
+- Use "Wait," "But," "Precisely," or "I disagree."
+- NO polite phrases. 
 
-Conversation so far:
-${transcriptStr}
-
-${userLastMessage ? `The user just said: "${userLastMessage}"` : ""}
-
-Your task: Respond as ${agent.name} — react to what was said, challenge it, agree partially, or add a new angle.
-
-STRICT RULES:
-- 2-4 sentences, natural spoken language, no markdown.
-- Do NOT say: "I am listening", "I'm listening", "That's a great point", "Welcome", "As an AI".
-- Do NOT ask the user or others to speak — you are expressing YOUR view.
-- Be direct, opinionated, and confident per your personality.
-
-Respond ONLY with ${agent.name}'s words.`;
+Respond ONLY with that one sentence.`;
 
   const text = await callOpenRouter(prompt, 0.85, 25000);
   return (text || "").trim();
@@ -143,26 +127,15 @@ const getProactiveAgentResponse = async (agent, topic, transcriptLines) => {
     .map((t) => `${t.speaker}: ${t.text}`)
     .join("\n");
 
-  const prompt = `You are ${agent.name} in a live group discussion on: "${topic}".
+  const prompt = `You are ${agent.name} in a GD on: "${topic}".
+Context: ${transcriptStr || "(Start of discussion)"}
 
-Your personality: ${agent.personality}
+TASK: Jump in with ONE sharp point or counter-point.
+- ONE SENTENCE MAX.
+- Use natural interruption: "Actually, look at it this way...", "But what about...", "Indeed, but..."
+- No fluff.
 
-Recent exchange:
-${transcriptStr || "(The discussion just started.)"}
-
-You are jumping in proactively. Pick ONE of these moves:
-- Introduce a COUNTER-argument to what was last said.
-- Bring in a REAL-WORLD example or statistic that supports or challenges a point.
-- Introduce a NEW angle on the topic that hasn't been discussed yet.
-
-STRICT RULES — you MUST NOT say:
-- "I am listening" / "I'm listening" / "I agree" alone without elaboration.
-- "That's interesting" / "Great point" / "Welcome everyone".
-- Any passive filler. You are jumping in with SUBSTANCE.
-
-2-3 sharp, confident spoken sentences. No markdown.
-
-Respond ONLY with ${agent.name}'s words.`;
+Respond ONLY with that sentence.`;
 
   const text = await callOpenRouter(prompt, 0.9, 25000);
   return (text || "").trim();

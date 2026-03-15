@@ -28,11 +28,27 @@ function speakText(text, agentName, onDone) {
     const go = () => {
       const voices = window.speechSynthesis.getVoices();
       const en = voices.filter((v) => v.lang.startsWith("en"));
+      
+      // Select stable voice slots
       const slots = { Alex: 0, Priya: 2, Marcus: 1, Zoe: 3 };
       const idx = slots[agentName] ?? 0;
       if (en.length > 0) utter.voice = en[idx % en.length];
-      utter.rate  = agentName === "Marcus" ? 1.08 : agentName === "Priya" ? 0.87 : 0.95;
-      utter.pitch = agentName === "Zoe" ? 1.15 : agentName === "Priya" ? 1.08 : 1.0;
+
+      // Randomize slightly for "human" variation
+      const variance = (Math.random() * 0.1) - 0.05; // +/- 5%
+      
+      // Base profiles
+      const profiles = {
+        Alex:   { rate: 1.0,  pitch: 0.95 },
+        Priya:  { rate: 0.92, pitch: 1.15 },
+        Marcus: { rate: 1.1,  pitch: 0.9 },
+        Zoe:    { rate: 1.05, pitch: 1.25 }
+      };
+
+      const p = profiles[agentName] || { rate: 1, pitch: 1 };
+      utter.rate  = p.rate + variance;
+      utter.pitch = p.pitch + variance;
+
       utter.onend = utter.onerror = () => { onDone?.(); resolve(); };
       window.speechSynthesis.speak(utter);
     };
@@ -86,6 +102,7 @@ export default function GroupDiscussionSession() {
   const silTimRef      = useRef(null);   // user-silence timer
   const openedRef      = useRef(false);  // opening turn fired
   const transcriptRef  = useRef([]);     // mirror of transcript for closures
+  const prefetchedTurnRef = useRef(null); // stores { agent, text } pre-fetched
   const endRef         = useRef(null);   // scroll anchor
 
   // get a fresh auth token inside callbacks
@@ -116,72 +133,114 @@ export default function GroupDiscussionSession() {
     if (busyRef.current) return;
     busyRef.current = true;
 
-    setIsThinking(true);
+    let turnData = null;
 
+    // 1. Check if we have a pre-fetched turn that matches this request type
+    if (endpoint === "next-turn" && body.proactive && prefetchedTurnRef.current) {
+        console.log("⚡ Found pre-fetched turn! Consuming instantly.");
+        turnData = prefetchedTurnRef.current;
+        prefetchedTurnRef.current = null;
+    } else {
+        // 2. Otherwise, fetch it now
+        setIsThinking(true);
+        try {
+            const token = await getTokenRef.current();
+            const res = await axios.post(
+                `${backend_URL}/api/group-discussion/${endpoint}`,
+                { sessionId, lastSpeaker: lastSpkRef.current, ...body },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            turnData = res.data;
+        } catch (err) {
+            console.error("Agent turn error:", err);
+            setIsThinking(false);
+            setSpeakingAgent(null);
+            busyRef.current = false;
+            if (aliveRef.current && !mutedRef.current && recRef.current) {
+                try { recRef.current.start(); } catch (_) {}
+            }
+            scheduleProactive(12000);
+            return;
+        }
+    }
+
+    if (!aliveRef.current || !turnData) { busyRef.current = false; return; }
+
+    const { agent, text } = turnData;
+    lastSpkRef.current = agent.name;
+
+    const entry = {
+      id: Date.now(), speaker: agent.name,
+      role: "agent", text,
+      color: agent.color || AGENT_COLORS[agent.name] || "#6366f1",
+    };
+
+    setTranscript((prev) => {
+      const next = [...prev, entry];
+      transcriptRef.current = next;
+      return next;
+    });
+
+    setIsThinking(false);
+
+    // pause mic during TTS
+    if (recRef.current && !mutedRef.current) {
+      try { recRef.current.stop(); } catch (_) {}
+    }
+
+    setSpeakingAgent(agent.name);
+
+    // ── SMART STEP: While this agent is speaking, pre-fetch the NEXT one! ──
+    if (aliveRef.current) {
+        prefetchNextTurn(agent.name);
+    }
+
+    await speakText(text, agent.name, null);
+
+    setSpeakingAgent(null);
+    busyRef.current = false;
+
+    // resume mic
+    if (aliveRef.current && !mutedRef.current && recRef.current) {
+      try { recRef.current.start(); } catch (_) {}
+    }
+
+    // schedule next proactive turn
+    scheduleProactive();
+  };
+
+  // ── Background Pre-fetching ───────────────────────────────────────────────
+  async function prefetchNextTurn(currentSpeaker) {
+    if (prefetchedTurnRef.current) return; 
+    console.log(`🔍 Pre-fetching next agent to follow ${currentSpeaker}...`);
     try {
       const token = await getTokenRef.current();
       const res = await axios.post(
-        `${backend_URL}/api/group-discussion/${endpoint}`,
-        { sessionId, lastSpeaker: lastSpkRef.current, ...body },
+        `${backend_URL}/api/group-discussion/next-turn`,
+        { sessionId, lastSpeaker: currentSpeaker, proactive: true },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      if (!aliveRef.current) { busyRef.current = false; return; }
-
-      const { agent, text } = res.data;
-      lastSpkRef.current = agent.name;
-
-      const entry = {
-        id: Date.now(), speaker: agent.name,
-        role: "agent", text,
-        color: agent.color || AGENT_COLORS[agent.name] || "#6366f1",
-      };
-
-      setTranscript((prev) => {
-        const next = [...prev, entry];
-        transcriptRef.current = next;
-        return next;
-      });
-
-      setIsThinking(false);
-
-      // pause mic during TTS
-      if (recRef.current && !mutedRef.current) {
-        try { recRef.current.stop(); } catch (_) {}
+      if (aliveRef.current) {
+        prefetchedTurnRef.current = res.data;
+        console.log("✅ Pre-fetch ready:", res.data.agent.name);
       }
-
-      setSpeakingAgent(agent.name);
-
-      await speakText(text, agent.name, null);
-
-      setSpeakingAgent(null);
-      busyRef.current = false;
-
-      // resume mic
-      if (aliveRef.current && !mutedRef.current && recRef.current) {
-        try { recRef.current.start(); } catch (_) {}
-      }
-
-      // schedule next proactive turn
-      scheduleProactive();
     } catch (err) {
-      console.error("Agent turn error:", err);
-      setIsThinking(false);
-      setSpeakingAgent(null);
-      busyRef.current = false;
-      if (aliveRef.current && !mutedRef.current && recRef.current) {
-        try { recRef.current.start(); } catch (_) {}
-      }
-      // retry proactive after error
-      scheduleProactive(12000);
+      console.warn("Pre-fetch failed (will retry normally if needed):", err.message);
     }
-  };
+  }
 
   // ── Proactive scheduling ──────────────────────────────────────────────────
   function scheduleProactive(delay = null) {
     if (proTimRef.current) clearTimeout(proTimRef.current);
     if (!aliveRef.current) return;
-    const d = delay ?? 8000 + Math.random() * 8000; // 8-16s
+    
+    // ── RAPID-FIRE MODE ──
+    // If we already have a response ready, jump in fast (1.5-2.5s)
+    // Otherwise, wait for a natural gap (8-16s)
+    const hasPre = !!prefetchedTurnRef.current;
+    const d = delay ?? (hasPre ? 1500 + Math.random() * 1000 : 8000 + Math.random() * 8000);
+    
+    console.log(`⏱ Scheduling turn in ${Math.round(d)}ms (${hasPre ? "Rapid-Fire" : "Normal"})`);
     proTimRef.current = setTimeout(() => {
       if (aliveRef.current && !busyRef.current) {
         runAgentTurnRef.current({ endpoint: "next-turn", body: { proactive: true } });
@@ -221,6 +280,12 @@ export default function GroupDiscussionSession() {
         if (!aliveRef.current || mutedRef.current) return;
         if (busyRef.current) return; // ignore echo while agent TTS plays
 
+        // ── USER SPOKE: Invalidate pre-fetch ──
+        if (prefetchedTurnRef.current) {
+            console.log("🚫 User spoke, invalidating pre-fetched turn.");
+            prefetchedTurnRef.current = null;
+        }
+
         if (proTimRef.current) clearTimeout(proTimRef.current);
         if (silTimRef.current)  clearTimeout(silTimRef.current);
 
@@ -232,7 +297,6 @@ export default function GroupDiscussionSession() {
             interimText += e.results[i][0].transcript;
           }
         }
-
         const display = (finalBuffer + " " + interimText).trim();
         setLiveText(display);
         setIsUserSpeaking(true);
@@ -264,9 +328,9 @@ export default function GroupDiscussionSession() {
                   body: { userMessage: spoken, proactive: false },
                 });
               }
-            }, 700);
+            }, 400); // Shorter pause for snappier conversation
           }
-        }, 1400);
+        }, 1100); 
       };
 
       recognition.onerror = (e) => {
@@ -358,34 +422,56 @@ export default function GroupDiscussionSession() {
     const on    = speakingAgent === agent.name;
     const color = agent.color || AGENT_COLORS[agent.name] || "#6366f1";
     return (
-      <div className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all duration-300 ${
-        on ? "border-white/30 bg-zinc-800/80 scale-[1.03]" : "border-white/5 bg-zinc-900/60"
+      <div className={`relative flex flex-col items-center gap-2 p-5 rounded-2xl border transition-all duration-500 overflow-hidden bg-zinc-900/40 backdrop-blur-md ${
+        on ? "border-white/20 ring-1 ring-white/10 scale-[1.05] z-10 shadow-2xl" : "border-white/5 opacity-70"
       }`}>
         {on && (
-          <>
-            <div className="absolute inset-0 rounded-2xl animate-ping  opacity-[0.15]" style={{ background: color }} />
-            <div className="absolute inset-0 rounded-2xl animate-pulse opacity-[0.08]" style={{ background: color }} />
-          </>
+          <div className="absolute inset-x-0 bottom-0 h-1 flex items-end justify-center gap-[2px] px-4 pb-2">
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i} 
+                className="w-full bg-white/40 rounded-full animate-pulse" 
+                style={{ 
+                  height: `${20 + Math.random() * 80}%`,
+                  animationDuration: `${0.4 + Math.random() * 0.6}s`,
+                  background: color
+                }} 
+              />
+            ))}
+          </div>
         )}
-        <div className="relative w-12 h-12 rounded-full flex items-center justify-center font-black text-white z-10 text-base"
-          style={{ background: `${color}33`, border: `2px solid ${on ? color : color + "44"}`, boxShadow: on ? `0 0 18px ${color}55` : "none" }}>
+        
+        <div className="relative w-16 h-16 rounded-full flex items-center justify-center font-black text-white z-10 text-xl transition-all duration-500"
+          style={{ 
+            background: on ? `${color}44` : `${color}11`, 
+            border: `3px solid ${on ? color : color + "22"}`, 
+            boxShadow: on ? `0 0 30px ${color}66` : "none",
+            transform: on ? "translateY(-5px)" : "none"
+          }}>
           {agent.name[0]}
           {on && (
-            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-zinc-900 flex items-center justify-center"
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-zinc-900 flex items-center justify-center shadow-lg"
               style={{ background: color }}>
-              <FiMic size={7} className="text-white" />
+              <FiMic size={10} className="text-white" />
             </div>
           )}
         </div>
-        <div className="text-center z-10">
-          <p className="text-xs font-bold text-zinc-200">{agent.name}</p>
-          <p className="text-[10px]">
-            {on
-              ? <span style={{ color }} className="font-semibold animate-pulse">Speaking...</span>
-              : isThinking
-              ? <span className="text-indigo-400 animate-pulse">Thinking...</span>
-              : <span className="text-zinc-500">Listening</span>}
-          </p>
+        
+        <div className="text-center z-10 mt-1">
+          <p className="text-xs font-bold text-white tracking-wide">{agent.name}</p>
+          <div className="h-4 flex items-center justify-center">
+            {on ? (
+              <span style={{ color }} className="text-[10px] uppercase font-black animate-pulse tracking-tighter">Speaking</span>
+            ) : isThinking ? (
+              <div className="flex gap-1">
+                <div className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0s' }} />
+                <div className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0.1s' }} />
+                <div className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
+              </div>
+            ) : (
+              <span className="text-zinc-600 text-[10px] uppercase font-bold tracking-tighter">Quiet</span>
+            )}
+          </div>
         </div>
       </div>
     );
