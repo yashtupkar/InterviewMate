@@ -6,6 +6,7 @@ const {
   generateReportFromTranscript,
   getUserInterviews,
   retryAnalysis,
+  reportVapiFailure,
 } = require("../controllers/vapiInterviewController");
 const auth = require("../middleware/auth"); // Corrected middleware name
 
@@ -18,5 +19,6 @@ vapiInterviewRouter.post(
 );
 vapiInterviewRouter.post("/retry-analysis", auth, retryAnalysis);
 vapiInterviewRouter.get("/user", auth, getUserInterviews);
+vapiInterviewRouter.post("/report-failure", auth, reportVapiFailure);
 
 module.exports = vapiInterviewRouter;

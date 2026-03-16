@@ -123,7 +123,10 @@ const AnalyzeFullTranscript = async (transcriptText) => {
   The report should include:
   1. **Overall Scores** (0-100 scale):
      - correctness, clarity, relevance, detail, efficiency, creativity, communication, problemSolving.
-  2. **Question-by-Question Analysis**:
+  2. **Summary**: A high-level overview of the candidate's performance.
+  3. **Strengths**: An array of 3-4 specific strengths demonstrated by the candidate.
+  4. **Growth Areas**: An array of 3-4 specific areas for improvement.
+  5. **Question-by-Question Analysis**:
      For each question asked by the interviewer:
      - question: The interviewer's question.
      - answer: The candidate's response.
@@ -137,6 +140,9 @@ const AnalyzeFullTranscript = async (transcriptText) => {
     "overall": {
       "correctness": number, "clarity": number, "relevance": number, "detail": number, "efficiency": number, "creativity": number, "communication": number, "problemSolving": number
     },
+    "summary": string,
+    "strengths": [string, string, string],
+    "growthAreas": [string, string, string],
     "questions": [
       {
         "question": string,

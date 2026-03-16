@@ -1,3 +1,4 @@
+const VapiKeyManager = require("../services/vapiKeyManager");
 const InterviewSession = require("../models/interviewSessionModel");
 const {
   InterviewResponseAnalyzer,
@@ -89,7 +90,7 @@ const startInterview = async (req, res) => {
     res.status(200).json({
       sessionId: session._id,
       systemPrompt,
-      vapiPublicKey: process.env.VAPI_PUBLIC_KEY, // Send public key to frontend
+      vapiPublicKey: await VapiKeyManager.getActiveKey(), // Get rotated public key
     });
   } catch (error) {
     console.error("Error starting interview:", error);
@@ -161,10 +162,9 @@ const generateReportFromTranscript = async (req, res) => {
 
         session.report = {
           overallScore: averageScore,
-          feedback: "",
-          strengths: [],
-          weaknesses: [],
-          suggestions: [],
+          summary: reportData.summary || "",
+          strengths: reportData.strengths || [],
+          improvements: reportData.growthAreas || [],
           detailedAnalysis: reportData,
         };
         session.status = "completed";
@@ -230,10 +230,9 @@ const retryAnalysis = async (req, res) => {
 
       session.report = {
         overallScore: averageScore,
-        feedback: "",
-        strengths: [],
-        weaknesses: [],
-        suggestions: [],
+        summary: reportData.summary || "",
+        strengths: reportData.strengths || [],
+        improvements: reportData.growthAreas || [],
         detailedAnalysis: reportData,
       };
       session.status = "completed";
@@ -293,6 +292,24 @@ const saveTranscriptOnly = async (req, res) => {
   }
 };
 
+const reportVapiFailure = async (req, res) => {
+  try {
+    const { publicKey } = req.body;
+    if (!publicKey) return res.status(400).json({ message: "Key required" });
+
+    await VapiKeyManager.reportExhaustion(publicKey);
+    const nextKey = await VapiKeyManager.getActiveKey();
+    
+    res.status(200).json({ 
+      message: "Key reported and rotated", 
+      nextKey 
+    });
+  } catch (error) {
+    console.error("Error rotating key:", error);
+    res.status(500).json({ message: "Rotation failed" });
+  }
+};
+
 module.exports = {
   startInterview,
   getInterviewReport,
@@ -300,4 +317,5 @@ module.exports = {
   retryAnalysis,
   saveTranscriptOnly,
   getUserInterviews,
+  reportVapiFailure,
 };

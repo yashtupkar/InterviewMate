@@ -128,11 +128,11 @@ const CreateInterview = () => {
         finalInterviewData,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      const { systemPrompt, sessionId: newSessionId } = response.data;
+      const { systemPrompt, sessionId: newSessionId, vapiPublicKey } = response.data;
       setSessionId(newSessionId);
 
       navigate(`/session/${newSessionId}`, {
-        state: { systemPrompt },
+        state: { systemPrompt, vapiPublicKey },
       });
     } catch (error) {
       console.error(error);

@@ -71,6 +71,7 @@ const InterviewSession = () => {
   const navigate = useNavigate();
   const { sessionId: urlSessionId } = useParams();
   const systemPrompt = location.state?.systemPrompt;
+  const initialVapiPublicKey = location.state?.vapiPublicKey;
 
   // ── DEV PREVIEW MODE ─────────────────────────────────────────────────────
   // Visit /session?preview=true to design UI without a real call.
@@ -308,7 +309,7 @@ const InterviewSession = () => {
         if (!globalVapiInstance) {
           const VapiConstructor = Vapi.default || Vapi;
           globalVapiInstance = new VapiConstructor(
-            import.meta.env.VITE_VAPI_PUBLIC_KEY,
+            initialVapiPublicKey || import.meta.env.VITE_VAPI_PUBLIC_KEY,
           );
         }
 
@@ -385,8 +386,31 @@ const InterviewSession = () => {
           }
         });
 
-        vapi.current.on("error", (error) => {
+        vapi.current.on("error", async (error) => {
           console.error("Vapi error:", error);
+          
+          // Check for quota/credit errors (Vapi error messages usually contain these keywords)
+          const errorMsg = error?.message?.toLowerCase() || "";
+          if (errorMsg.includes("quota") || errorMsg.includes("credit") || errorMsg.includes("insufficient")) {
+             toast.loading("Current key exhausted. Rotating to a new key...", { duration: 3000 });
+             
+             try {
+               const token = await getToken();
+               await axios.post(
+                 `${backend_URL}/api/vapi-interview/report-failure`,
+                 { publicKey: vapi.current.publicKey }, // Correctly access current key if possible or use the one we have
+                 { headers: { Authorization: `Bearer ${token}` } }
+               );
+               
+               // After reporting, we tell the user to restart or we could try to auto-refresh
+               setTimeout(() => {
+                 window.location.reload(); // Simplest way to pick up the new key from backend for a fresh session
+               }, 2000);
+             } catch (rotError) {
+               console.error("Failed to rotate key:", rotError);
+             }
+          }
+
           setCallStatus("inactive");
           toast.error("Bridge connection failed.");
         });
@@ -535,6 +559,16 @@ const InterviewSession = () => {
         // Start call automatically — agent speaks first on connect
         setCallStatus("connecting");
         await vapi.current.start({
+          transcriber: {
+            provider: "deepgram",
+            model: "nova-2",
+            language: "en-US",
+            smartFormat: true,
+            keywords: [user?.fullName, user?.firstName, user?.lastName, "InterviewMate"]
+              .filter(Boolean)
+              .flatMap(name => name.split(/\s+/))
+              .filter(word => word.length > 0),
+          },
           model: {
             provider: "openai",
             model: "gpt-4o",
