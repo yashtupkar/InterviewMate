@@ -18,6 +18,7 @@ import GroupDiscussionSetup from "./pages/GroupDiscussionSetup";
 import GroupDiscussionSession from "./pages/GroupDiscussionSession";
 import GroupDiscussionResult from "./pages/GroupDiscussionResult";
 import PastGDs from "./pages/PastGDs";
+import PricingPage from "./pages/PricingPage";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -102,6 +103,11 @@ function App() {
           path="result/:sessionId"
           element={<GroupDiscussionResult />}
         />
+      </Route>
+
+      {/* Pricing Route */}
+      <Route path="/pricing" element={<InterviewLayout />}>
+        <Route index element={<PricingPage />} />
       </Route>
 
       {/* Standalone GD Session (No Sidebar) */}

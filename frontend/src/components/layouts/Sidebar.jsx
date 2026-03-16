@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import axios from "axios";
+import { useAuth, useUser, useClerk } from "@clerk/clerk-react";
 import { 
   FiTrendingUp, 
   FiMessageSquare, 
@@ -10,16 +12,34 @@ import {
   FiHelpCircle,
   FiLogOut,
   FiPlus,
-  FiUsers
+  FiUsers,
+  FiCreditCard,
+  FiStar
 } from "react-icons/fi";
-import { useUser, useClerk } from "@clerk/clerk-react";
 
 const Sidebar = () => {
   const location = useLocation();
   const { user } = useUser();
+  const { getToken } = useAuth();
   const { openUserProfile, signOut } = useClerk();
-  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [subscription, setSubscription] = useState(null);
   const menuRef = React.useRef(null);
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const token = await getToken();
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setSubscription(res.data);
+      } catch (err) {
+        console.error("Error fetching subscription:", err);
+      }
+    };
+    fetchSubscription();
+  }, [getToken]);
 
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -40,12 +60,15 @@ const Sidebar = () => {
   ];
 
   const exposureItems = [
+
     // { name: "Jobs", icon: <FiBriefcase />, path: "#", badge: "Coming soon" },
     // { name: "Resume builder", icon: <FiFileText />, path: "#", badge: "Coming.." },
     // { name: "Leaderboard", icon: <FiAward />, path: "#", badge: "Coming So.." },
   ];
 
   const bottomItems = [
+    { name: "Pricing", icon: <FiStar />, path: "/pricing", active: location.pathname === "/pricing" },
+
     { name: "Feedback", icon: <FiMessageCircle />, path: "#" },
     { name: "Help", icon: <FiHelpCircle />, path: "#" },
   ];
@@ -110,8 +133,8 @@ const Sidebar = () => {
       </div>
 
       {/* Bottom Section */}
-      <div className="px-4 py-4 border-t border-white/5 space-y-4">
-        <div className="space-y-1">
+      <div className="px-4 py-4 border-t border-white/5 space-y-3">
+        <div className="space-y-0.5">
           {bottomItems.map((item) => (
             <Link
               key={item.name}
@@ -123,6 +146,45 @@ const Sidebar = () => {
             </Link>
           ))}
         </div>
+
+        {/* Compact Subscriptions Card - Circular Redesign */}
+        {subscription && (
+          <div className="bg-[#bef264]/15 rounded-2xl p-3 border border-[#bef264] space-y-3 shadow-sm mx-1">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[9px] font-black text-zinc-300 uppercase tracking-[0.15em] leading-none">
+                {subscription.tier} Plan
+              </span>
+              <Link to="/pricing" className="text-[9px] font-black text-[#bef264] hover:text-[#d9ff96] transition-colors uppercase tracking-widest leading-none">
+                Upgrade
+              </Link>
+            </div>
+            
+            <div className="flex justify-around items-center pt-1">
+              <CircularUsage 
+                label="Talk" 
+                value={subscription.credits.talkTime} 
+                max={subscription.limits.talkTime} 
+                unit="m"
+                color="#bef264"
+                size={40}
+              />
+              <CircularUsage 
+                label="Int" 
+                value={subscription.credits.interviews} 
+                max={subscription.limits.interviews} 
+                color="#60a5fa"
+                size={40}
+              />
+              <CircularUsage 
+                label="GD" 
+                value={subscription.credits.gdSessions} 
+                max={subscription.limits.gdSessions} 
+                color="#a78bfa"
+                size={40}
+              />
+            </div>
+          </div>
+        )}
 
         {/* User Profile */}
         <div className="relative mt-auto border-t border-white/5 pt-4" ref={menuRef}>
@@ -163,7 +225,7 @@ const Sidebar = () => {
           
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-zinc-800/50 transition-all duration-200 group border border-transparent hover:border-white/5"
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl bg-zinc-800/70 transition-all duration-200 group border border-transparent hover:border-white/5"
           >
             <div className="relative">
               <img 
@@ -179,8 +241,56 @@ const Sidebar = () => {
             </div>
           </button>
         </div>
+
+    
       </div>
     </aside>
+  );
+};
+
+const CircularUsage = ({ label, value, max, unit = "", color, size = 44 }) => {
+  const percentage = Math.min((value / max) * 100, 100);
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 group cursor-default">
+      <div className="relative" style={{ width: size, height: size }}>
+        {/* Shadow Circle */}
+        <svg className="w-full h-full transform -rotate-90">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            className="text-white/5"
+          />
+          {/* Progress Circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            className="transition-all duration-1000 ease-out opacity-80"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[8px] font-bold text-zinc-300 group-hover:text-white transition-colors">
+            {value}{unit}
+          </span>
+        </div>
+      </div>
+      <span className="text-[8px] font-black text-zinc-200 uppercase tracking-widest">{label}</span>
+    </div>
   );
 };
 

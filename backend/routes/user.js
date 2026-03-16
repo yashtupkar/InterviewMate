@@ -1,6 +1,7 @@
 const express = require('express');
 const asyncHandler = require('../utils/asyncHandler');
 const User = require('../models/User');
+const Subscription = require('../models/Subscription');
 const { createClerkClient } = require('@clerk/clerk-sdk-node');
 const router = express.Router();
 
@@ -27,6 +28,13 @@ router.post('/sync', asyncHandler(async (req, res) => {
         },
         { upsert: true, returnDocument: 'after' }
     );
+    
+    // Auto-create subscription if it doesn't exist
+    if (!user.subscription) {
+        const subscription = await Subscription.create({ user: user._id });
+        user.subscription = subscription._id;
+        await user.save();
+    }
 
     res.status(200).json({
         success: true,
