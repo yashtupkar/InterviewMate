@@ -1,30 +1,47 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary: #33b997;
-  --primary-hover: #84a546;
+  --primary: #bef264;
+  --primary-rgb: 190, 242, 100;
+  --primary-hover: #a3e635;
+  --primary-glow: rgba(190, 242, 100, 0.2);
+  
   --bg-dark: #09090b;
-  --bg-surface: #18181b;
-  --bg-surface-light: #27272a;
+  --bg-dark-rgb: 9, 9, 11;
+  
+  --surface: #121214;
+  --surface-rgb: 18, 18, 20;
+  
+  --surface-alt: #18181b;
+  --surface-alt-rgb: 24, 24, 27;
+  
   --text-main: #ffffff;
-  --text-dim: #a1a1aa;
-  --accent-gold: #eab308;
-  --border: rgba(255, 255, 255, 0.08);
-  --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --text-muted: #88888e;
+  --border-color: rgba(255, 255, 255, 0.08);
+
+  /* Agent Colors - Harmonized for Dark Theme */
+  --agent-indigo: #818cf8;
+  --agent-pink: #f472b6;
+  --agent-amber: #fbbf24;
+  --agent-emerald: #34d399;
+  --agent-violet: #a78bfa;
+  --agent-rose: #fb7185;
+  --agent-blue: #60a5fa;
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  font-family: "Space Grotesk", sans-serif !important;
 }
 
 body {
-  font-family: "Outfit", sans-serif;
+  font-family: "Space Grotesk", sans-serif !important;
   background: var(--bg-dark);
   color: var(--text-main);
   line-height: 1.6;
@@ -57,4 +74,59 @@ body {
 
 .animate-fade {
   animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Premium Utilities */
+.glass-card {
+  background: rgba(18, 18, 20, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.5rem;
+}
+
+.premium-shadow {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.primary-glow {
+  box-shadow: 0 0 20px var(--primary-glow);
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 2s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

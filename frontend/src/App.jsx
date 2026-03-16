@@ -17,6 +17,7 @@ import { InterviewProvider } from "./context/InterviewContext";
 import GroupDiscussionSetup from "./pages/GroupDiscussionSetup";
 import GroupDiscussionSession from "./pages/GroupDiscussionSession";
 import GroupDiscussionResult from "./pages/GroupDiscussionResult";
+import PastGDs from "./pages/PastGDs";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -71,6 +72,7 @@ function App() {
         <Route index element={<DashboardOverview />} />
         <Route path="setup" element={<CreateInterview />} />
         <Route path="interviews" element={<PastInterviews />} />
+        <Route path="gd-interviews" element={<PastGDs />} />
         <Route path="result/:sessionId" element={<InterviewResult />} />
       </Route>
 
@@ -92,15 +94,20 @@ function App() {
       />
 
 
-      {/* Group Discussion Routes (Standalone, No Sidebar) */}
-      <Route path="/gd/setup" element={<GroupDiscussionSetup />} />
+      {/* Group Discussion Routes */}
+      <Route path="/gd" element={<InterviewLayout />}>
+        <Route index element={<Navigate to="setup" replace />} />
+        <Route path="setup" element={<GroupDiscussionSetup />} />
+        <Route
+          path="result/:sessionId"
+          element={<GroupDiscussionResult />}
+        />
+      </Route>
+
+      {/* Standalone GD Session (No Sidebar) */}
       <Route
         path="/gd/session/:sessionId"
         element={<GroupDiscussionSession />}
-      />
-      <Route
-        path="/gd/result/:sessionId"
-        element={<GroupDiscussionResult />}
       />
 
       {/* Fallback */}

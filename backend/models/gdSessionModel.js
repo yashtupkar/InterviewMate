@@ -36,6 +36,8 @@ const gdSessionSchema = new mongoose.Schema({
   },
   transcript: [transcriptEntrySchema],
   duration: { type: Number, default: 0 }, // seconds
+  timeLimit: { type: Number, default: 600 }, // seconds (default 10 mins)
+  prepTime: { type: Boolean, default: false }, // whether user wants preparation time
   report: {
     overallScore: Number,
     contributionScore: Number,
@@ -43,11 +45,15 @@ const gdSessionSchema = new mongoose.Schema({
     relevanceScore: Number,
     initiationScore: Number,
     depthScore: Number,
+    speakingScore: Number,
+    initiationBonus: { type: Boolean, default: false },
+    conclusionBonus: { type: Boolean, default: false },
     userTurnCount: Number,
     totalTurns: Number,
     strengths: [String],
-    improvements: [String],
+    improvements: mongoose.Schema.Types.Mixed,
     summary: String,
+    speakingStyle: String,
     agentSummaries: mongoose.Schema.Types.Mixed,
   },
   createdAt: { type: Date, default: Date.now },

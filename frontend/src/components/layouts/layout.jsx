@@ -6,7 +6,7 @@ const Layout = ({ children }) => {
   return (
     <div className="app-container">
       <nav className="navbar">
-        <Link to="/" className="logo">Interview<span>Mate</span></Link>
+        <Link to="/" className="logo">PriPare<span>Ai</span></Link>
         <div className="nav-links">
           <a href="#features">Features</a>
           <a href="#about">About</a>
@@ -24,7 +24,7 @@ const Layout = ({ children }) => {
       {children}
 
       <footer className="footer">
-        <p>&copy; 2026 InterviewMate. Built with MERN Stack.</p>
+        <p>&copy; 2026 PriPareAi. Built with MERN Stack.</p>
       </footer>
     </div>
   );

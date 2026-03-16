@@ -10,6 +10,8 @@ import {
   FiLoader,
   FiShield,
   FiChevronDown,
+  FiZap,
+  FiArrowRight,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
@@ -143,21 +145,24 @@ const CreateInterview = () => {
   const toggleVideo = () => setIsCameraEnabled(!isCameraEnabled);
 
   return (
-    <div className="min-h-screen bg-background dark:bg-background text-zinc-100 transition-colors font-sans selection:bg-primary/30 pb-20">
-      <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade-in-up mt-8 px-4">
+    <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
+      <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade mt-8">
         {/* Pre-call Preview / Green Room - Sticky Section */}
-        <div className="w-full lg:w-1/2 flex  flex-col sticky top-8 space-y-4 animate-fade-in-left">
-          <div className="space-y-2">
-            <h1 className="text-2xl md:text-4xl font-bold dark:text-white text-black tracking-tight">
-              Practice Interview{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400">
-                with AI
-              </span>
+        <div className="w-full lg:w-1/2 flex flex-col sticky top-16 space-y-6 animate-fade-in-left">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#bef264]/10 border border-[#bef264]/20 text-[#bef264] text-[10px] font-black uppercase tracking-widest">
+              <FiZap size={12} />
+              AI Interview · Real-time Session
+            </div>
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              Ace your <span className="text-[#bef264] italic">Job</span> Interview
             </h1>
-            <p className="text-zinc-500 text-sm font-medium">Prepare for your dream job with real-time AI feedback.</p>
+            <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-md">
+              Prepare for your dream job with real-time AI feedback. Practice speaking in a professional environment with our advanced AI interviewers.
+            </p>
           </div>
 
-          <div className="relative aspect-video bg-zinc-950 rounded-[2rem] border-2 border-primary/20 overflow-hidden group shadow-2xl shadow-indigo-500/10">
+          <div className="relative aspect-video bg-zinc-950 rounded-[2rem] border border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
             {isCameraEnabled ? (
               <video
                 ref={localVideoRef}
@@ -204,75 +209,72 @@ const CreateInterview = () => {
             </div>
 
             <div className="absolute top-6 left-6 flex items-center space-x-2 bg-zinc-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-[10px] font-bold tracking-widest text-white uppercase opacity-90">
-                System Ready
+              <div className={`w-2 h-2 rounded-full ${isCameraEnabled && isMicEnabled ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}></div>
+              <span className="text-[10px] font-black tracking-widest text-white uppercase opacity-90">
+                {isCameraEnabled && isMicEnabled ? "System Ready" : "Setup Required"}
               </span>
             </div>
           </div>
 
           <div className="dark:bg-[#1a1a1a] bg-white p-7 shadow-xl rounded-[2rem] border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
-            <h3 className="text-lg font-bold dark:text-white text-black mb-3 flex items-center">
-              <FiShield className="mr-3 text-indigo-400 text-xl" /> Professional
-              Environment
+            <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
+              <FiShield className="mr-3 text-[#bef264] text-xl" /> Professional Environment
             </h3>
-            <p className="text-sm dark:text-zinc-400 text-gray-600 leading-relaxed font-medium">
-              Ensure you are in a quiet room with good lighting. Our AI
-              interviewer will analyze both your tone and content to provide
-              detailed feedback.
+            <p className="text-[13px] dark:text-zinc-500 text-gray-600 leading-relaxed font-medium">
+              Ensure you are in a quiet room with good lighting. Our AI interviewer will analyze both your tone and content to provide detailed feedback.
             </p>
           </div>
         </div>
 
         {/* Setup Form */}
-        <div className="w-1/3 flex flex-col gap-6 animate-fade-in-right px-4">
+        <div className="w-full lg:w-[450px] flex flex-col gap-8 animate-fade-in-right px-4">
           <div className="pb-2">
-            <h2 className="text-base font-bold dark:text-white text-black mb-1">
+            <h2 className="text-lg font-black dark:text-white text-black mb-1 uppercase tracking-tight">
               Interview details
             </h2>
-            <p className="dark:text-zinc-500 text-gray-500 text-sm">
+            <p className="dark:text-zinc-500 text-gray-500 text-sm font-medium">
               Give the job details you want to apply for
             </p>
           </div>
 
           <div className="space-y-6">
             {/* Job Title */}
-            <div>
-              <label className="block text-sm font-semibold dark:text-white text-black mb-2">
+            <div className="space-y-4">
+              <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                 Job title
               </label>
               <input
                 name="role"
                 value={interviewData?.role || ""}
                 onChange={handleInputChange}
-                placeholder="Frontend Developer"
-                className="w-full px-4 py-2.5 bg-black border border-zinc-700 rounded-xl text-white focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all outline-none text-sm placeholder-gray-400 shadow-sm"
+                placeholder="e.g. Frontend Developer"
+                className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none text-[13px] font-bold placeholder-gray-600 shadow-sm"
               />
             </div>
 
             <hr className="dark:border-white/5 border-black/5" />
 
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-semibold dark:text-white text-black">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Context source
                 </label>
                 <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
                   <button
                     onClick={() => setInputType("jobDescription")}
-                    className={`px-4 py-1.5 text-[11px] font-semibold rounded-full transition-colors ${inputType === "jobDescription" ? "dark:bg-zinc-700 bg-gray-200 dark:text-white text-black shadow-sm" : "dark:text-zinc-500 text-gray-500 dark:hover:text-zinc-300 hover:text-gray-700"}`}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all ${inputType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
                   >
-                    Job Description
+                    JD
                   </button>
                   <button
                     onClick={() => setInputType("resume")}
-                    className={`px-4 py-1.5 text-[11px] font-semibold rounded-full transition-colors ${inputType === "resume" ? "dark:bg-zinc-700 bg-gray-200 dark:text-white text-black shadow-sm" : "dark:text-zinc-500 text-gray-500 dark:hover:text-zinc-300 hover:text-gray-700"}`}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all ${inputType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
                   >
                     Resume
                   </button>
                   <button
                     onClick={() => setInputType("both")}
-                    className={`px-4 py-1.5 text-[11px] font-semibold rounded-full transition-colors ${inputType === "both" ? "dark:bg-zinc-700 bg-gray-200 dark:text-white text-black shadow-sm" : "dark:text-zinc-500 text-gray-500 dark:hover:text-zinc-300 hover:text-gray-700"}`}
+                    className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all ${inputType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
                   >
                     Both
                   </button>
@@ -281,35 +283,31 @@ const CreateInterview = () => {
 
               <div className="space-y-4">
                 {(inputType === "jobDescription" || inputType === "both") && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="block text-sm font-semibold dark:text-white text-black">
-                        Paste the job description here
-                      </label>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+                      Job Description
+                    </label>
                     <textarea
                       value={jobDescription}
                       onChange={(e) => setJobDescription(e.target.value)}
                       rows="4"
-                      placeholder="e.g. We are seeking a React.js Developer to join our dynamic team in..."
-                      className="w-full p-4 bg-black  border border-zinc-700 rounded-xl text-white  focus:ring-1 focus:ring-indigo-500/50 transition-all outline-none resize-none text-sm dark:placeholder-zinc-600 placeholder-gray-500 shadow-sm"
+                      placeholder="Paste the job description here..."
+                      className="w-full p-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] transition-all outline-none resize-none text-[13px] font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm"
                     ></textarea>
                   </div>
                 )}
 
                 {(inputType === "resume" || inputType === "both") && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <label className="block text-sm font-semibold dark:text-white text-black">
-                        Paste your resume text here
-                      </label>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+                      Resume Content
+                    </label>
                     <textarea
                       value={resumeContent}
                       onChange={(e) => setResumeContent(e.target.value)}
                       rows="4"
-                      placeholder="Paste your core resume points, skills, and experience..."
-                      className="w-full p-4 bg-black  border border-zinc-700 rounded-xl text-white  focus:ring-1 focus:ring-indigo-500/50 transition-all outline-none resize-none text-sm dark:placeholder-zinc-600 placeholder-gray-500 shadow-sm"
+                      placeholder="Paste your core resume points here..."
+                      className="w-full p-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 transition-all outline-none resize-none text-[13px] font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm"
                     ></textarea>
                   </div>
                 )}
@@ -319,14 +317,14 @@ const CreateInterview = () => {
             <hr className="dark:border-white/5 border-black/5" />
 
             {/* Experience Level */}
-            <div className="relative" ref={experienceDropdownRef}>
-              <label className="block text-sm font-semibold dark:text-white text-black mb-2">
+            <div className="relative space-y-4" ref={experienceDropdownRef}>
+              <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                 Experience level
               </label>
               <button
                 type="button"
                 onClick={() => setIsExperienceDropdownOpen(!isExperienceDropdownOpen)}
-                className="w-full md:w-1/2 flex items-center justify-between px-4 py-2.5 bg-black border border-zinc-700 rounded-xl text-white focus:ring-1 focus:ring-indigo-500/50 outline-none text-sm shadow-sm transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] outline-none text-[13px] font-bold shadow-sm transition-all cursor-pointer hover:border-zinc-700"
               >
                 <span>
                   {
@@ -338,11 +336,11 @@ const CreateInterview = () => {
                     ].find((level) => level.value === (interviewData.level || "Junior"))?.label
                   }
                 </span>
-                <FiChevronDown className={`transition-transform duration-200 text-gray-500 ${isExperienceDropdownOpen ? "rotate-180" : ""}`} />
+                <FiChevronDown className={`transition-transform duration-300 text-zinc-500 ${isExperienceDropdownOpen ? "rotate-180" : ""}`} />
               </button>
-              
+
               {isExperienceDropdownOpen && (
-                <div className="absolute z-10 w-full md:w-1/2 mt-2 bg-black border border-zinc-700 rounded-xl shadow-lg overflow-hidden animate-fade-in-up">
+                <div className="absolute z-10 w-full mt-2 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden animate-fade-in">
                   {[
                     { value: "Junior", label: "Entry Level" },
                     { value: "Mid-Level", label: "Mid-Level Associate" },
@@ -356,11 +354,10 @@ const CreateInterview = () => {
                         handleInputChange({ target: { name: "level", value: level.value } });
                         setIsExperienceDropdownOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer ${
-                        (interviewData.level || "Junior") === level.value
-                          ? "dark:bg-indigo-500/10 bg-indigo-50 dark:text-indigo-400 text-indigo-600 font-semibold"
-                          : "dark:text-zinc-300 text-gray-700 dark:hover:bg-zinc-800 hover:bg-gray-100"
-                      }`}
+                      className={`w-full text-left px-5 py-3.5 text-[13px] transition-all cursor-pointer ${(interviewData.level || "Junior") === level.value
+                        ? "bg-[#bef264/10 text-[#bef264] font-black"
+                          : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                        }`}
                     >
                       {level.label}
                     </button>
@@ -372,14 +369,14 @@ const CreateInterview = () => {
             <hr className="dark:border-white/5 border-black/5" />
 
             {/* Interviewer Selection */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-semibold dark:text-white text-black">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Select Interviewer
                 </label>
                 <button
                   onClick={() => setShowAllAgents(!showAllAgents)}
-                  className="text-[11px] font-medium text-indigo-500 hover:text-indigo-400 transition-colors"
+                  className="text-[10px] font-black uppercase tracking-widest text-[#bef264] hover:text-[#bef264]/80 transition-colors"
                 >
                   {showAllAgents ? "Show Less" : "View All"}
                 </button>
@@ -402,15 +399,15 @@ const CreateInterview = () => {
                         borderColor:
                           interviewData.agentName === agent.name
                             ? `#${agent.bg}`
-                            : "",
+                            : "transparent",
                         backgroundColor:
                           interviewData.agentName === agent.name
                             ? `#${agent.bg}15`
-                            : "",
+                            : "transparent",
                       }}
-                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${interviewData.agentName === agent.name
-                        ? "shadow-md scale-[1.02]"
-                        : "border-zinc-700  bg-zinc-900 hover:border-zinc-600 opacity-80 hover:opacity-100"
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${interviewData.agentName === agent.name
+                        ? "shadow-lg shadow-black/20"
+                        : "border-zinc-800 bg-black hover:border-zinc-700 opacity-70 hover:opacity-100"
                         }`}
                     >
                       <div
@@ -429,14 +426,14 @@ const CreateInterview = () => {
                           src={agent.image}
                           alt={agent.name}
                           className={`w-10 h-10 rounded-full object-cover border-2 ${interviewData.agentName === agent.name
-                            ? "border-transparent"
-                            : "border-transparent grayscale-0"
+                            ? "border-zinc-950"
+                            : "border-transparent"
                             }`}
                         />
                       </div>
                       <div>
                         <p
-                          className="text-sm font-bold dark:text-white text-black transition-colors"
+                          className="text-[12px] font-black dark:text-white text-black transition-colors"
                           style={{
                             color:
                               interviewData.agentName === agent.name
@@ -446,7 +443,7 @@ const CreateInterview = () => {
                         >
                           {agent.name}
                         </p>
-                        <p className="text-[10px] dark:text-zinc-500 text-gray-500 font-medium">
+                        <p className="text-[9px] dark:text-zinc-500 text-gray-500 font-black uppercase tracking-tight">
                           {agent.label} Voice
                         </p>
                       </div>
@@ -458,92 +455,71 @@ const CreateInterview = () => {
             <hr className="dark:border-white/5 border-black/5" />
 
             {/* Interview Types */}
-            <div className="space-y-5 pt-1">
-              {/* Technical */}
-              <label className="flex items-start gap-4 cursor-pointer group">
-                <div
-                  className={`mt-0.5 flex flex-shrink-0 items-center justify-center w-4 h-4 rounded-full border transition-colors ${interviewData.interviewType === "technical" ? "border-blue-500 bg-blue-500" : "border-zinc-600 dark:bg-zinc-800 bg-gray-100"}`}
-                >
-                  {interviewData.interviewType === "technical" && (
-                    <div className="w-2 h-2 bg-zinc-300 rounded-full"></div>
-                  )}
-                </div>
-                <input
-                  type="radio"
-                  className="hidden"
-                  name="interviewType"
-                  value="technical"
-                  onChange={() =>
-                    setInterviewData((p) => ({
-                      ...p,
-                      interviewType: "technical",
-                    }))
-                  }
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[15px] dark:text-zinc-100 text-gray-900 font-bold">
-                      Technical
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 font-medium whitespace-nowrap">
-                      Problem solving
-                    </span>
-                  </div>
-                  <p className="text-sm dark:text-zinc-400 text-gray-600 font-medium">
-                    Test your expertise and problem-solving skills
-                  </p>
-                </div>
+            <div className="space-y-4">
+              <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                Interview Type
               </label>
+              <div className="space-y-3">
+                {/* Technical */}
+                <button
+                  onClick={() => setInterviewData((p) => ({ ...p, interviewType: "technical" }))}
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "technical" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
+                >
+                  <div className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "technical" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`} />
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "technical" ? "text-white" : "group-hover:text-zinc-200"}`}>
+                        Technical
+                      </span>
+                      <span className="text-[9px] px-2 py-0.5 rounded bg-[#bef264]/20 text-[#bef264] font-black uppercase tracking-widest">
+                        Problem solving
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-bold text-zinc-500 leading-tight">
+                      Test your domain expertise and logic
+                    </p>
+                  </div>
+                </button>
 
-              {/* Behavioral */}
-              <label className="flex items-start gap-4 cursor-pointer group">
-                <div
-                  className={`mt-0.5 flex flex-shrink-0 items-center justify-center w-4 h-4 rounded-full border transition-colors ${interviewData.interviewType === "behavioral" ? "border-blue-500 bg-blue-500" : "border-zinc-600 dark:bg-zinc-800 bg-gray-100"}`}
+                {/* Behavioral */}
+                <button
+                  onClick={() => setInterviewData((p) => ({ ...p, interviewType: "behavioral" }))}
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
                 >
-                  {interviewData.interviewType === "behavioral" && (
-                    <div className="w-2 h-2 bg-zinc-300 rounded-full"></div>
-                  )}
-                </div>
-                <input
-                  type="radio"
-                  className="hidden"
-                  name="interviewType"
-                  value="behavioral"
-                  onChange={() =>
-                    setInterviewData((p) => ({
-                      ...p,
-                      interviewType: "behavioral",
-                    }))
-                  }
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[15px] dark:text-zinc-100 text-gray-900 font-bold">
-                      Behavioral
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-green-500/10 text-green-400 font-medium whitespace-nowrap">
-                      Soft skills
-                    </span>
+                  <div className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`} />
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "behavioral" ? "text-white" : "group-hover:text-zinc-200"}`}>
+                        Behavioral
+                      </span>
+                      <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-black uppercase tracking-widest">
+                        Soft skills
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-bold text-zinc-500 leading-tight">
+                      Evaluate experiences and interpersonal skills
+                    </p>
                   </div>
-                  <p className="text-sm dark:text-zinc-400 text-gray-600 font-medium">
-                    Evaluate your experiences and interpersonal skills
-                  </p>
-                </div>
-              </label>
+                </button>
+              </div>
             </div>
 
-            <div className="pt-4">
+            <div className="pt-2">
               <button
                 onClick={startInterview}
                 disabled={loading}
-                className="w-full md:w-auto px-10 bg-indigo-500 hover:bg-indigo-600 cursor-pointer text-white font-bold py-3 rounded-xl transition-all inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(190,242,100,0.15)]"
+                className="w-full px-10 bg-[#bef264] hover:bg-[#bef264]/90 cursor-pointer text-black font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/10 active:scale-95 group"
               >
                 {loading ? (
                   <>
-                    <FiLoader className="animate-spin mr-2" /> Starting...
+                    <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                    Starting Interview...
                   </>
                 ) : (
-                  "Start Interview"
+                  <>
+                    Start Session
+                    <FiArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  </>
                 )}
               </button>
             </div>

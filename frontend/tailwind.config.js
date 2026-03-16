@@ -9,10 +9,12 @@ export default {
       colors: {
         primary: {
           DEFAULT: '#bef264',
-          hover: '#d9f99d',
+          hover: '#a3e635',
+          glow: 'rgba(190, 242, 100, 0.2)',
         },
         background: '#09090b',
-        surface: '#18181b',
+        surface: '#121214',
+        'surface-alt': '#18181b',
       }
     },
   },

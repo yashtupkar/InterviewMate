@@ -63,7 +63,7 @@
 }
 
 .gradient-text {
-  background: linear-gradient(to right, #bef264, #eab308);
+  background: linear-gradient(to right, var(--primary), var(--agent-amber));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -83,14 +83,14 @@
 
 .btn-primary {
   background: var(--primary);
-  color: #000;
+  color: #000000;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 4px 20px 0 rgba(190, 242, 100, 0.15);
+  box-shadow: 0 4px 20px 0 rgba(var(--primary-rgb), 0.15);
 }
 
 .btn-primary:hover {
@@ -141,8 +141,8 @@
   border-radius: 50%;
 }
 
-.status-dot.green { background: #10b981; box-shadow: 0 0 10px #10b981; }
-.status-dot.red { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+.status-dot.green { background: var(--agent-emerald); box-shadow: 0 0 10px var(--agent-emerald); }
+.status-dot.red { background: var(--agent-rose); box-shadow: 0 0 10px var(--agent-rose); }
 
 .hero-visual {
   position: relative;
@@ -202,7 +202,7 @@
   transform: translate(-50%, -50%);
   width: 120%;
   height: 120%;
-  background: radial-gradient(circle, rgba(190, 242, 100, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.1) 0%, transparent 70%);
   z-index: 1;
 }
 

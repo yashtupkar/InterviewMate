@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FiMoreVertical, FiLoader } from "react-icons/fi";
+import { FiMoreVertical, FiLoader, FiPlus } from "react-icons/fi";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
 import { interviewAgents } from "../constants/agents";
@@ -16,6 +16,7 @@ const PastInterviews = () => {
 
   useEffect(() => {
     const fetchPastInterviews = async () => {
+      setLoading(true);
       try {
         const token = await getToken();
         const res = await axios.get(
@@ -31,10 +32,12 @@ const PastInterviews = () => {
         }
       } catch (err) {
         console.error("Error fetching past interviews:", err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchPastInterviews();
-  }, []);
+  }, [getToken]);
 
   const handleGenerateReport = async (e, sessionId) => {
     e.stopPropagation();
@@ -64,15 +67,22 @@ const PastInterviews = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background dark:bg-background text-zinc-100 transition-colors font-sans selection:bg-primary/30 pb-20">
+    <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
       <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold dark:text-white text-black">
-            Your Interviews
-          </h2>
-        </div>
+          <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-2xl font-bold dark:text-white text-black">
+                    Your Interviews
+                  </h2>
+                  <button
+                    onClick={() => navigate("/create-interview")}
+                    className="flex items-center justify-center gap-2 px-6 py-2 bg-[#bef264] hover:bg-[#bef264]-hover text-black font-bold rounded-lg transition-all active:scale-95 whitespace-nowrap text-sm"
+                  >
+                    <FiPlus size={16} />
+                    Create Interview
+                  </button>
+                </div>
 
-        <div className="overflow-hidden rounded-xl border dark:border-white/5 border-black/5 dark:bg-[#1a1a1a]/40 bg-gray-100/40">
+        <div className="overflow-hidden rounded-xl border dark:border-white/5 border-black/5 d bg-black">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -86,7 +96,33 @@ const PastInterviews = () => {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {currentInterviews.length > 0 ? (
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b dark:border-white/5 border-black/5 dark:bg-[#1a1a1a]/50 bg-gray-100/50">
+                      <td className="px-6 py-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full skeleton" />
+                          <div className="h-4 w-24 skeleton" />
+                        </div>
+                      </td>
+                      <td className="px-6 py-6 font-medium">
+                        <div className="h-4 w-32 skeleton" />
+                      </td>
+                      <td className="px-6 py-6">
+                        <div className="h-4 w-20 skeleton" />
+                      </td>
+                      <td className="px-6 py-6">
+                        <div className="h-6 w-20 rounded-md skeleton" />
+                      </td>
+                      <td className="px-6 py-6">
+                        <div className="h-4 w-24 skeleton" />
+                      </td>
+                      <td className="px-6 py-6">
+                        <div className="h-4 w-8 bg-white/5 rounded mx-auto" />
+                      </td>
+                    </tr>
+                  ))
+                ) : currentInterviews.length > 0 ? (
                   currentInterviews.map((session) => {
                     const agentName = session.metadata?.agentName || "Rohan";
                     const agent = interviewAgents.find(
@@ -195,7 +231,7 @@ const PastInterviews = () => {
                 onClick={() => setCurrentPage(i + 1)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   currentPage === i + 1
-                    ? "bg-primary text-black"
+                    ? "bg-[#bef264] text-black"
                     : "bg-white/5 text-zinc-400 hover:bg-white/10"
                 }`}
               >

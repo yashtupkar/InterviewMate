@@ -12,6 +12,7 @@ import {
   FiCpu,
   FiAlertCircle,
   FiMessageSquare,
+  FiShuffle,
 } from "react-icons/fi";
 import { AppContext } from "../context/AppContext";
 
@@ -65,7 +66,9 @@ const TOPIC_POOLS = {
 
 const GroupDiscussionSetup = () => {
   const [selectedCategory, setSelectedCategory] = useState("general");
-  const [selectedTopicIdx, setSelectedTopicIdx] = useState(null);
+  const [selectedTopicIdx, setSelectedTopicIdx] = useState(null); // null means Random Topic
+  const [timeLimit, setTimeLimit] = useState(5); // minutes
+  const [prepTime, setPrepTime] = useState(false);
   const [micReady, setMicReady] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const { backend_URL } = useContext(AppContext);
@@ -86,17 +89,14 @@ const GroupDiscussionSetup = () => {
   }, []);
 
   // Reset topic selection when category changes
-  useEffect(() => {
-    setSelectedTopicIdx(null);
-  }, [selectedCategory]);
+  const handleCategoryChange = (key) => {
+    setSelectedCategory(key);
+    setSelectedTopicIdx(null); // Always default to random when category changes for simplicity
+  };
 
   const handleStart = async () => {
     if (!micReady) {
       toast.error("Please allow microphone access to participate.");
-      return;
-    }
-    if (selectedTopicIdx === null) {
-      toast.error("Please select a topic to discuss.");
       return;
     }
     setIsStarting(true);
@@ -104,7 +104,12 @@ const GroupDiscussionSetup = () => {
       const token = await getToken();
       const res = await axios.post(
         `${backend_URL}/api/group-discussion/start`,
-        { category: selectedCategory, topicIndex: selectedTopicIdx },
+        { 
+          category: selectedCategory, 
+          topicIndex: selectedTopicIdx,
+          timeLimit: timeLimit * 60, // convert to seconds
+          prepTime
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       navigate(`/gd/session/${res.data.sessionId}`, {
@@ -113,6 +118,8 @@ const GroupDiscussionSetup = () => {
           description: res.data.description,
           agents: res.data.agents,
           category: res.data.category,
+          timeLimit: timeLimit * 60,
+          prepTime: res.data.prepTime,
         },
       });
     } catch (err) {
@@ -123,190 +130,220 @@ const GroupDiscussionSetup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans">
-      {/* Header */}
-      <header className="border-b border-white/5 px-6 py-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
-          <FiMessageSquare className="text-indigo-400" size={16} />
-        </div>
-        <div>
-          <h1 className="text-sm font-bold text-white">Group Discussion</h1>
-          <p className="text-[10px] text-zinc-500">AI-Powered GD Practice</p>
-        </div>
-      </header>
+    <div className="min-h-screen  text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
+      <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade mt-8">
 
-      <div className="max-w-4xl mx-auto px-6 py-10">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-4">
-            <FiZap size={12} />
-            4 AI Agents · Random Speaker Order · Real-time
+        {/* Left Column: Preview & Info - Sticky */}
+        <div className="w-full lg:w-1/2 flex flex-col sticky top-16 space-y-6 animate-fade-in-left">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#bef264]/10 border border-[#bef264]/20 text-[#bef264] text-[10px] font-black uppercase tracking-widest">
+              <FiZap size={12} />
+              AI Participants · Real-time Session
+            </div>
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              Master the <span className="text-[#bef264] italic">GD</span> Dynamics
+            </h1>
+            <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-md">
+              Prepare for group discussions with 4 unique AI personas. They interact naturally, allowing you to simulate a high-pressure corporate GD environment.
+            </p>
           </div>
-          <h2 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">
-            Practice Group Discussion
-          </h2>
-          <p className="text-zinc-400 text-sm max-w-xl mx-auto leading-relaxed">
-            Join a live group discussion with 4 AI participants. Speak
-            naturally — agents respond randomly just like a real GD. Get a
-            detailed contribution report at the end.
-          </p>
-        </div>
 
-        {/* Category Selection */}
-        <div className="mb-8">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">
-            Choose Category
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {CATEGORIES.map(({ key, label, icon: Icon, color }) => {
-              const isActive = selectedCategory === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setSelectedCategory(key)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? "border-white/20 bg-white/5"
-                      : "border-white/5 bg-zinc-900/40 hover:bg-zinc-900/80 hover:border-white/10"
-                  }`}
-                >
+          {/* Discussion Panel Preview */}
+          <div className="p-8 bg-zinc-950 rounded-[2rem] border-2 border-[#bef264]/20 shadow-2xl shadow-[#bef264]/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#bef264]/5 rounded-full blur-3xl -mr-10 -mt-10" />
+            <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-6 relative z-10">Discussion Panel</h3>
+            <div className="grid grid-cols-2 gap-6 relative z-10">
+              {[
+                { name: "Alex", color: "#6366f1", trait: "Analytical", image: "/assets/interviewers/male1.png" },
+                { name: "Priya", color: "#ec4899", trait: "Empathetic", image: "/assets/interviewers/female1.png" },
+                { name: "Marcus", color: "#f59e0b", trait: "Bold", image: "/assets/interviewers/male2.png" },
+                { name: "Zoe", color: "#10b981", trait: "Creative", image: "/assets/interviewers/female2.png" },
+              ].map((agent) => (
+                <div key={agent.name} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 overflow-hidden">
                   <div
-                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: `${color}22`,
-                      border: `1px solid ${color}44`,
-                    }}
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-black text-white shadow-lg flex-shrink-0 overflow-hidden"
+                    style={{ background: `${agent.color}33`, border: `2px solid ${agent.color}44` }}
                   >
-                    <Icon size={16} style={{ color }} />
-                  </div>
-                  <span className="text-xs font-semibold text-zinc-300 text-center leading-tight">
-                    {label}
-                  </span>
-                  {isActive && (
-                    <div
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ background: color }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Topic Selection */}
-        <div className="mb-10">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">
-            Select Topic
-          </p>
-          <div className="flex flex-col gap-2">
-            {topics.map((topic, idx) => {
-              const isSelected = selectedTopicIdx === idx;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedTopicIdx(idx)}
-                  className={`text-left px-5 py-4 rounded-2xl border transition-all duration-200 cursor-pointer group ${
-                    isSelected
-                      ? "border-indigo-500/50 bg-indigo-500/10 text-white"
-                      : "border-white/5 bg-zinc-900/40 hover:bg-zinc-900/70 hover:border-white/10 text-zinc-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-2 h-2 rounded-full flex-shrink-0 transition-all ${
-                          isSelected
-                            ? "bg-indigo-400"
-                            : "bg-zinc-700 group-hover:bg-zinc-500"
-                        }`}
-                      />
-                      <span className="text-sm font-medium leading-snug">
-                        {topic}
-                      </span>
-                    </div>
-                    {isSelected && (
-                      <FiArrowRight
-                        className="text-indigo-400 flex-shrink-0 animate-pulse"
-                        size={14}
-                      />
+                    {agent.image ? (
+                      <img src={agent.image} alt={agent.name} className="w-full h-full object-cover" />
+                    ) : (
+                      agent.name[0]
                     )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Agent Preview */}
-        <div className="mb-10 p-5 rounded-2xl bg-zinc-900/60 border border-white/5">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4">
-            Your Discussion Panel
-          </p>
-          <div className="flex items-center gap-4 flex-wrap">
-            {[
-              { name: "Alex", color: "#6366f1", trait: "Analytical" },
-              { name: "Priya", color: "#ec4899", trait: "Empathetic" },
-              { name: "Marcus", color: "#f59e0b", trait: "Bold" },
-              { name: "Zoe", color: "#10b981", trait: "Creative" },
-            ].map((agent) => (
-              <div key={agent.name} className="flex items-center gap-2.5">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black text-white"
-                  style={{ background: `${agent.color}33`, border: `1.5px solid ${agent.color}66` }}
-                >
-                  {agent.name[0]}
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-zinc-200">{agent.name}</p>
-                  <p className="text-[10px] text-zinc-500">{agent.trait}</p>
+                    <p className="text-xs font-black text-white">{agent.name}</p>
+                    <p className="text-[9px] text-[#bef264] font-bold uppercase tracking-tight">{agent.trait}</p>
+                  </div>
+                </div>
+              ))}
+              </div>
+
+            <div className="mt-8 flex items-center justify-between border-t border-white/5 pt-6 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#bef264]/20 border-2 border-[#bef264]/40 flex items-center justify-center">
+                  <FiMic size={18} className="text-[#bef264]" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-white">You</p>
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Candidate</p>
                 </div>
               </div>
-            ))}
-            <div className="flex items-center gap-2.5 ml-auto">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-                <FiMic size={14} className="text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-zinc-200">You</p>
-                <p className="text-[10px] text-zinc-500">Candidate</p>
+              <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${micReady ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-red-500/20 bg-red-500/10 text-red-400"
+                }`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${micReady ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+                {micReady ? "Mic Active" : "Mic Access Needed"}
               </div>
             </div>
           </div>
+
+          <div className="dark:bg-[#1a1a1a] bg-white p-7 shadow-xl rounded-[2rem] border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
+            <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
+              <FiMessageSquare className="mr-3 text-[#bef264] text-lg" /> GD Dynamics
+            </h3>
+            <p className="text-[13px] dark:text-zinc-500 text-gray-600 leading-relaxed font-medium capitalize">
+              Participants will open the floor, jump in with counter-points, and conclude based on collective input. speak clearly to ensure the AI understands your contribution.
+            </p>
+          </div>
         </div>
 
-        {/* Mic Status + Start */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          <div
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-xs font-semibold ${
-              micReady
-                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
-                : "border-red-500/30 bg-red-500/5 text-red-400"
-            }`}
-          >
-            <FiMic size={13} />
-            {micReady ? "Microphone Ready" : "Microphone blocked — please allow access"}
+        {/* Right Column: Setup Form */}
+        <div className="w-full lg:w-[450px] flex flex-col gap-8 animate-fade-in-right px-4">
+          <div className="pb-2">
+            <h2 className="text-lg font-black dark:text-white text-black mb-1 uppercase tracking-tight">
+              Session Configuration
+            </h2>
+
+            <div className="space-y-6">
+              {/* Duration Select */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                  Time Limit
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[2,5, 8, 10, 15].map((min) => (
+                    <button
+                      key={min}
+                      onClick={() => setTimeLimit(min)}
+                      className={`py-2.5 rounded-xl border text-xs font-black transition-all ${timeLimit === min
+                        ? "border-[#bef264] bg-[#bef264]/10 text-white"
+                        : "border-white/5 bg-white/5 text-zinc-500 hover:border-white/10"
+                        }`}
+                    >
+                      {min}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preparation Time Toggle */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                  Topic Preparation (1 min)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: true, label: "Enabled" },
+                    { value: false, label: "Disabled" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.label}
+                      type="button"
+                      onClick={() => setPrepTime(opt.value)}
+                      className={`py-2.5 rounded-xl border text-xs font-black transition-all ${prepTime === opt.value
+                        ? "border-[#bef264] bg-[#bef264]/10 text-white"
+                        : "border-white/5 bg-white/5 text-zinc-500 hover:border-white/10"
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category Select */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                  Category
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CATEGORIES.map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => handleCategoryChange(key)}
+                      className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${selectedCategory === key
+                        ? "border-[#bef264] bg-[#bef264]/10 text-white"
+                        : "border-white/5 bg-white/5 text-zinc-500 hover:border-white/10"
+                        }`}
+                    >
+                      <Icon size={14} className={selectedCategory === key ? "text-[#bef264]" : ""} />
+                      <span className="text-[11px] font-bold">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Topic List */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                  Select Topic
+                </label>
+                <div className="p-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
+                  <div className="max-h-[220px] overflow-y-auto gd-scrollbar pr-1">
+                    {/* Random Option */}
+                    <button
+                      onClick={() => setSelectedTopicIdx(null)}
+                      className={`w-full text-left sticky top-0 px-4 py-3 rounded-xl transition-all mb-1 flex items-center justify-between group ${selectedTopicIdx === null
+                        ? "bg-[#bef264] text-black font-black"
+                        : "text-zinc-400 hover:bg-white/5 font-bold"
+                        }`}
+                    >
+                      <span className="text-[12px]">Choose Automatically (Random)</span>
+                      <FiShuffle size={14} className={selectedTopicIdx === null ? "text-black" : "text-[#bef264] opacity-50"} />
+                    </button>
+
+                    <div className="h-px bg-white/5 mx-2 my-1" />
+
+                    {/* Manual Options */}
+                    {topics.map((topic, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedTopicIdx(idx)}
+                        className={`w-full text-left px-4 py-3 rounded-xl transition-all mb-1 ${selectedTopicIdx === idx
+                          ? "bg-white/10 text-white border border-white/10 font-bold"
+                          : "text-zinc-300 hover:text-[#bef264] hover:bg-[#bef264]/10 font-medium"
+                          }`}
+                      >
+                        <p className="text-[12px] leading-snug">{topic}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  onClick={handleStart}
+                  disabled={isStarting || !micReady}
+                  className="w-full bg-[#bef264] hover:bg-[#bef264]/90 text-black font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50"
+                >
+                  {isStarting ? (
+                    <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      Start Discussion Floor
+                      <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${micReady ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    {micReady ? "Microphone Ready" : "Microphone Required"}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={handleStart}
-            disabled={isStarting || !micReady || selectedTopicIdx === null}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-all active:scale-[0.98] cursor-pointer"
-          >
-            {isStarting ? (
-              <>
-                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Setting up discussion...
-              </>
-            ) : (
-              <>
-                Join Group Discussion
-                <FiArrowRight size={16} />
-              </>
-            )}
-          </button>
         </div>
       </div>
     </div>

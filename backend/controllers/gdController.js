@@ -3,6 +3,7 @@ const {
   getOpeningStatement,
   getAgentResponse,
   getProactiveAgentResponse,
+  getConclusionStatement,
   analyzeGDTranscript,
 } = require("../services/GDAnalyzer");
 
@@ -64,6 +65,10 @@ const GD_TOPICS = {
     {
       topic: "The gig economy is exploiting workers",
       description: "Flexibility vs stability in modern employment",
+    },
+    {
+      topic: "Work from home vs Office culture: Which is better for India?",
+      description: "Compare the benefits and challenges of WFH and traditional office work.",
     },
   ],
   technical: [
@@ -155,15 +160,15 @@ function pickNextAgent(agents, lastSpeakerName) {
  */
 const startGDSession = async (req, res) => {
   try {
-    const { category = "general", topicIndex } = req.body;
+    const { category = "general", topicIndex, timeLimit = 600, prepTime = false } = req.body;
     const userId = req.user?._id;
 
     if (!userId) return res.status(401).json({ message: "User not authenticated" });
 
     const topicPool = GD_TOPICS[category] || GD_TOPICS.general;
     const selectedTopic =
-      topicIndex !== undefined
-        ? topicPool[topicIndex] || topicPool[0]
+      topicIndex !== null && topicIndex !== undefined
+        ? topicPool[topicIndex] || topicPool[Math.floor(Math.random() * topicPool.length)]
         : topicPool[Math.floor(Math.random() * topicPool.length)];
 
     const agents = pickAgents(4);
@@ -175,6 +180,8 @@ const startGDSession = async (req, res) => {
       agents,
       status: "active",
       transcript: [],
+      timeLimit,
+      prepTime,
     });
 
     await session.save();
@@ -185,6 +192,7 @@ const startGDSession = async (req, res) => {
       description: selectedTopic.description,
       category,
       agents,
+      prepTime,
     });
   } catch (error) {
     console.error("startGDSession error:", error);
@@ -211,7 +219,7 @@ const getTopics = async (req, res) => {
  */
 const openGDSession = async (req, res) => {
   try {
-    const { sessionId } = req.body;
+    const { sessionId, skipSave = false } = req.body;
     const userId = req.user?._id;
 
     const session = await GDSession.findOne({ _id: sessionId, userId });
@@ -223,14 +231,16 @@ const openGDSession = async (req, res) => {
     const openingText = await getOpeningStatement(opener, session.topic);
     if (!openingText) return res.status(500).json({ message: "Failed to generate opening" });
 
-    session.transcript.push({
-      speaker: opener.name,
-      role: "agent",
-      text: openingText,
-      agentPersonality: opener.personality,
-      timestamp: new Date(),
-    });
-    await session.save();
+    if (!skipSave) {
+      session.transcript.push({
+        speaker: opener.name,
+        role: "agent",
+        text: openingText,
+        agentPersonality: opener.personality,
+        timestamp: new Date(),
+      });
+      await session.save();
+    }
 
     res.status(200).json({
       agent: { name: opener.name, color: opener.color, avatarSeed: opener.avatarSeed, voiceId: opener.voiceId },
@@ -250,14 +260,14 @@ const openGDSession = async (req, res) => {
  */
 const getNextAgentTurn = async (req, res) => {
   try {
-    const { sessionId, userMessage, proactive = false, lastSpeaker } = req.body;
+    const { sessionId, userMessage, proactive = false, lastSpeaker, skipSave = false } = req.body;
     const userId = req.user?._id;
 
     const session = await GDSession.findOne({ _id: sessionId, userId });
     if (!session) return res.status(404).json({ message: "Session not found" });
 
     // Add user message to transcript first if provided
-    if (userMessage && userMessage.trim()) {
+    if (userMessage && userMessage.trim() && !skipSave) {
       session.transcript.push({
         speaker: "User",
         role: "user",
@@ -290,16 +300,17 @@ const getNextAgentTurn = async (req, res) => {
       return res.status(500).json({ message: "Agent failed to respond" });
     }
 
-    // Save agent turn to transcript
-    session.transcript.push({
-      speaker: agent.name,
-      role: "agent",
-      text: agentText,
-      agentPersonality: agent.personality,
-      timestamp: new Date(),
-    });
-
-    await session.save();
+    // Save agent turn to transcript if not skipping
+    if (!skipSave) {
+      session.transcript.push({
+        speaker: agent.name,
+        role: "agent",
+        text: agentText,
+        agentPersonality: agent.personality,
+        timestamp: new Date(),
+      });
+      await session.save();
+    }
 
     res.status(200).json({
       agent: {
@@ -371,19 +382,27 @@ const generateGDReport = async (req, res) => {
     (async () => {
       try {
         const userName = "User";
+        // Reload session to get the latest transcript including any just-added messages
+        const freshSession = await GDSession.findById(sessionId);
+        if (!freshSession) return;
+
         const reportData = await analyzeGDTranscript(
-          session.topic,
-          session.transcript,
+          freshSession.topic,
+          freshSession.transcript,
           userName
         );
 
-        session.report = reportData;
-        session.status = "completed";
+        freshSession.report = reportData;
+        freshSession.status = "completed";
+        await freshSession.save();
       } catch (err) {
         console.error("GD analysis error:", err);
-        session.status = "analysis_failed";
+        const failSession = await GDSession.findById(sessionId);
+        if (failSession) {
+          failSession.status = "analysis_failed";
+          await failSession.save();
+        }
       }
-      await session.save();
     })();
   } catch (error) {
     console.error("generateGDReport error:", error);
@@ -422,13 +441,94 @@ const getUserGDs = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/group-discussion/conclude
+ * Picks an agent to provide a final wrap-up statement.
+ */
+const concludeGDSession = async (req, res) => {
+  try {
+    const { sessionId, lastSpeaker, skipSave = false } = req.body;
+    const userId = req.user?._id;
+
+    const session = await GDSession.findOne({ _id: sessionId, userId });
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    // Pick a concluding agent (not necessarily the last speaker)
+    const agent = pickNextAgent(session.agents, lastSpeaker);
+
+    const conclusionText = await getConclusionStatement(
+      agent,
+      session.topic,
+      session.transcript
+    );
+
+    if (!conclusionText) {
+      return res.status(500).json({ message: "Failed to generate conclusion" });
+    }
+
+    if (!skipSave) {
+      session.transcript.push({
+        speaker: agent.name,
+        role: "agent",
+        text: conclusionText,
+        agentPersonality: agent.personality,
+        timestamp: new Date(),
+      });
+      
+      // Mark as completed since this is the wrap-up
+      session.status = "active"; // Keep active while we play the sound, but frontend knows it's the end
+      await session.save();
+    }
+
+    res.status(200).json({
+      agent: {
+        name: agent.name,
+        color: agent.color,
+        avatarSeed: agent.avatarSeed,
+        voiceId: agent.voiceId,
+      },
+      text: conclusionText,
+    });
+  } catch (error) {
+    console.error("concludeGDSession error:", error);
+    res.status(500).json({ message: "Failed to conclude session" });
+  }
+};
+
+const addAgentMessage = async (req, res) => {
+  try {
+    const { sessionId, name, text, personality } = req.body;
+    const userId = req.user?._id;
+
+    const session = await GDSession.findOne({ _id: sessionId, userId });
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    if (text && text.trim()) {
+      session.transcript.push({
+        speaker: name,
+        role: "agent",
+        text: text.trim(),
+        agentPersonality: personality || "",
+        timestamp: new Date(),
+      });
+      await session.save();
+    }
+
+    res.status(200).json({ message: "Agent message saved" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save agent message" });
+  }
+};
+
 module.exports = {
   startGDSession,
   openGDSession,
   getTopics,
   getNextAgentTurn,
   addUserMessage,
+  addAgentMessage,
   generateGDReport,
   getGDReport,
   getUserGDs,
+  concludeGDSession,
 };

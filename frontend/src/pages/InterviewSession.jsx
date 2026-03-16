@@ -675,7 +675,7 @@ const InterviewSession = () => {
   };
 
   return (
-    <div className="min-h-screen dark:bg-zinc-950 bg-white dark:text-zinc-100 text-gray-900 font-sans">
+    <div className="min-h-screen bg-background dark:text-zinc-100 text-gray-900 font-sans">
       <div className="h-full flex flex-col overflow-hidden min-h-[90vh]">
         <header className="px-4 md:px-6 py-3 flex items-center justify-between bg-zinc-950/80 border-b dark:border-white/5 border-black/5 backdrop-blur-xl sticky top-0 z-40">
           <div className="flex items-center gap-3 md:gap-4">
@@ -698,7 +698,7 @@ const InterviewSession = () => {
           <div className="flex items-center gap-2 md:gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full dark:bg-zinc-900 bg-gray-50 border dark:border-white/5 border-black/5 shadow-inner">
               <div
-                className={`w-2 h-2 rounded-full ${callStatus === "active" ? "bg-emerald-400 animate-pulse" : "bg-yellow-400"}`}
+                className={`w-2 h-2 rounded-full ${callStatus === "active" ? "bg-agent-emerald animate-pulse" : "bg-agent-amber"}`}
               />
               <span className="text-[10px] font-mono font-semibold dark:text-zinc-300 text-gray-700">
                 {formatDuration(interviewDuration)}
@@ -721,7 +721,7 @@ const InterviewSession = () => {
 
         <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
           <div className="flex flex-col gap-6 min-w-0">
-            <div className="relative aspect-video  dark:bg-zinc-900/40 bg-gray-100/40 rounded-[28px] overflow-hidden border dark:border-indigo-500 border-black/5 shadow-[0_0_60px_rgba(24,24,27,0.7)]">
+            <div className="relative aspect-video dark:bg-surface-alt/40 bg-gray-100/40 rounded-[28px] overflow-hidden border dark:border-[#bef264] border-black/5 shadow-[0_0_60px_rgba(24,24,27,0.7)]">
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
                 {callStatus === "active" && (
                   <div className="absolute inset-0 dark:bg-zinc-800 bg-gray-100 blur-[90px] animate-pulse-slow pointer-events-none" />
@@ -729,7 +729,7 @@ const InterviewSession = () => {
                 {hasCallEnded && !isProcessing && (
                   <div className="absolute inset-0 dark:bg-black/80 bg-white/80 backdrop-blur-md flex items-center justify-center z-40">
                     <div className="text-center w-full max-w-sm px-6">
-                      <FiCheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-4" />
+                      <FiCheckCircle className="w-10 h-10 text-agent-emerald mx-auto mb-4" />
                       <h2 className="text-xl font-bold dark:text-white text-black mb-2">
                         Interview Ended
                       </h2>
@@ -746,7 +746,7 @@ const InterviewSession = () => {
                               handleGenerateReport();
                             }
                           }}
-                          className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs py-3 rounded-2xl transition-all active:scale-[0.98]"
+                          className="flex-1 bg-[#bef264] hover:bg-[#bef264]-hover text-black font-black text-xs py-3 rounded-2xl transition-all active:scale-[0.98]"
                         >
                           Generate Report
                         </button>
@@ -778,11 +778,11 @@ const InterviewSession = () => {
                         <img
                           src={user?.avatar}
                           alt="User Avatar"
-                          className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-indigo-500/50"
+                          className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-[#bef264]/50"
                         />
                       ) : (
-                        <div className="w-24 h-24 rounded-full bg-indigo-500/20 flex items-center justify-center mb-4 border-2 border-indigo-500/50">
-                          <FiUser className="text-4xl text-indigo-400" />
+                        <div className="w-24 h-24 rounded-full bg-[#bef264]/20 flex items-center justify-center mb-4 border-2 border-[#bef264]/50">
+                          <FiUser className="text-4xl text-[#bef264]" />
                         </div>
                       )}
                       <span className="text-[10px] font-semibold uppercase mt-2">
