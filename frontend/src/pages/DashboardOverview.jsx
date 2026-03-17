@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import {
   FiPlus, FiArrowUpRight, FiClock, FiCheckCircle,
@@ -91,8 +92,12 @@ const DashboardOverview = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 animate-fade-in">
-      {/* Header Section */}
+    <>
+      <Helmet>
+        <title>Dashboard | PriPareAI</title>
+      </Helmet>
+      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 animate-fade-in">
+        {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-white mb-2 flex items-center gap-3">
@@ -351,7 +356,8 @@ const DashboardOverview = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

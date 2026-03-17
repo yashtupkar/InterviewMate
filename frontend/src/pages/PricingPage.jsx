@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from "react-helmet-async";
 import { 
   FiCheck, 
   FiZap, 
@@ -75,8 +76,12 @@ const PricingPage = () => {
     ];
 
     return (
-        <div className="min-h-screen  text-white py-12 px-4 animate-fade-in">
-            <div className="max-w-5xl mx-auto text-center">
+        <>
+            <Helmet>
+                <title>Pricing | PriPareAI</title>
+            </Helmet>
+            <div className="min-h-screen  text-white py-12 px-4 animate-fade-in">
+                <div className="max-w-5xl mx-auto text-center">
                 <div className="mb-10">
                     <span className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block">Pricing & Plans</span>
                     <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">
@@ -166,8 +171,9 @@ const PricingPage = () => {
                     *Elite fair use: 500 mins Talk Time / mo. <br />
                     Secure payments via Razorpay. No hidden charges.
                 </div>
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 

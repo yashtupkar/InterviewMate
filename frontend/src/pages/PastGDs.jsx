@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FiMoreVertical, FiMessageSquare, FiUsers, FiClock } from "react-icons/fi";
@@ -48,8 +49,12 @@ const PastGDs = () => {
   );
 
   return (
-    <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
-      <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">
+    <>
+      <Helmet>
+        <title>Past Group Discussions | PriPareAI</title>
+      </Helmet>
+      <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
+        <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold dark:text-white text-black">
             Group Discussions
@@ -201,8 +206,9 @@ const PastGDs = () => {
             ))}
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

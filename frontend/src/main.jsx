@@ -6,6 +6,7 @@ import { AppProvider } from "./context/AppContext";
 import "./index.css";
 import { dark } from "@clerk/themes";
 import App from "./App.jsx";
+import { HelmetProvider } from "react-helmet-async";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -15,24 +16,26 @@ if (!PUBLISHABLE_KEY) {
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
-      <AppProvider>
-        <ClerkProvider 
-          publishableKey={PUBLISHABLE_KEY} 
-          afterSignOutUrl="/"
-          appearance={{
-            baseTheme: dark,
-            variables: {
-              colorPrimary: "#bef264",
-              colorBackground: "#18181b",
-              colorInputBackground: "#27272a",
-              colorInputText: "white",
-            }
-          }}
-        >
-          <App />
-        </ClerkProvider>
-      </AppProvider>
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <AppProvider>
+          <ClerkProvider 
+            publishableKey={PUBLISHABLE_KEY} 
+            afterSignOutUrl="/"
+            appearance={{
+              baseTheme: dark,
+              variables: {
+                colorPrimary: "#bef264",
+                colorBackground: "#18181b",
+                colorInputBackground: "#27272a",
+                colorInputText: "white",
+              }
+            }}
+          >
+            <App />
+          </ClerkProvider>
+        </AppProvider>
+      </BrowserRouter>
+    </HelmetProvider>
   </StrictMode>,
 );

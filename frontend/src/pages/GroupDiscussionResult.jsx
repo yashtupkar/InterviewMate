@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { Helmet } from "react-helmet-async";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@clerk/clerk-react";
@@ -156,8 +157,12 @@ const GroupDiscussionResult = () => {
   }
 
   return (
-    <div className="min-h-screen  text-zinc-100 selection:bg-[#bef264]/30 pb-20 p-6">
-      <div className="max-w-4xl mx-auto flex flex-col gap-8 animate-fade">
+    <>
+      <Helmet>
+        <title>GD Analysis | PriPareAI</title>
+      </Helmet>
+      <div className="min-h-screen  text-zinc-100 selection:bg-[#bef264]/30 pb-20 p-6">
+        <div className="max-w-4xl mx-auto flex flex-col gap-8 animate-fade">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <h1 className="text-4xl font-black text-white tracking-tight">GD <span className="text-[#bef264]">Analysis</span></h1>
@@ -433,7 +438,8 @@ const GroupDiscussionResult = () => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

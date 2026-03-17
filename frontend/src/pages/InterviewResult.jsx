@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import axios from "axios";
 import {
@@ -133,8 +134,12 @@ const InterviewResult = () => {
 
   if (!report || status === "analysis_pending") {
     return (
-      <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6">
-        <div className="relative w-20 h-20">
+      <>
+        <Helmet>
+          <title>Analyzing Interview | PriPareAI</title>
+        </Helmet>
+        <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6">
+          <div className="relative w-20 h-20">
           <div className="absolute inset-0 rounded-full border-4 border-[#bef264]/10" />
           <div className="absolute inset-0 rounded-full border-t-4 border-[#bef264] animate-spin" />
           <FiLoader className="absolute inset-0 m-auto text-[#bef264]" size={24} />
@@ -150,15 +155,20 @@ const InterviewResult = () => {
             <FiRefreshCw className="animate-spin" size={10} />
             Finalizing evaluation metrics
           </p>
-        )}
-      </div>
+          )}
+        </div>
+      </>
     );
   }
 
   if (status === "analysis_failed") {
     return (
-      <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6 text-center px-4">
-        <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center border border-red-500/20 shadow-2xl shadow-red-500/5">
+      <>
+        <Helmet>
+          <title>Analysis Failed | InterviewMate</title>
+        </Helmet>
+        <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6 text-center px-4">
+          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center border border-red-500/20 shadow-2xl shadow-red-500/5">
           <FiAlertCircle className="text-red-400" size={40} />
         </div>
         <div>
@@ -174,6 +184,7 @@ const InterviewResult = () => {
           Try New Session
         </button>
       </div>
+      </>
     );
   }
 
@@ -195,8 +206,12 @@ const InterviewResult = () => {
         : "#ef4444";
 
   return (
-    <div className="min-h-screen text-zinc-100 selection:bg-[#bef264]/30 pb-20 p-6">
-      <div className="max-w-4xl mx-auto flex flex-col gap-8 animate-fade">
+    <>
+      <Helmet>
+        <title>Interview Result | InterviewMate</title>
+      </Helmet>
+      <div className="min-h-screen text-zinc-100 selection:bg-[#bef264]/30 pb-20 p-6">
+        <div className="max-w-4xl mx-auto flex flex-col gap-8 animate-fade">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <h1 className="text-4xl font-black text-white tracking-tight">
@@ -489,8 +504,9 @@ const InterviewResult = () => {
             <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

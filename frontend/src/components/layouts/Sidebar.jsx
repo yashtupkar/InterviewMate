@@ -14,7 +14,8 @@ import {
   FiPlus,
   FiUsers,
   FiCreditCard,
-  FiStar
+  FiStar,
+  FiLinkedin
 } from "react-icons/fi";
 
 const Sidebar = () => {
@@ -57,6 +58,7 @@ const Sidebar = () => {
     { name: "Interviews", icon: <FiMessageSquare />, path: "/dashboard/interviews", active: location.pathname === "/dashboard/interviews" },
     { name: "Group Discussion", icon: <FiUsers />, path: "/gd/setup", active: location.pathname === "/gd/setup" },
     { name: "GD Interviews", icon: <FiMessageCircle />, path: "/dashboard/gd-interviews", active: location.pathname === "/dashboard/gd-interviews" },
+    { name: "LinkedIn AI", icon: <FiLinkedin />, path: "/dashboard/linkedin", active: location.pathname === "/dashboard/linkedin" },
   ];
 
   const exposureItems = [
@@ -77,7 +79,7 @@ const Sidebar = () => {
     <aside className="fixed left-0 top-0 h-screen w-64  bg-black border-r border-white/5 flex flex-col z-50">
       {/* Logo */}
       <div className="p-6 flex items-center gap-2">
-        <div className="w-8 h-8 bg-[#bef264] rounded-lg flex items-center justify-center font-bold text-black text-xl">
+        <div className="w-8 h-8 bg-[#bef264]  rounded-lg flex items-center justify-center font-bold text-black text-xl">
           P
         </div>
         <span className="text-white font-bold text-lg tracking-tight">
@@ -86,7 +88,7 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <div className="flex-1 px-4 py-4 space-y-8 overflow-y-auto">
+      <div className="flex-1 px-4 py-4 space-y-8 custom-scrollbar overflow-y-auto">
         {/* Main Section */}
         <div>
           <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-4">Main</h3>

@@ -7,6 +7,7 @@ const ApiError = require('./utils/ApiError');
 const vapiInterviewRouter = require('./routes/vapiInterviewRoutes');
 const gdRouter = require('./routes/gdRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const linkedinRoutes = require('./routes/linkedinRoutes');
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/vapi-interview', vapiInterviewRouter);
 app.use('/api/group-discussion', gdRouter);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/linkedin', linkedinRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

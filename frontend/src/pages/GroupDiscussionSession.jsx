@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
+import { Helmet } from "react-helmet-async";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
@@ -919,7 +920,11 @@ export default function GroupDiscussionSession() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen dark:bg-zinc-950 bg-white dark:text-zinc-100 text-gray-900 overflow-hidden">
+    <>
+      <Helmet>
+        <title>Group Discussion Session | PriPareAI</title>
+      </Helmet>
+      <div className="h-screen flex flex-col pt-16 h-screen-ios bg-background overflow-hidden selection:bg-indigo-500/30 text-zinc-100">
       <PrepModal />
       <div className="h-full flex flex-col">
         {/* Header */}
@@ -1203,5 +1208,6 @@ export default function GroupDiscussionSession() {
         .animate-scan { animation: scan 3s linear infinite; }
       `}</style>
     </div>
+    </>
   );
 }

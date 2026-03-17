@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FiMoreVertical, FiLoader, FiPlus } from "react-icons/fi";
@@ -67,8 +68,12 @@ const PastInterviews = () => {
   );
 
   return (
-    <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
-      <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">
+    <>
+      <Helmet>
+        <title>Past Interviews | InterviewMate</title>
+      </Helmet>
+      <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
+        <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">
           <div className="flex items-center justify-between mb-8">
                   <h2 className="text-2xl font-bold dark:text-white text-black">
                     Your Interviews
@@ -240,8 +245,9 @@ const PastInterviews = () => {
             ))}
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

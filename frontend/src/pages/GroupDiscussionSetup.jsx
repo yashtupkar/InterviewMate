@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "@clerk/clerk-react";
@@ -130,8 +131,12 @@ const GroupDiscussionSetup = () => {
   };
 
   return (
-    <div className="min-h-screen  text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
-      <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade mt-8">
+    <>
+      <Helmet>
+        <title>GD Setup | PriPareAI</title>
+      </Helmet>
+      <div className="min-h-screen  text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
+        <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade mt-8">
 
         {/* Left Column: Preview & Info - Sticky */}
         <div className="w-full lg:w-1/2 flex flex-col sticky top-16 space-y-6 animate-fade-in-left">
@@ -345,8 +350,9 @@ const GroupDiscussionSetup = () => {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -19,6 +19,7 @@ import GroupDiscussionSession from "./pages/GroupDiscussionSession";
 import GroupDiscussionResult from "./pages/GroupDiscussionResult";
 import PastGDs from "./pages/PastGDs";
 import PricingPage from "./pages/PricingPage";
+import LinkedInOptimisation from "./pages/LinkedInOptimisation";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -74,6 +75,7 @@ function App() {
         <Route path="setup" element={<CreateInterview />} />
         <Route path="interviews" element={<PastInterviews />} />
         <Route path="gd-interviews" element={<PastGDs />} />
+        <Route path="linkedin" element={<LinkedInOptimisation />} />
         <Route path="result/:sessionId" element={<InterviewResult />} />
       </Route>
 
