@@ -13,6 +13,7 @@ import {
   FiChevronDown,
   FiZap,
   FiArrowRight,
+  FiCreditCard,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
@@ -45,9 +46,25 @@ const CreateInterview = () => {
   const experienceDropdownRef = useRef(null);
   const navigate = useNavigate();
 
+  const [subscription, setSubscription] = useState(null);
+
   useEffect(() => {
     resetInterview();
-  }, []);
+    const fetchSubscription = async () => {
+      try {
+        const token = await getToken();
+        if (token) {
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setSubscription(res.data);
+        }
+      } catch (err) {
+        console.error("Error fetching subscription:", err);
+      }
+    };
+    fetchSubscription();
+  }, [getToken]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -92,6 +109,12 @@ const CreateInterview = () => {
   };
 
   const startInterview = async () => {
+    if (subscription && subscription.tier !== 'Elite' && subscription.credits.interviews <= 0) {
+      toast.error("You have run out of interview credits. Redirecting to billing...");
+      setTimeout(() => navigate("/billing"), 2000);
+      return;
+    }
+
     if (!isCameraEnabled || !isMicEnabled) {
       toast.error("Please enable both camera and microphone to start.");
       return;
@@ -513,12 +536,17 @@ const CreateInterview = () => {
               <button
                 onClick={startInterview}
                 disabled={loading}
-                className="w-full px-10 bg-[#bef264] hover:bg-[#bef264]/90 cursor-pointer text-black font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/10 active:scale-95 group"
+                className={`w-full px-10 ${subscription && subscription.tier !== 'Elite' && subscription.credits.interviews <= 0 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-[#bef264] hover:bg-[#bef264]/90 text-black'} cursor-pointer font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/10 active:scale-95 group`}
               >
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                     Starting Interview...
+                  </>
+                ) : subscription && subscription.tier !== 'Elite' && subscription.credits.interviews <= 0 ? (
+                  <>
+                    Pay as you go
+                    <FiCreditCard size={20} className="group-hover:translate-x-1 transition-transform" />
                   </>
                 ) : (
                   <>

@@ -376,6 +376,19 @@ const InterviewSession = () => {
           setIsProcessing(false);
           setIsVideoOn(false);
           setIsMuted(true);
+
+          // Deduct credit
+          (async () => {
+            try {
+              const token = await getToken();
+              await axios.post(`${backend_URL}/api/subscription/deduct-interview`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              console.log("Interview credit deducted.");
+            } catch (err) {
+              console.error("Failed to deduct interview credit:", err);
+            }
+          })();
         });
 
         vapi.current.on("volume-level", (volume) => {

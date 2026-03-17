@@ -5,6 +5,7 @@ const {
   AnalyzeFullTranscript,
 } = require("../services/InterviewResponseAnalyzer");
 const axios = require("axios");
+const { rewardReferrer } = require("./referralController");
 
 // Start an interview session
 const startInterview = async (req, res) => {
@@ -168,6 +169,7 @@ const generateReportFromTranscript = async (req, res) => {
           detailedAnalysis: reportData,
         };
         session.status = "completed";
+        await rewardReferrer(userId);
       } catch (reportError) {
         console.error("Error generating report from transcript:", reportError);
         session.status = "analysis_failed";

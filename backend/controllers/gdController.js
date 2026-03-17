@@ -6,6 +6,7 @@ const {
   getConclusionStatement,
   analyzeGDTranscript,
 } = require("../services/GDAnalyzer");
+const { rewardReferrer } = require("./referralController");
 
 // ── Agent Roster ──────────────────────────────────────────────────────────────
 const AGENT_ROSTER = [
@@ -395,6 +396,7 @@ const generateGDReport = async (req, res) => {
         freshSession.report = reportData;
         freshSession.status = "completed";
         await freshSession.save();
+        await rewardReferrer(userId);
       } catch (err) {
         console.error("GD analysis error:", err);
         const failSession = await GDSession.findById(sessionId);

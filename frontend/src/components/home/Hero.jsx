@@ -24,11 +24,11 @@ const Hero = ({ backendStatus }) => {
 
       <div className="flex flex-col sm:flex-row items-center gap-4 z-10 w-full justify-center px-4 mb-16">
         <SignedOut>
-          <SignInButton mode="modal">
+          <Link to="/signup" className="w-full sm:w-auto">
             <button className="px-8 py-4 w-full sm:w-auto rounded-full bg-gradient-to-r from-[#bef264] via-[#7cff67] to-[#00f5a0] text-black font-bold text-lg hover:brightness-110 transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(190,242,100,0.3)] border-none">
               Start Practicing Free
             </button>
-          </SignInButton>
+          </Link>
         </SignedOut>
         <SignedIn>
           <Link to="/dashboard" className="w-full sm:w-auto">

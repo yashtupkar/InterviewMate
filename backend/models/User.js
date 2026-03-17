@@ -21,7 +21,25 @@ const userSchema = new mongoose.Schema({
     subscription: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Subscription'
+    },
+    referralCode: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    status: {
+        type: String,
+        enum: ['active', 'deleted'],
+        default: 'active'
+    },
+    deletedAt: {
+        type: Date
     }
 }, { timestamps: true });
+
 
 module.exports = mongoose.model('User', userSchema);

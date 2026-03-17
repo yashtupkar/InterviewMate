@@ -14,6 +14,7 @@ import {
   FiAlertCircle,
   FiMessageSquare,
   FiShuffle,
+  FiCreditCard,
 } from "react-icons/fi";
 import { AppContext } from "../context/AppContext";
 
@@ -78,6 +79,25 @@ const GroupDiscussionSetup = () => {
 
   const topics = TOPIC_POOLS[selectedCategory] || [];
 
+  const [subscription, setSubscription] = useState(null);
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const token = await getToken();
+        if (token) {
+          const res = await axios.get(`${backend_URL}/api/subscription/status`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setSubscription(res.data);
+        }
+      } catch (err) {
+        console.error("Error fetching subscription:", err);
+      }
+    };
+    fetchSubscription();
+  }, [getToken, backend_URL]);
+
   // Check mic permission
   useEffect(() => {
     navigator.mediaDevices
@@ -96,6 +116,12 @@ const GroupDiscussionSetup = () => {
   };
 
   const handleStart = async () => {
+    if (subscription && subscription.tier !== 'Elite' && subscription.credits.gdSessions <= 0) {
+      toast.error("You have run out of GD session credits. Redirecting to billing...");
+      setTimeout(() => navigate("/billing"), 2000);
+      return;
+    }
+
     if (!micReady) {
       toast.error("Please allow microphone access to participate.");
       return;
@@ -329,10 +355,15 @@ const GroupDiscussionSetup = () => {
                 <button
                   onClick={handleStart}
                   disabled={isStarting || !micReady}
-                  className="w-full bg-[#bef264] hover:bg-[#bef264]/90 text-black font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50"
+                  className={`w-full ${subscription && subscription.tier !== 'Elite' && subscription.credits.gdSessions <= 0 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-[#bef264] hover:bg-[#bef264]/90 text-black'} font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50`}
                 >
                   {isStarting ? (
                     <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                  ) : subscription && subscription.tier !== 'Elite' && subscription.credits.gdSessions <= 0 ? (
+                    <>
+                      Pay as you go
+                      <FiCreditCard className="group-hover:translate-x-1 transition-transform" />
+                    </>
                   ) : (
                     <>
                       Start Discussion Floor

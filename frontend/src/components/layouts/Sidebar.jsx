@@ -15,7 +15,8 @@ import {
   FiUsers,
   FiCreditCard,
   FiStar,
-  FiLinkedin
+  FiLinkedin,
+  FiGift
 } from "react-icons/fi";
 
 const Sidebar = () => {
@@ -69,7 +70,8 @@ const Sidebar = () => {
   ];
 
   const bottomItems = [
-    { name: "Pricing", icon: <FiStar />, path: "/pricing", active: location.pathname === "/pricing" },
+    { name: "Plans & Billing", icon: <FiCreditCard />, path: "/billing", active: location.pathname === "/billing" },
+    { name: "Referrals", icon: <FiGift />, path: "/referrals", active: location.pathname === "/referrals" },
 
     { name: "Feedback", icon: <FiMessageCircle />, path: "#" },
     { name: "Help", icon: <FiHelpCircle />, path: "#" },
@@ -168,21 +170,21 @@ const Sidebar = () => {
                 max={subscription.limits.talkTime} 
                 unit="m"
                 color="#bef264"
-                size={40}
+                size={50}
               />
               <CircularUsage 
                 label="Int" 
                 value={subscription.credits.interviews} 
                 max={subscription.limits.interviews} 
                 color="#60a5fa"
-                size={40}
+                size={50}
               />
               <CircularUsage 
                 label="GD" 
                 value={subscription.credits.gdSessions} 
                 max={subscription.limits.gdSessions} 
                 color="#a78bfa"
-                size={40}
+                size={50}
               />
             </div>
           </div>
@@ -285,9 +287,12 @@ const CircularUsage = ({ label, value, max, unit = "", color, size = 44 }) => {
             className="transition-all duration-1000 ease-out opacity-80"
           />
         </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[8px] font-bold text-zinc-300 group-hover:text-white transition-colors">
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-[9px] font-black text-white leading-none">
             {value}{unit}
+          </span>
+          <span className="text-[7px] font-bold text-zinc-500 mt-0.5">
+            /{max}{unit}
           </span>
         </div>
       </div>

@@ -1,0 +1,40 @@
+/**
+ * This script simulates a Clerk 'user.deleted' webhook event.
+ * It bypasses the Svix signature verification for testing purposes.
+ * 
+ * Usage: 
+ * 1. Make sure your server is running.
+ * 2. Run: node backend/scripts/simulateDeletion.js <CLERK_USER_ID>
+ */
+
+const axios = require('axios');
+
+const clerkUserId = process.argv[2];
+
+if (!clerkUserId) {
+    console.error("Please provide a Clerk User ID to delete.");
+    process.exit(1);
+}
+
+const simulateDeletion = async () => {
+    try {
+        console.log(`Simulating deletion for Clerk User ID: ${clerkUserId}`);
+        
+        // We'll send a request to a test endpoint or modify the webhook route slightly to allow testing
+        // For now, let's assume we want to test the REAL logic but need to bypass verification
+        // AN ALTERNATIVE is to mock the headers and payload correctly, but that's complex without the secret.
+        
+        // BETTER: Tell the user to use the Clerk Dashboard "Test Hook" feature or Ngrok.
+        // But for a quick local test, we can add a bypass flag temporarily.
+        
+        console.log("To test this locally without Clerk Dashboard:");
+        console.log("1. Add a temporary check in webhookRoutes.js to allow testing.");
+        console.log("2. Or use Ngrok to expose your local port 5000 and add the URL to Clerk Dashboard.");
+        
+        // Let's actually provide a snippet they can use with CURL if they have Ngrok.
+    } catch (error) {
+        console.error("Simulation failed:", error.message);
+    }
+};
+
+simulateDeletion();

@@ -25,7 +25,8 @@ const getSubscriptionStatus = async (req, res) => {
             tier: subscription.tier,
             credits: subscription.credits,
             limits: TIER_LIMITS[subscription.tier] || TIER_LIMITS.Free,
-            planExpiry: subscription.planExpiry
+            planExpiry: subscription.planExpiry,
+            paymentHistory: subscription.paymentHistory
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -96,4 +97,58 @@ const verifyPayment = async (req, res) => {
     }
 };
 
-module.exports = { getSubscriptionStatus, createOrder, verifyPayment };
+const deductInterviewCredit = async (req, res) => {
+    try {
+        const user = await User.findOne({ clerkId: req.auth.userId }).populate('subscription');
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const subscription = user.subscription;
+        if (!subscription) return res.status(404).json({ message: "Subscription not found" });
+
+        if (subscription.tier === 'Elite') {
+            return res.json({ message: "Unlimited credits for Elite plan", credits: subscription.credits });
+        }
+
+        if (subscription.credits.interviews > 0) {
+            subscription.credits.interviews -= 1;
+            await subscription.save();
+            res.json({ message: "Interview credit deducted", credits: subscription.credits });
+        } else {
+            res.status(400).json({ message: "Insufficient interview credits" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const deductGdCredit = async (req, res) => {
+    try {
+        const user = await User.findOne({ clerkId: req.auth.userId }).populate('subscription');
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const subscription = user.subscription;
+        if (!subscription) return res.status(404).json({ message: "Subscription not found" });
+
+        if (subscription.tier === 'Elite') {
+            return res.json({ message: "Unlimited credits for Elite plan", credits: subscription.credits });
+        }
+
+        if (subscription.credits.gdSessions > 0) {
+            subscription.credits.gdSessions -= 1;
+            await subscription.save();
+            res.json({ message: "GD session credit deducted", credits: subscription.credits });
+        } else {
+            res.status(400).json({ message: "Insufficient GD credits" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { 
+    getSubscriptionStatus, 
+    createOrder, 
+    verifyPayment, 
+    deductInterviewCredit, 
+    deductGdCredit 
+};

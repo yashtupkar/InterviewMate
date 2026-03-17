@@ -28,11 +28,11 @@ const Layout = ({ children }) => {
           <a href="#features" className="text-gray-300 hover:text-white font-medium transition-colors hidden md:block">Features</a>
           <a href="#about" className="text-gray-300 hover:text-white font-medium transition-colors hidden md:block">About</a>
           <SignedOut>
-            <SignInButton mode="modal">
+            <Link to="/signin">
               <button className="bg-gradient-to-r from-[#bef264] via-[#7cff67] to-[#00f5a0] text-black px-6 py-2 rounded-lg font-bold hover:brightness-110 transition-all shadow-[0_0_15px_rgba(190,242,100,0.15)] hover:transform hover:scale-105 border-none">
                 Sign In
               </button>
-            </SignInButton>
+            </Link>
           </SignedOut>
           <SignedIn>
             <UserButton afterSignOutUrl="/"/>

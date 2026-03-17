@@ -788,12 +788,21 @@ export default function GroupDiscussionSession() {
         { sessionId, duration },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      setSessionEnded(true);
+      setIsEnding(false);
+
+      // Deduct credit
+      try {
+        await axios.post(`${backend_URL}/api/subscription/deduct-gd`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log("GD credit deducted.");
+      } catch (err) {
+        console.error("Failed to deduct GD credit:", err);
+      }
     } catch (err) {
       console.error("Report err:", err);
     }
-
-    setSessionEnded(true);
-    setIsEnding(false);
   };
 
   // ── Tiles ─────────────────────────────────────────────────────────────────
@@ -924,7 +933,7 @@ export default function GroupDiscussionSession() {
       <Helmet>
         <title>Group Discussion Session | PriPareAI</title>
       </Helmet>
-      <div className="h-screen flex flex-col pt-16 h-screen-ios bg-background overflow-hidden selection:bg-indigo-500/30 text-zinc-100">
+      <div className="h-screen flex flex-col h-screen-ios bg-background overflow-hidden selection:bg-indigo-500/30 text-zinc-100">
       <PrepModal />
       <div className="h-full flex flex-col">
         {/* Header */}
@@ -982,7 +991,7 @@ export default function GroupDiscussionSession() {
           </div>
         )}
 
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-2 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-3 overflow-hidden">
           {/* Left Column: Participants */}
           <div className="flex flex-col gap-6 min-w-0">
             {/* Participant Grid Section */}

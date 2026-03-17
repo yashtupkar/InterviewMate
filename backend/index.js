@@ -8,6 +8,8 @@ const vapiInterviewRouter = require('./routes/vapiInterviewRoutes');
 const gdRouter = require('./routes/gdRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const linkedinRoutes = require('./routes/linkedinRoutes');
+const referralRoutes = require('./routes/referralRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 
 const app = express();
 
@@ -15,6 +17,7 @@ const app = express();
 connectDB();
 
 // Middleware
+app.use('/api/webhooks', express.raw({ type: 'application/json' })); // Raw body for webhooks
 app.use(cors());
 app.use(express.json());
 
@@ -24,6 +27,8 @@ app.use('/api/vapi-interview', vapiInterviewRouter);
 app.use('/api/group-discussion', gdRouter);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/linkedin', linkedinRoutes);
+app.use('/api/referrals', referralRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
