@@ -26,6 +26,8 @@ import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { WelcomePopup, SuccessPopup } from "./pages/ReferralPopups";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import axios from "axios";
 
 function App() {
@@ -137,6 +139,16 @@ function App() {
             <Homepage backendStatus={backendStatus} />
           </Layout>
         }
+      />
+
+      <Route
+        path="/terms"
+        element={<TermsAndConditions />}
+      />
+
+      <Route
+        path="/privacy"
+        element={<PrivacyPolicy />}
       />
 
       {/* Dashboard Routes */}

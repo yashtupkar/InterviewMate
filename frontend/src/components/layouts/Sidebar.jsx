@@ -19,6 +19,8 @@ import {
   FiGift
 } from "react-icons/fi";
 
+import CircularUsage from "../common/CircularUsage";
+
 const Sidebar = () => {
   const location = useLocation();
   const { user } = useUser();
@@ -65,14 +67,11 @@ const Sidebar = () => {
   const exposureItems = [
 
     // { name: "Jobs", icon: <FiBriefcase />, path: "#", badge: "Coming soon" },
-    // { name: "Resume builder", icon: <FiFileText />, path: "#", badge: "Coming.." },
+    { name: "Resume builder", icon: <FiFileText />, path: "#", badge: "Coming.." },
     // { name: "Leaderboard", icon: <FiAward />, path: "#", badge: "Coming So.." },
   ];
 
   const bottomItems = [
-    { name: "Plans & Billing", icon: <FiCreditCard />, path: "/billing", active: location.pathname === "/billing" },
-    { name: "Referrals", icon: <FiGift />, path: "/referrals", active: location.pathname === "/referrals" },
-
     { name: "Feedback", icon: <FiMessageCircle />, path: "#" },
     { name: "Help", icon: <FiHelpCircle />, path: "#" },
   ];
@@ -153,7 +152,7 @@ const Sidebar = () => {
 
         {/* Compact Subscriptions Card - Circular Redesign */}
         {subscription && (
-          <div className="bg-[#bef264]/15 rounded-2xl p-3 border border-[#bef264] space-y-3 shadow-sm mx-1">
+          <div className="bg-[#bef264]/10 rounded-2xl p-3 border-y border-[#bef264] space-y-3 shadow-sm mx-1">
             <div className="flex items-center justify-between px-1">
               <span className="text-[9px] font-black text-zinc-300 uppercase tracking-[0.15em] leading-none">
                 {subscription.tier} Plan
@@ -217,6 +216,22 @@ const Sidebar = () => {
                 <FiUsers className="text-zinc-500" />
                 Manage Profile
               </button>
+              <Link 
+                to="/billing"
+                onClick={() => setIsProfileOpen(false)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
+              >
+                <FiCreditCard className="text-zinc-500" />
+                Plans & Billing
+              </Link>
+              <Link 
+                to="/referrals"
+                onClick={() => setIsProfileOpen(false)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
+              >
+                <FiGift className="text-zinc-500" />
+                Referrals
+              </Link>
               <button 
                 onClick={() => signOut()}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
@@ -249,55 +264,6 @@ const Sidebar = () => {
     
       </div>
     </aside>
-  );
-};
-
-const CircularUsage = ({ label, value, max, unit = "", color, size = 44 }) => {
-  const percentage = Math.min((value / max) * 100, 100);
-  const strokeWidth = 3;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div className="flex flex-col items-center gap-1.5 group cursor-default">
-      <div className="relative" style={{ width: size, height: size }}>
-        {/* Shadow Circle */}
-        <svg className="w-full h-full transform -rotate-90">
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            fill="transparent"
-            className="text-white/5"
-          />
-          {/* Progress Circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={color}
-            strokeWidth={strokeWidth}
-            fill="transparent"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            className="transition-all duration-1000 ease-out opacity-80"
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[9px] font-black text-white leading-none">
-            {value}{unit}
-          </span>
-          <span className="text-[7px] font-bold text-zinc-500 mt-0.5">
-            /{max}{unit}
-          </span>
-        </div>
-      </div>
-      <span className="text-[8px] font-black text-zinc-200 uppercase tracking-widest">{label}</span>
-    </div>
   );
 };
 

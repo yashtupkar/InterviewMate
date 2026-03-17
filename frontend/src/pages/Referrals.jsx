@@ -75,7 +75,7 @@ const Referrals = () => {
 
                     {/* Compact Reward Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
-                        <div className="bg-purple-500/5 border border-purple-500/50 rounded-3xl p-6 relative overflow-hidden group">
+                        <div className="bg-purple-500/5 border-y border-purple-500 rounded-3xl p-6 relative overflow-hidden group">
                            <div className="relative z-10 flex items-start gap-4 ">
                                 <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-400 shrink-0">
                                     <FiUsers className="w-5 h-5" />
@@ -91,7 +91,7 @@ const Referrals = () => {
                            </div>
                         </div>
 
-                        <div className="bg-[#bef264]/5 border border-[#bef264]/50 rounded-3xl p-6 relative overflow-hidden group">
+                        <div className="bg-[#bef264]/5 border-y border-[#bef264] rounded-3xl p-6 relative overflow-hidden group">
                            <div className="relative z-10 flex items-start gap-4">
                                 <div className="p-3 bg-[#bef264]/10 rounded-2xl text-[#bef264] shrink-0">
                                     <FiGift className="w-5 h-5" />

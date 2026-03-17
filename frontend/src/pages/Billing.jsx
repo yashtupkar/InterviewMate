@@ -156,7 +156,7 @@ const Billing = () => {
                         {/* Left Column: Current Plan & Usage */}
                         <div className="lg:col-span-2 space-y-8">
                             {/* Current Plan Card */}
-                            <div className="bg-zinc-900 border border-[#bef264]/50 rounded-[2rem] p-4 relative overflow-hidden group">
+                            <div className="bg-[#bef264]/5 border-y border-[#bef264] rounded-[2rem] p-4 relative overflow-hidden group">
                                 <div className="relative z-10 flex flex-col gap-4">
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 ">
                                         <div className="flex items-center gap-4">

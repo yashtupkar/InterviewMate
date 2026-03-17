@@ -180,7 +180,7 @@ const GroupDiscussionSetup = () => {
           </div>
 
           {/* Discussion Panel Preview */}
-          <div className="p-8 bg-zinc-950 rounded-[2rem] border-2 border-[#bef264]/20 shadow-2xl shadow-[#bef264]/5 relative overflow-hidden group">
+          <div className="p-8 bg-zinc-950 rounded-[2rem] border-y border-[#bef264] shadow-2xl shadow-[#bef264]/5 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#bef264]/5 rounded-full blur-3xl -mr-10 -mt-10" />
             <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-6 relative z-10">Discussion Panel</h3>
             <div className="grid grid-cols-2 gap-6 relative z-10">
@@ -319,7 +319,7 @@ const GroupDiscussionSetup = () => {
                   Select Topic
                 </label>
                 <div className="p-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden">
-                  <div className="max-h-[220px] overflow-y-auto gd-scrollbar pr-1">
+                  <div className="max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
                     {/* Random Option */}
                     <button
                       onClick={() => setSelectedTopicIdx(null)}

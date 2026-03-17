@@ -190,14 +190,14 @@ const CreateInterview = () => {
             </p>
           </div>
 
-          <div className="relative aspect-video bg-zinc-950 rounded-[2rem] border border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
+          <div className="relative aspect-video bg-zinc-950 rounded-[2rem] border-y border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
             {isCameraEnabled ? (
               <video
                 ref={localVideoRef}
                 autoPlay
                 playsInline
                 muted
-                className="absolute inset-0 w-full h-full object-cover mirror"
+                className="absolute inset-0 w-full h-full object-cover mirror rounded-[2rem]"
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/50 backdrop-blur-sm">

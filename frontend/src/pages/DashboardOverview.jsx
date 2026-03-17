@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { formatDistanceToNow, format } from "date-fns";
 import { interviewAgents } from "../constants/agents";
+import CircularUsage from "../components/common/CircularUsage";
 
 const DashboardOverview = () => {
   const { getToken } = useAuth();
@@ -22,23 +23,28 @@ const DashboardOverview = () => {
   const navigate = useNavigate();
   const [interviews, setInterviews] = useState([]);
   const [gds, setGDs] = useState([]);
+  const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = await getToken();
-        const [interviewsRes, gdsRes] = await Promise.all([
+         const [interviewsRes, gdsRes, subscriptionRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/vapi-interview/user`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/group-discussion/my-sessions`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
             headers: { Authorization: `Bearer ${token}` }
           })
         ]);
 
         setInterviews(interviewsRes.data || []);
         setGDs(gdsRes.data || []);
+        setSubscription(subscriptionRes.data || null);
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {
@@ -100,9 +106,9 @@ const DashboardOverview = () => {
         {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black text-white mb-2 flex items-center gap-3">
+          <h1 className="text-3xl md:text-2xl font-black text-white mb-2 flex items-center gap-3">
             Welcome back, {user?.firstName}
-            <span className="text-2xl animate-bounce">👋</span>
+            <span className="text-3xl animate-wave">👋</span>
           </h1>
           <p className="text-zinc-400 font-medium text-sm md:text-base">Here's what's happening with your interview prep today.</p>
         </div>
@@ -150,14 +156,52 @@ const DashboardOverview = () => {
           description="Topic mastery"
           color="amber"
         />
-        <MetricCard
-          icon={<FiActivity className="text-emerald-400" />}
-          title="Preparation Level"
-          value="Ready"
-          badge="Gold Tier"
-          description="Overall status"
-          color="emerald"
-        />
+        {subscription ? (
+          <div className="bg-[#bef264]/5 rounded-3xl p-6 border-y border-[#bef264] space-y-4 shadow-sm h-full flex flex-col justify-center">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.15em] leading-none">
+                {subscription.tier} Plan
+              </span>
+              <Link to="/billing" className="text-[10px] font-black text-[#bef264] hover:text-[#d9ff96] transition-colors uppercase tracking-widest leading-none">
+                Upgrade
+              </Link>
+            </div>
+            
+            <div className="flex justify-around items-center pt-1">
+              <CircularUsage 
+                label="Talk" 
+                value={subscription.credits.talkTime} 
+                max={subscription.limits.talkTime} 
+                unit="m"
+                color="#bef264"
+                size={70}
+              />
+              <CircularUsage 
+                label="Int" 
+                value={subscription.credits.interviews} 
+                max={subscription.limits.interviews} 
+                color="#60a5fa"
+                size={70}
+              />
+              <CircularUsage 
+                label="GD" 
+                value={subscription.credits.gdSessions} 
+                max={subscription.limits.gdSessions} 
+                color="#a78bfa"
+                size={70}
+              />
+            </div>
+          </div>
+        ) : (
+          <MetricCard
+            icon={<FiActivity className="text-emerald-400" />}
+            title="Preparation Level"
+            value="Ready"
+            badge="Gold Tier"
+            description="Overall status"
+            color="emerald"
+          />
+        )}
       </div>
 
       {/* Charts Section */}
@@ -362,8 +406,8 @@ const DashboardOverview = () => {
 };
 
 const MetricCard = ({ icon, title, value, trend, badge, description, color }) => (
-  <div className="bg-surface/40 border border-white/5 rounded-[2rem] p-6 transition-all hover:bg-surface/60 group relative overflow-hidden">
-    <div className="flex items-center justify-between mb-4 relative z-10">
+  <div className="bg-surface/40 border-y border-[#bef264] rounded-3xl p-4 transition-all hover:bg-surface/60 group relative overflow-hidden">
+    {/* <div className="flex items-center justify-between mb-4 relative z-10">
       <div className={`p-3 rounded-2xl bg-zinc-800/50 group-hover:scale-110 transition-transform`}>{icon}</div>
       {trend && (
         <span className="text-[10px] font-black text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg">
@@ -375,7 +419,7 @@ const MetricCard = ({ icon, title, value, trend, badge, description, color }) =>
           {badge}
         </span>
       )}
-    </div>
+    </div> */}
     <div className="relative z-10">
       <h3 className="text-zinc-500 font-bold text-xs uppercase tracking-widest mb-1">{title}</h3>
       <div className="flex items-end justify-between">
