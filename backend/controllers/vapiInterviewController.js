@@ -47,11 +47,27 @@ const startInterview = async (req, res) => {
     } else if (interviewType === "technical") {
       typeSpecificInstructions = `
       INTERVIEW TYPE: TECHNICAL
-      - Focus exclusively on core technical skills, concepts, and problem-solving.
-      - Ask about data structures, algorithms, system design, or specific technologies mentioned in the candidate context.
-      - If the role is for a developer, you can ask them to describe how they would implement a specific feature or solve a technical challenge.
-      - Avoid soft skill questions unless they are directly related to technical collaboration.
-      - Examples: "Explain the difference between SQL and NoSQL," "How does a load balancer work?"
+      - Focus on core technical skills, concepts, and problem-solving.
+      - You have the ability to give coding questions.
+      - Ask a mix of verbal technical questions and 1-2 coding problems.
+      - CRITICAL: For coding questions, you MUST output the following BLOCK exactly. 
+      - DO NOT speak the JSON block aloud. Just say the question verbally, and then output the tag block.
+      - FORMAT:
+        [CODE_QUESTION]
+        \`\`\`json
+        {
+          "question": "Write a function to...",
+          "language": "javascript", 
+          "initialCode": "function solution() {\\n  \\n}",
+          "timeLimit": 300
+        }
+        \`\`\`
+        [/CODE_QUESTION]
+      - Supported languages: javascript, html, python, java, cpp.
+      - For Frontend roles, prioritize javascript, html and css. For html, give tasks like "Create a responsive card".
+      - For DSA/Backend, prioritize javascript, python or cpp.
+      - timeLimit is in seconds (300 = 5 minutes).
+      - After a coding question, wait for the user to submit or for the timer to run out.
       `;
     } else if (interviewType === "hr") {
       typeSpecificInstructions = `

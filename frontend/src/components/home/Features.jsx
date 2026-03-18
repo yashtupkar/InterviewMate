@@ -7,7 +7,7 @@ const Features = () => {
         Core Features
       </div>
       <h2 className="text-3xl md:text-5xl font-bold text-center mb-16 text-white max-w-2xl">
-        Discover Powerful Ways to Prepare <br className="hidden md:block"/> on InterviewMate
+        Discover Powerful Ways to Prepare <br className="hidden md:block"/> on PlaceMateAI
       </h2>
 
       <div className="w-full flex flex-col gap-8">

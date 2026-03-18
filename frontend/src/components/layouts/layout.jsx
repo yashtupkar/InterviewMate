@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/clerk-react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiUser, FiLogOut, FiSettings, FiLayout, FiCreditCard, FiGift } from "react-icons/fi";
+import Logo from "../common/Logo";
 
 const Layout = ({ children }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -32,20 +33,30 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen relative z-10 w-full">
-      <nav className={`fixed top-0 left-0 w-full z-[100] transition-all duration-300 flex justify-between items-center px-6 md:px-16 ${
+      <nav className={`fixed top-2 left-1/2 -translate-x-1/2 w-[80%] rounded-full z-[100] transition-all duration-300 flex justify-between items-center px-6 md:px-16 ${
         isScrolled 
-          ? "py-3 bg-[#09090b]/50 backdrop-blur-md border-b border-white/5 shadow-2xl" 
+          ? "py-3 bg-black/20 border-y border-[#bef264] backdrop-blur-lg  shadow-2xl" 
           : "py-3 bg-transparent border-b border-transparent"
-      }`}>
-        <Link to="/" className="text-2xl font-black tracking-tight text-white">
-          PriPare<span className="text-primary">Ai</span>
+        }`}>
+        
+        <div className="flex items-center gap-2">
+          <Logo size={32} />
+        <Link to="/" className="text-2xl font-semibold  tracking-tight text-white">
+          PlaceMate<span className="text-primary">AI</span>
         </Link>
-        <div className="flex gap-4 md:gap-8 items-center">
+        </div>
+        <div className="hidden md:flex gap-8 text-sm items-center">
+          <Link to="/about" className="text-white font-semibold hover:text-primary transition-colors">About</Link>
+          <Link to="/features" className="text-white font-semibold hover:text-primary transition-colors">Features</Link>
+          <Link to="/pricing" className="text-white font-semibold hover:text-primary transition-colors">Pricing</Link>
+          <Link to="/contact" className="text-white font-semibold hover:text-primary transition-colors">Contact</Link>
+        </div>
+        <div className="flex gap-2 md:gap-4 items-center">
           
           <SignedOut>
             <Link to="/signin">
-              <button className="bg-gradient-to-r from-[#bef264] via-[#7cff67] to-[#00f5a0] text-black px-6 py-2 rounded-lg font-bold hover:brightness-110 transition-all shadow-[0_0_15px_rgba(190,242,100,0.15)] hover:transform hover:scale-105 border-none">
-                Sign In
+              <button
+                className="bg-[#bef264] text-black px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm">                Sign In
               </button>
             </Link>
           </SignedOut>
@@ -131,7 +142,7 @@ const Layout = ({ children }) => {
           <Link to="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link>
           <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
         </div>
-        <p>&copy; 2026 PriPareAi. Built with MERN Stack.</p>
+        <p>&copy; 2026 PlaceMateAI. Built with MERN Stack.</p>
       </footer>
     </div>
   );

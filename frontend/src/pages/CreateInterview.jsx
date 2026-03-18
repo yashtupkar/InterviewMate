@@ -14,6 +14,7 @@ import {
   FiZap,
   FiArrowRight,
   FiCreditCard,
+  FiVolume2,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
@@ -39,8 +40,52 @@ const CreateInterview = () => {
   const [inputType, setInputType] = useState("both"); // 'resume', 'jobDescription', 'both'
   const [jobDescription, setJobDescription] = useState("");
   const [resumeContent, setResumeContent] = useState("");
+  const [duration, setDuration] = useState(10); // 5, 10, 15, 20 minutes
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState([]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) setAvailableVoices(voices);
+    };
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  const playVoiceSample = (agent, e = null) => {
+    if (e) e.stopPropagation();
+    window.speechSynthesis.cancel();
+    
+    const config = agent.browserVoiceConfig;
+    if (!config) {
+      toast.error("Voice preview not available for this agent.");
+      return;
+    }
+
+    const text = `Hi, I am ${agent.name}. I'll be your interviewer today.`;
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+    let voice = null;
+    for (const kw of config.keywords) {
+      voice = voices.find(v => v.name.includes(kw) && v.lang.includes("en"));
+      if (voice) break;
+    }
+    if (!voice) {
+      voice = voices.find(v => (config.gender === 'female' ? (v.name.includes("Female") || v.name.includes("Zira")) : (v.name.includes("Male") || v.name.includes("David"))) && v.lang.includes("en"));
+    }
+    if (!voice) voice = voices.find(v => v.lang.includes("en"));
+
+    if (voice) utterance.voice = voice;
+    utterance.rate = config.rate;
+    utterance.pitch = config.pitch;
+    
+    window.speechSynthesis.speak(utterance);
+  };
 
   const localVideoRef = useRef(null);
   const experienceDropdownRef = useRef(null);
@@ -115,6 +160,11 @@ const CreateInterview = () => {
       return;
     }
 
+    if (!interviewData.agentName) {
+      toast.error("Please select an interviewer to continue.");
+      return;
+    }
+
     if (!isCameraEnabled || !isMicEnabled) {
       toast.error("Please enable both camera and microphone to start.");
       return;
@@ -142,25 +192,27 @@ const CreateInterview = () => {
     const finalInterviewData = {
       ...interviewData,
       content: combinedContent,
+      userName: user?.firstName || "Candidate",
+      duration: duration
     };
 
     setLoading(true);
     const token = await getToken();
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/vapi-interview/start`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/start`,
         finalInterviewData,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      const { systemPrompt, sessionId: newSessionId, vapiPublicKey } = response.data;
+      const { systemPrompt, sessionId: newSessionId, duration: serverDuration } = response.data;
       setSessionId(newSessionId);
 
-      navigate(`/session/${newSessionId}`, {
-        state: { systemPrompt, vapiPublicKey },
+      navigate(`/session-custom/${newSessionId}`, {
+        state: { systemPrompt, isCustom: true, duration: serverDuration || duration },
       });
     } catch (error) {
       console.error(error);
-      toast.error("Failed to initialize interview.");
+      toast.error("Failed to initialize custom interview.");
     } finally {
       setLoading(false);
     }
@@ -171,7 +223,7 @@ const CreateInterview = () => {
   return (
     <>
       <Helmet>
-        <title>Interview Setup | PriPareAI</title>
+        <title>Interview Setup | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
         <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade mt-8">
@@ -411,35 +463,37 @@ const CreateInterview = () => {
               </div>
               <div className="grid grid-cols-2 gap-3 transition-all duration-300">
                 {interviewAgents
+                  .filter(a => ["Rohan", "Sophia", "Marcus", "Emma", "Drew", "Rachel"].includes(a.name))
                   .slice(0, showAllAgents ? undefined : 4)
                   .map((agent) => (
                     <div
                       key={agent.name}
-                      onClick={() =>
+                      onClick={() => {
                         setInterviewData((p) => ({
                           ...p,
                           agentName: agent.name,
                           agentVoiceProvider: agent.provider,
                           agentVoiceId: agent.voiceId,
-                        }))
-                      }
+                        }));
+                        playVoiceSample(agent);
+                      }}
                       style={{
                         borderColor:
                           interviewData.agentName === agent.name
                             ? `#${agent.bg}`
-                            : "transparent",
+                            : "",
                         backgroundColor:
                           interviewData.agentName === agent.name
                             ? `#${agent.bg}15`
-                            : "transparent",
+                            : "",
                       }}
-                      className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${interviewData.agentName === agent.name
-                        ? "shadow-lg shadow-black/20"
-                        : "border-zinc-800 bg-black hover:border-zinc-700 opacity-70 hover:opacity-100"
+                      className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${interviewData.agentName === agent.name
+                        ? "shadow-xl shadow-black/40 scale-[1.02]"
+                        : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900"
                         }`}
                     >
                       <div
-                        className={`relative rounded-full p-0.5 transition-all ${interviewData.agentName === agent.name
+                        className={`relative rounded-full p-0.5 transition-all duration-300 ${interviewData.agentName === agent.name
                           ? "scale-110"
                           : ""
                           }`}
@@ -453,25 +507,38 @@ const CreateInterview = () => {
                         <img
                           src={agent.image}
                           alt={agent.name}
-                          className={`w-10 h-10 rounded-full object-cover border-2 ${interviewData.agentName === agent.name
+                          className={`w-11 h-11 rounded-full object-cover border-2 ${interviewData.agentName === agent.name
                             ? "border-zinc-950"
-                            : "border-transparent"
+                            : "border-zinc-800"
                             }`}
                         />
                       </div>
-                      <div>
-                        <p
-                          className="text-[12px] font-black dark:text-white text-black transition-colors"
-                          style={{
-                            color:
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p
+                            className="text-[13px] font-black truncate transition-colors"
+                            style={{
+                              color:
+                                interviewData.agentName === agent.name
+                                  ? `#${agent.bg}`
+                                  : "#d4d4d8", // zinc-300
+                            }}
+                          >
+                            {agent.name}
+                          </p>
+                          <button
+                            onClick={(e) => playVoiceSample(agent, e)}
+                            className={`p-2 rounded-xl transition-all ${
                               interviewData.agentName === agent.name
-                                ? `#${agent.bg}`
-                                : "",
-                          }}
-                        >
-                          {agent.name}
-                        </p>
-                        <p className="text-[9px] dark:text-zinc-500 text-gray-500 font-black uppercase tracking-tight">
+                                ? "bg-white/10 text-white hover:bg-white/20"
+                                : "bg-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800"
+                            }`}
+                            title="Play sample"
+                          >
+                            <FiVolume2 size={14} />
+                          </button>
+                        </div>
+                        <p className="text-[10px] dark:text-zinc-500 text-gray-500 font-black uppercase tracking-widest mt-0.5">
                           {agent.label} Voice
                         </p>
                       </div>
@@ -529,6 +596,30 @@ const CreateInterview = () => {
                     </p>
                   </div>
                 </button>
+              </div>
+            </div>
+
+            <hr className="dark:border-white/5 border-black/5" />
+
+            {/* Interview Duration */}
+            <div className="space-y-4">
+              <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                Interview Duration
+              </label>
+              <div className="flex bg-black rounded-xl p-1 border border-zinc-800 shadow-sm">
+                {[5, 10, 15, 20].map((mins) => (
+                  <button
+                    key={mins}
+                    onClick={() => setDuration(mins)}
+                    className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                      duration === mins 
+                        ? "bg-[#bef264] text-black shadow-lg" 
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {mins} Min
+                  </button>
+                ))}
               </div>
             </div>
 

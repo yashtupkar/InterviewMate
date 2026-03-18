@@ -60,7 +60,7 @@ const Referrals = () => {
     return (
         <>
             <Helmet>
-                <title>Referrals | PriPareAI</title>
+                <title>Referrals | PlaceMateAI</title>
             </Helmet>
             <div className="min-h-screen text-white py-12 px-4 md:px-8 border-l border-white/5 animate-fade-in custom-scrollbar overflow-y-auto">
                 <div className="max-w-5xl mx-auto pb-24">
@@ -265,7 +265,7 @@ const Referrals = () => {
                                         title="1. ELIGIBILITY" 
                                         items={[
                                             "Referral rewards are only available for first-time signups who use a valid referral code/link.",
-                                            "The referrer must have a verified account on PriPareAI.",
+                                            "The referrer must have a verified account on PlaceMateAI.",
                                             "Existing users cannot be referred by others."
                                         ]} 
                                     />
@@ -281,14 +281,14 @@ const Referrals = () => {
                                         title="3. LIMITATIONS & FRAUD" 
                                         items={[
                                             "Creating multiple accounts or botting to exploit the referral system is strictly prohibited.",
-                                            "PriPareAI reserves the right to withhold rewards if we detect suspicious activity.",
+                                            "PlaceMateAI reserves the right to withhold rewards if we detect suspicious activity.",
                                             "Credits have no cash value and are non-transferable."
                                         ]} 
                                     />
                                     <TermSection 
                                         title="4. MODIFICATIONS" 
                                         items={[
-                                            "PriPareAI reserves the right to modify or terminate the referral program at any time without prior notice.",
+                                            "PlaceMateAI reserves the right to modify or terminate the referral program at any time without prior notice.",
                                             "Any changes will be effective immediately upon posting on this page."
                                         ]} 
                                     />

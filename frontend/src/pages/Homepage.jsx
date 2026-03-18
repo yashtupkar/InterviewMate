@@ -13,7 +13,7 @@ const Homepage = ({ backendStatus }) => {
   return (
     <>
       <Helmet>
-        <title>PriPareAI | AI Interview Practice</title>
+        <title>PlaceMateAI | AI Interview Practice</title>
       </Helmet>
       <div className="min-h-screen  overflow-x-hidden selection:bg-indigo-500/30">
       {/* Fixed Aurora Background for the entire page */}

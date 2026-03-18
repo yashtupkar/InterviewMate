@@ -11,6 +11,7 @@ import InterviewSession from "./pages/InterviewSession";
 import CreateInterview from "./pages/CreateInterview";
 import PastInterviews from "./pages/PastInterviews";
 import InterviewResult from "./pages/InterviewResult";
+import CustomInterviewSession from "./pages/CustomInterviewSession";
 import DashboardOverview from "./pages/DashboardOverview";
 import Layout from "./components/layouts/layout";
 import { InterviewProvider } from "./context/InterviewContext";
@@ -29,6 +30,8 @@ import { WelcomePopup, SuccessPopup } from "./pages/ReferralPopups";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import axios from "axios";
+import CodingSpace from "./components/CodingSpace";
+import VoiceTest from "./pages/VoiceTest";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -83,7 +86,7 @@ function App() {
     const ref = urlParams.get("ref");
     if (ref) {
       localStorage.setItem("referralCode", ref);
-      
+
       const fetchReferrer = async () => {
         try {
           const res = await axios.get(`http://localhost:5000/api/referrals/info/${ref}`);
@@ -92,7 +95,7 @@ function App() {
             if (!isSignedIn) {
               setShowWelcome(true);
             } else {
-               toast.error("Referral detected! Rewards only apply to new signups.", { icon: 'ℹ️' });
+              toast.error("Referral detected! Rewards only apply to new signups.", { icon: 'ℹ️' });
             }
           }
         } catch (err) {
@@ -104,7 +107,7 @@ function App() {
       };
 
       fetchReferrer();
-      
+
       // Clean up URL without refreshing
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
@@ -114,10 +117,10 @@ function App() {
   return (
     <InterviewProvider>
       <Toaster position="top-right" />
-      
+
       {showWelcome && (
-        <WelcomePopup 
-          referrerName={referredBy} 
+        <WelcomePopup
+          referrerName={referredBy}
           onSignIn={() => {
             setShowWelcome(false);
             navigate("/signin");
@@ -131,92 +134,113 @@ function App() {
       )}
 
       <Routes>
-      {/* Homepage Route */}
-      <Route
-        path="/"
-        element={
-          <Layout>
-            <Homepage backendStatus={backendStatus} />
-          </Layout>
-        }
-      />
-
-      <Route
-        path="/terms"
-        element={<TermsAndConditions />}
-      />
-
-      <Route
-        path="/privacy"
-        element={<PrivacyPolicy />}
-      />
-
-      {/* Dashboard Routes */}
-      <Route path="/dashboard" element={<InterviewLayout />}>
-        <Route index element={<DashboardOverview />} />
-        <Route path="setup" element={<CreateInterview />} />
-        <Route path="interviews" element={<PastInterviews />} />
-        <Route path="gd-interviews" element={<PastGDs />} />
-        <Route path="linkedin" element={<LinkedInOptimisation />} />
-        <Route path="result/:sessionId" element={<InterviewResult />} />
-      </Route>
-
-      {/* Sub-routes under interview that need Sidebar */}
-      <Route path="/interview" element={<InterviewLayout />}>
-        <Route index element={<Navigate to="setup" replace />} />
-        <Route path="setup" element={<CreateInterview />} />
-        <Route path="result/:sessionId" element={<InterviewResult />} />
-      </Route>
-
-      {/* Standalone Session Routes (No Sidebar) */}
-      <Route
-        path="/session"
-        element={<InterviewSession />}
-      />
-      <Route
-        path="/session/:sessionId"
-        element={<InterviewSession />}
-      />
-
-
-      {/* Group Discussion Routes */}
-      <Route path="/gd" element={<InterviewLayout />}>
-        <Route index element={<Navigate to="setup" replace />} />
-        <Route path="setup" element={<GroupDiscussionSetup />} />
+        {/* Homepage Route */}
         <Route
-          path="result/:sessionId"
-          element={<GroupDiscussionResult />}
+          path="/"
+          element={
+            <Layout>
+              <Homepage backendStatus={backendStatus} />
+            </Layout>
+          }
         />
-      </Route>
 
-      {/* Pricing Route */}
-      <Route path="/pricing" element={<InterviewLayout />}>
-        <Route index element={<PricingPage />} />
-      </Route>
+        <Route
+          path="/terms"
+          element={<TermsAndConditions />}
+        />
 
-      <Route path="/billing" element={<InterviewLayout />}>
-        <Route index element={<Billing />} />
-      </Route>
+        <Route
+          path="/privacy"
+          element={<PrivacyPolicy />}
+        />
 
-      <Route path="/referrals" element={<InterviewLayout />}>
-        <Route index element={<Referrals />} />
-      </Route>
+        {/* Dashboard Routes */}
+        <Route path="/dashboard" element={<InterviewLayout />}>
+          <Route index element={<DashboardOverview />} />
+          <Route path="setup" element={<CreateInterview />} />
+          <Route path="interviews" element={<PastInterviews />} />
+          <Route path="gd-interviews" element={<PastGDs />} />
+          <Route path="linkedin" element={<LinkedInOptimisation />} />
+          <Route path="result/:sessionId" element={<InterviewResult />} />
+        </Route>
 
-      {/* Auth Routes */}
-      <Route path="/signin/*" element={<SignInPage />} />
-      <Route path="/signup/*" element={<SignUpPage />} />
+        {/* Sub-routes under interview that need Sidebar */}
+        <Route path="/interview" element={<InterviewLayout />}>
+          <Route index element={<Navigate to="setup" replace />} />
+          <Route path="setup" element={<CreateInterview />} />
+          <Route path="result/:sessionId" element={<InterviewResult />} />
+        </Route>
 
-      {/* Standalone GD Session (No Sidebar) */}
-      <Route
-        path="/gd/session/:sessionId"
-        element={<GroupDiscussionSession />}
-      />
+        {/* Standalone Session Routes (No Sidebar) */}
+        <Route
+          path="/session"
+          element={<InterviewSession />}
+        />
+      
+        <Route
+          path="/session/:sessionId"
+          element={<InterviewSession />}
+        />
+        <Route
+          path="/session-custom/:sessionId"
+          element={<CustomInterviewSession />}
+        />
+        <Route
+          path="/session-custom"
+          element={<CustomInterviewSession />}
+        />
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+
+        {/* Group Discussion Routes */}
+        <Route path="/gd" element={<InterviewLayout />}>
+          <Route index element={<Navigate to="setup" replace />} />
+          <Route path="setup" element={<GroupDiscussionSetup />} />
+          <Route
+            path="result/:sessionId"
+            element={<GroupDiscussionResult />}
+          />
+        </Route>
+
+        {/* Pricing Route */}
+        <Route path="/pricing" element={<InterviewLayout />}>
+          <Route index element={<PricingPage />} />
+        </Route>
+
+        <Route path="/billing" element={<InterviewLayout />}>
+          <Route index element={<Billing />} />
+        </Route>
+
+        <Route path="/referrals" element={<InterviewLayout />}>
+          <Route index element={<Referrals />} />
+        </Route>
+
+        {/* Auth Routes */}
+        <Route path="/signin/*" element={<SignInPage />} />
+        <Route path="/signup/*" element={<SignUpPage />} />
+
+        {/* Standalone GD Session (No Sidebar) */}
+        <Route
+          path="/gd/session/:sessionId"
+          element={<GroupDiscussionSession />}
+        />
+
+ {/* Testing routes */}
+        <Route
+          path="/voices"
+          element={<VoiceTest />}
+        />
+        <Route
+          path="/code"
+          element={<CodingSpace />}
+        />
+
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </InterviewProvider>
   );
 }
 
 export default App;
+

@@ -6,7 +6,7 @@ const PrivacyPolicy = () => {
   return (
     <>
       <Helmet>
-        <title>Privacy Policy | PriPareAI</title>
+        <title>Privacy Policy | PlaceMateAI</title>
       </Helmet>
       <Layout>
         <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto text-zinc-300">
@@ -53,7 +53,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-xl font-bold text-white mb-3">6. Contact Us</h2>
               <p>
-                If you have questions about this Privacy Policy, please contact us at support@pripareai.com.
+                If you have questions about this Privacy Policy, please contact us at support@prepipai.com.
               </p>
             </section>
           </div>

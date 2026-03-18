@@ -6,7 +6,7 @@ const TermsAndConditions = () => {
   return (
     <>
       <Helmet>
-        <title>Terms and Conditions | PriPareAI</title>
+        <title>Terms and Conditions | PlaceMateAI</title>
       </Helmet>
       <Layout>
         <div className="pt-32 pb-20 px-6 max-w-4xl mx-auto text-zinc-300">
@@ -18,14 +18,14 @@ const TermsAndConditions = () => {
             <section>
               <h2 className="text-xl font-bold text-white mb-3">1. Acceptance of Terms</h2>
               <p>
-                By accessing and using PriPareAI, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our services.
+                By accessing and using PlaceMateAI, you agree to be bound by these Terms and Conditions. If you do not agree, please do not use our services.
               </p>
             </section>
             
             <section>
               <h2 className="text-xl font-bold text-white mb-3">2. Service Description</h2>
               <p>
-                PriPareAI provides AI-powered interview practice, group discussion simulations, and LinkedIn profile optimization tools. We reserve the right to modify or discontinue services at any time.
+                PlaceMateAI provides AI-powered interview practice, group discussion simulations, and LinkedIn profile optimization tools. We reserve the right to modify or discontinue services at any time.
               </p>
             </section>
 
@@ -39,14 +39,14 @@ const TermsAndConditions = () => {
             <section>
               <h2 className="text-xl font-bold text-white mb-3">4. Intellectual Property</h2>
               <p>
-                All content, logos, and software on PriPareAI are the property of PriPareAI or its licensors and are protected by intellectual property laws.
+                All content, logos, and software on PlaceMateAI are the property of PlaceMateAI or its licensors and are protected by intellectual property laws.
               </p>
             </section>
 
             <section>
               <h2 className="text-xl font-bold text-white mb-3">5. Limitation of Liability</h2>
               <p>
-                PriPareAI is provided "as is" without warranties. We are not liable for any damages arising from your use of the platform.
+                PlaceMateAI is provided "as is" without warranties. We are not liable for any damages arising from your use of the platform.
               </p>
             </section>
 

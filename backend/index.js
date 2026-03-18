@@ -10,6 +10,8 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const linkedinRoutes = require('./routes/linkedinRoutes');
 const referralRoutes = require('./routes/referralRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const codingRoutes = require('./routes/codingRoutes');
+const customInterviewRoutes = require('./routes/customInterviewRoutes');
 
 const app = express();
 
@@ -29,10 +31,12 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/linkedin', linkedinRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/coding', codingRoutes);
+app.use('/api/custom-interview', customInterviewRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'InterviewMate API is running...' });
+    res.json({ status: 'OK', message: 'PrepiAi API is running...' });
 });
 
 // Error Handling Middleware

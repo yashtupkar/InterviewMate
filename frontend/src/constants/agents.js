@@ -1,4 +1,13 @@
 export const interviewAgents = [
+    {
+    name: "Sophia",
+    provider: "openai",
+    voiceId: "nova",
+    bg: "ec4899",
+    image: "/assets/interviewers/female1.png",
+    label: "Female",
+    browserVoiceConfig: { gender: 'female', pitch: 1.15, rate: 1.0, keywords: ["Google US English", "Microsoft Aria", "Samantha", "Siri", "Female"] }
+  },
   {
     name: "Rohan",
     provider: "openai",
@@ -6,15 +15,9 @@ export const interviewAgents = [
     bg: "6366f1",
     image: "/assets/interviewers/male1.png",
     label: "Male",
+    browserVoiceConfig: { gender: 'male', pitch: 1.0, rate: 0.95, keywords: ["Google UK English Male", "Microsoft Guy", "Daniel", "Alex", "Male"] }
   },
-  {
-    name: "Sophia",
-    provider: "openai",
-    voiceId: "nova",
-    bg: "ec4899",
-    image: "/assets/interviewers/female1.png",
-    label: "Female",
-  },
+
   {
     name: "Marcus",
     provider: "openai",
@@ -22,6 +25,7 @@ export const interviewAgents = [
     bg: "10b981",
     image: "/assets/interviewers/male2.png",
     label: "Male",
+    browserVoiceConfig: { gender: 'male', pitch: 1.30, rate: 1.0, keywords: ["Google UK English Male", "Microsoft Ryan", "Alex", "Christopher", "Male"] }
   },
   {
     name: "Emma",
@@ -30,6 +34,7 @@ export const interviewAgents = [
     bg: "8b5cf6",
     image: "/assets/interviewers/female2.png",
     label: "Female",
+    browserVoiceConfig: { gender: 'female', pitch: 1.0, rate: 1.0, keywords: ["Google UK English Female", "Microsoft Mia", "Victoria", "Siri", "Female"] }
   },
   {
     name: "Elliot",
@@ -37,7 +42,7 @@ export const interviewAgents = [
     voiceId: "Elliot",
     bg: "f59e0b",
     image: "/assets/interviewers/male3.png",
-    label: "Male",
+    label: "Male"
   },
   {
     name: "Rachel",
@@ -46,6 +51,7 @@ export const interviewAgents = [
     bg: "E11D48",
     image: "/assets/interviewers/female3.png",
     label: "Female",
+    browserVoiceConfig: { gender: 'female', pitch: 1.40, rate: 1.0, keywords: ["Google UK English Female", "Microsoft Susan", "Zira", "Siri", "Female"] }
   },
   {
     name: "Drew",
@@ -54,6 +60,7 @@ export const interviewAgents = [
     bg: "2563EB",
     image: "/assets/interviewers/male4.png",
     label: "Male",
+    browserVoiceConfig: { gender: 'male', pitch: 0.80, rate: 1.0, keywords: ["Google UK English Male", "Microsoft David", "Mark", "Christopher", "Male"] }
   },
   {
     name: "Clyde",

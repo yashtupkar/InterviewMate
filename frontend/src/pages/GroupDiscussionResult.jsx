@@ -159,7 +159,7 @@ const GroupDiscussionResult = () => {
   return (
     <>
       <Helmet>
-        <title>GD Analysis | PriPareAI</title>
+        <title>GD Analysis | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen  text-zinc-100 selection:bg-[#bef264]/30 pb-20 p-6">
         <div className="max-w-4xl mx-auto flex flex-col gap-8 animate-fade">

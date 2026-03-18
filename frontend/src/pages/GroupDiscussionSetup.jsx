@@ -159,7 +159,7 @@ const GroupDiscussionSetup = () => {
   return (
     <>
       <Helmet>
-        <title>GD Setup | PriPareAI</title>
+        <title>GD Setup | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen  text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
         <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade mt-8">
@@ -185,10 +185,10 @@ const GroupDiscussionSetup = () => {
             <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-6 relative z-10">Discussion Panel</h3>
             <div className="grid grid-cols-2 gap-6 relative z-10">
               {[
-                { name: "Alex", color: "#6366f1", trait: "Analytical", image: "/assets/interviewers/male1.png" },
-                { name: "Priya", color: "#ec4899", trait: "Empathetic", image: "/assets/interviewers/female1.png" },
+                { name: "Rohan", color: "#6366f1", trait: "Analytical", image: "/assets/interviewers/male1.png" },
+                { name: "Sophia", color: "#ec4899", trait: "Empathetic", image: "/assets/interviewers/female1.png" },
                 { name: "Marcus", color: "#f59e0b", trait: "Bold", image: "/assets/interviewers/male2.png" },
-                { name: "Zoe", color: "#10b981", trait: "Creative", image: "/assets/interviewers/female2.png" },
+                { name: "Emma", color: "#10b981", trait: "Creative", image: "/assets/interviewers/female2.png" },
               ].map((agent) => (
                 <div key={agent.name} className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 overflow-hidden">
                   <div

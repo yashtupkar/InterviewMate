@@ -11,36 +11,36 @@ const { rewardReferrer } = require("./referralController");
 // ── Agent Roster ──────────────────────────────────────────────────────────────
 const AGENT_ROSTER = [
   {
-    name: "Alex",
+    name: "Rohan",
     personality:
       "Analytical and logical. Always backs points with data and structure. Tends to play devil's advocate.",
-    voiceId: "Google US English",
+    voiceId: "echo",
     color: "#6366f1",
-    avatarSeed: "alex",
+    avatarSeed: "rohan",
   },
   {
-    name: "Priya",
+    name: "Sophia",
     personality:
       "Empathetic and people-focused. Highlights human impact, social consequences, and emotional aspects of issues.",
-    voiceId: "Google UK English Female",
+    voiceId: "nova",
     color: "#ec4899",
-    avatarSeed: "priya",
+    avatarSeed: "sophia",
   },
   {
     name: "Marcus",
     personality:
       "Bold and direct. Takes strong stances, challenges weak arguments, and pushes for actionable conclusions.",
-    voiceId: "Google US English",
+    voiceId: "onyx",
     color: "#f59e0b",
     avatarSeed: "marcus",
   },
   {
-    name: "Zoe",
+    name: "Emma",
     personality:
       "Creative and unconventional. Brings fresh perspectives, out-of-the-box ideas, and challenges conventional wisdom.",
-    voiceId: "Google UK English Female",
+    voiceId: "shimmer",
     color: "#10b981",
-    avatarSeed: "zoe",
+    avatarSeed: "emma",
   },
 ];
 

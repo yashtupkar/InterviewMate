@@ -78,7 +78,7 @@ const PricingPage = () => {
     return (
         <>
             <Helmet>
-                <title>Pricing | PriPareAI</title>
+                <title>Pricing | PlaceMateAI</title>
             </Helmet>
             <div className="min-h-screen  text-white py-12 px-4 animate-fade-in">
                 <div className="max-w-5xl mx-auto text-center">

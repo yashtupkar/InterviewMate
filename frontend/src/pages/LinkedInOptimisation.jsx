@@ -58,7 +58,7 @@ const LinkedInOptimisation = () => {
   return (
     <>
       <Helmet>
-        <title>LinkedIn Optimization | PriPareAI</title>
+        <title>LinkedIn Optimization | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen text-zinc-100 selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
         <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">

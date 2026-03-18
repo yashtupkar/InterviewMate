@@ -100,7 +100,7 @@ const DashboardOverview = () => {
   return (
     <>
       <Helmet>
-        <title>Dashboard | PriPareAI</title>
+        <title>Dashboard | PlaceMateAI</title>
       </Helmet>
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 animate-fade-in">
         {/* Header Section */}

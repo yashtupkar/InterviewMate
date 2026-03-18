@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 const FAQ = () => {
   const faqs = [
-    { q: "How do I get started with InterviewMate?", a: "Simply sign up for a free account, complete your profile, and start your first AI mock interview instantly." },
+    { q: "How do I get started with PlaceMateAI?", a: "Simply sign up for a free account, complete your profile, and start your first AI mock interview instantly." },
     { q: "Is the voice interaction real-time?", a: "Yes, our platform uses cutting-edge speech-to-text and LLM integrations to provide under 500ms latency, mimicking a real conversation." },
     { q: "Are the interview questions actually relevant to my role?", a: "Absolutely. We tailor questions specifically to the role, seniority, and tech stack you specify before starting." },
     { q: "How does the Group Discussion feature work?", a: "You'll join a virtual room populated by distinct AI personas, each programmed with unique behaviors. You interact with them as if they are real participants." },

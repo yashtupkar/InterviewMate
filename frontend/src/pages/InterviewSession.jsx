@@ -19,11 +19,14 @@ import {
   FiArrowRight,
   FiShield,
   FiMoreVertical,
+  FiCode,
+  FiZap,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
 import { AppContext } from "../context/AppContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
+import CodingSpace from "../components/CodingSpace";
 
 const vapiSpeechConfig = {
   responseDelaySeconds: 1.5,
@@ -161,6 +164,10 @@ const InterviewSession = () => {
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isAiThinking, setIsAiThinking] = useState(false); // New state for "AI is thinking"
   const [hasCallEnded, setHasCallEnded] = useState(false);
+  // codingPopupTask: shows the Attempt/Skip popup
+  const [codingPopupTask, setCodingPopupTask] = useState(null);
+  // activeCodingTask: only set AFTER user clicks Attempt — opens full CodingSpace
+  const [activeCodingTask, setActiveCodingTask] = useState(null);
 
   const vapi = useRef(null);
   const transcriptEndRef = useRef(null);
@@ -183,6 +190,157 @@ const InterviewSession = () => {
   useEffect(() => {
     sessionIdRef.current = sessionId;
   }, [sessionId]);
+
+  // ── Coding Question Detection ──────────────────────────────────────────────
+  // Sets codingPopupTask (shows Attempt/Skip popup). Only sets activeCodingTask
+  // after the user clicks "Attempt".
+  useEffect(() => {
+    // If a popup or active task is already showing, don't re-trigger
+    if (activeCodingTask || codingPopupTask) return;
+
+    for (let i = transcript.length - 1; i >= 0; i--) {
+      const message = transcript[i];
+      if (!message.isAgent) continue;
+
+      const text = message.stableText || message.text || "";
+      if (!text) continue;
+
+      // 1. Primary: [CODE_QUESTION] tags with JSON
+      const tagMatch = text.match(/\[CODE_QUESTION\]([\s\S]*?)\[\/CODE_QUESTION\]/i);
+      if (tagMatch) {
+        try {
+          let jsonStr = tagMatch[1].trim();
+          jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const taskData = JSON.parse(jsonStr);
+          if (taskData.question) {
+            console.log("[CodingQ] Detected via tags:", taskData);
+            setCodingPopupTask(taskData);
+            return;
+          }
+        } catch (e) {
+          const fuzzyTask = extractFuzzyTask(tagMatch[1]);
+          if (fuzzyTask) { setCodingPopupTask(fuzzyTask); return; }
+        }
+      }
+
+      // 2. Keyword fallback
+      if (
+        text.toLowerCase().includes("coding question") ||
+        text.toLowerCase().includes("write a function") ||
+        (text.toLowerCase().includes("language") && text.toLowerCase().includes("time limit"))
+      ) {
+        const jsonMatch = text.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+          try {
+            const taskData = JSON.parse(jsonMatch[0].trim());
+            if (taskData.question && taskData.language) { setCodingPopupTask(taskData); return; }
+          } catch (e) {}
+        }
+        const fuzzyTask = extractFuzzyTask(text);
+        if (fuzzyTask) { console.log("[CodingQ] Fuzzy detection:", fuzzyTask); setCodingPopupTask(fuzzyTask); return; }
+      }
+    }
+  }, [transcript, activeCodingTask, codingPopupTask]);
+
+  // ── Skip handler: tell Vapi the user skipped
+  const handleSkipCodingQuestion = () => {
+    try {
+      if (vapi.current) {
+        vapi.current.send({
+          type: "add-message",
+          message: {
+            role: "user",
+            content:
+              "Sorry, I am not able to attempt the coding question right now. Please continue with the next question or topic.",
+          },
+        });
+      }
+    } catch (e) {
+      console.warn("[CodingQ] Could not send skip message to Vapi:", e);
+    }
+    setCodingPopupTask(null);
+    toast("Skipped coding question. Continuing interview…");
+  };
+
+  // ── Attempt handler: move task to active, mute mic
+  const handleAttemptCodingQuestion = () => {
+    if (!codingPopupTask) return;
+    // Mute mic while editing code (wrapped in try-catch — some SDK versions differ)
+    if (vapi.current && !isMuted) {
+      try { vapi.current.mute(); } catch (e) {
+        console.warn("[CodingQ] vapi.mute() unavailable, trying setMuted:", e);
+        try { vapi.current.setMuted(true); } catch (e2) {}
+      }
+      setIsMuted(true);
+      setIsMicEnabled(false);
+    }
+    setActiveCodingTask(codingPopupTask);
+    setCodingPopupTask(null);
+  };
+
+  // ── Submit handler: notify Vapi, unmute, close CodingSpace
+  const handleCodingSubmit = (submission) => {
+    const { code, language, isAutoSubmit } = submission;
+    const summaryMsg = isAutoSubmit
+      ? `Time's up! I've submitted my solution for the coding question. Language: ${language}. Here is my code:\n\n${code}`
+      : `I've finished my coding solution. Language: ${language}. Here is my code:\n\n${code}`;
+
+    try {
+      if (vapi.current) {
+        vapi.current.send({
+          type: "add-message",
+          message: { role: "user", content: summaryMsg },
+        });
+      }
+    } catch (e) {
+      console.warn("[CodingQ] Could not send submission to Vapi:", e);
+    }
+
+    // Unmute mic and resume interview
+    if (vapi.current && isMuted) {
+      try { vapi.current.unmute(); } catch (e) {}
+      setIsMuted(false);
+      setIsMicEnabled(true);
+    }
+
+    setActiveCodingTask(null);
+    toast.success(isAutoSubmit ? "Time up! Code submitted. Interview continues…" : "Code submitted! Interview continues…");
+  };
+
+  // Helper to extract task details from unstructured text
+  const extractFuzzyTask = (text) => {
+    const lowerText = text.toLowerCase();
+    
+    // Look for language
+    const languages = ['javascript', 'html', 'python', 'java', 'cpp', 'css'];
+    const language = languages.find(l => lowerText.includes(l));
+    
+    // Look for time limit (e.g., "300 seconds", "5 minutes", "limit 300")
+    let timeLimit = 300;
+    const timeMatch = text.match(/(?:time|limit|duration).*?(\d+)/i);
+    if (timeMatch) timeLimit = parseInt(timeMatch[1]);
+    else if (lowerText.includes("5 minute")) timeLimit = 300;
+    
+    // Try to isolate the question
+    // Usually starts after "Question:" or "write a function to"
+    let question = "";
+    const questionMatch = text.match(/(?:question|task|challenge)[:\s]+(.*?)(?=\n|Language|Time|$)/i);
+    if (questionMatch) question = questionMatch[1].trim();
+    else if (lowerText.includes("write a function")) {
+      const idx = lowerText.indexOf("write a function");
+      question = text.substring(idx).split(/[.\n]/)[0].trim();
+    }
+
+    if (language && (question || text.length > 50)) {
+      return {
+        question: question || "Please refer to the conversation for instructions.",
+        language: language,
+        timeLimit: timeLimit,
+        initialCode: ""
+      };
+    }
+    return null;
+  };
 
   // Redirect if no sessionId or systemPrompt (skip in preview mode)
   useEffect(() => {
@@ -559,7 +717,10 @@ const InterviewSession = () => {
                 normalized.includes(phrase),
               );
 
-              if (shouldEnd) {
+              // FIX: Don't end if a coding task was JUST detected or is active
+              const containsCodingTask = normalized.includes("coding question") || normalized.includes("write a function") || normalized.includes("[code_question]");
+
+              if (shouldEnd && !containsCodingTask && !activeCodingTask) {
                 console.log("End phrase detected:", normalized);
                 hasEndedRef.current = true;
                 pendingEndRef.current = true;
@@ -577,7 +738,7 @@ const InterviewSession = () => {
             model: "nova-2",
             language: "en-US",
             smartFormat: true,
-            keywords: [user?.fullName, user?.firstName, user?.lastName, "InterviewMate"]
+            keywords: [user?.fullName, user?.firstName, user?.lastName, "PlaceMateAI"]
               .filter(Boolean)
               .flatMap(name => name.split(/\s+/))
               .filter(word => word.length > 0),
@@ -722,8 +883,20 @@ const InterviewSession = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background dark:text-zinc-100 text-gray-900 font-sans">
-      <div className="h-full flex flex-col overflow-hidden min-h-[90vh]">
+    <div className="min-h-screen bg-background dark:text-zinc-100 text-gray-900 font-sans overflow-hidden">
+
+      {/* ── Full-Screen CodingSpace (after Attempt clicked) ───────────────── */}
+      {activeCodingTask && (
+        <div className="fixed inset-0 z-[120] flex flex-col animate-in fade-in duration-300">
+          <CodingSpace
+            task={activeCodingTask}
+            disableCopyPaste={true}
+            onSubmit={handleCodingSubmit}
+          />
+        </div>
+      )}
+
+      <div className="h-full flex flex-col min-h-[90vh]">
         <header className="px-4 md:px-6 py-3 flex items-center justify-between bg-zinc-950/80 border-b dark:border-white/5 border-black/5 backdrop-blur-xl sticky top-0 z-40">
           <div className="flex items-center gap-3 md:gap-4">
             <button
@@ -768,11 +941,12 @@ const InterviewSession = () => {
 
         <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
           <div className="flex flex-col gap-6 min-w-0">
-            <div className="relative aspect-video dark:bg-surface-alt/40 bg-gray-100/40 rounded-[28px] overflow-hidden border dark:border-[#bef264] border-black/5 shadow-[0_0_60px_rgba(24,24,27,0.7)]">
+            <div className={`relative aspect-video dark:bg-surface-alt/40 bg-gray-100/40 rounded-[28px] overflow-hidden border dark:border-[#bef264] border-black/5 transition-all duration-700 ${activeCodingTask ? 'scale-95 blur-xl' : 'scale-100 blur-0 shadow-[0_0_60px_rgba(24,24,27,0.7)]'}`}>
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-                {callStatus === "active" && (
+                {callStatus === "active" && !activeCodingTask && (
                   <div className="absolute inset-0 dark:bg-zinc-800 bg-gray-100 blur-[90px] animate-pulse-slow pointer-events-none" />
                 )}
+                
                 {hasCallEnded && !isProcessing && (
                   <div className="absolute inset-0 dark:bg-black/80 bg-white/80 backdrop-blur-md flex items-center justify-center z-40">
                     <div className="text-center w-full max-w-sm px-6">
@@ -810,55 +984,39 @@ const InterviewSession = () => {
                     </div>
                   </div>
                 )}
-                {isUserFocus ? (
-                  isVideoOn ? (
-                    <video
-                      ref={localVideoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover mirror z-10"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col z-10 items-center justify-center  dark:text-zinc-400 text-gray-600">
-                      {user?.avatar ? (
-                        <img
-                          src={user?.avatar}
-                          alt="User Avatar"
-                          className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-[#bef264]/50"
+
+                {/* Interviewer View / Speaker Indicator */}
+                <div className={`relative w-full h-full flex items-center justify-center transition-all duration-700 ${activeCodingTask ? 'scale-75' : 'scale-100'}`}>
+                   {!isUserFocus && (
+                     <div className="relative flex items-center justify-center">
+                        <div
+                          ref={agentVolumeCircleRef}
+                          className={`absolute inset-0 rounded-full bg-blue-900/40 transition-transform duration-75 ease-out pointer-events-none ${isAgentSpeaking ? "opacity-100" : "opacity-0"}`}
+                          style={{ transform: "scale(1)" }}
                         />
-                      ) : (
-                        <div className="w-24 h-24 rounded-full bg-[#bef264]/20 flex items-center justify-center mb-4 border-2 border-[#bef264]/50">
-                          <FiUser className="text-4xl text-[#bef264]" />
+                        <div
+                          className={`relative w-28 h-28 md:w-32 md:h-32 rounded-full dark:bg-zinc-900/80 bg-gray-100/80 border ${isAgentSpeaking ? "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.6)]" : "dark:border-white/10 border-black/10"} shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden z-10 transition-all duration-300`}
+                        >
+                          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-indigo-500 border dark:border-white/10 border-black/10 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
+                            <img
+                              src={getAgentImage(displayData.agentName)}
+                              alt={displayData.agentName}
+                              className={`w-full h-full object-cover transition-transform duration-500 ${isAgentSpeaking ? 'scale-110' : 'scale-100'}`}
+                            />
+                          </div>
                         </div>
-                      )}
-                      <span className="text-[10px] font-semibold uppercase mt-2">
-                        Camera Off
-                      </span>
-                    </div>
-                  )
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-zinc-950/40">
-                    <div className="relative flex items-center justify-center">
-                      <div
-                        ref={agentVolumeCircleRef}
-                        className={`absolute inset-0 rounded-full bg-blue-900/40 transition-transform duration-75 ease-out pointer-events-none ${isAgentSpeaking ? "opacity-100" : "opacity-0"}`}
-                        style={{ transform: "scale(1)" }}
-                      />
-                      <div
-                        className={`relative w-28 h-28 rounded-full dark:bg-zinc-900/80 bg-gray-100/80 border ${isAgentSpeaking ? "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.6)]" : "dark:border-white/10 border-black/10"} shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden z-10 transition-all duration-300`}
-                      >
-                        <div className="w-24 h-24 rounded-full bg-indigo-500 border dark:border-white/10 border-black/10 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
-                          <img
-                            src={getAgentImage(displayData.agentName)}
-                            alt={displayData.agentName}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                     </div>
+                   )}
+                   {isUserFocus && isVideoOn && (
+                     <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover rounded-[28px]" />
+                   )}
+                </div>
+
+                <div className="absolute top-6 left-6 z-20 flex items-center gap-2">
+                   <div className="px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 text-[10px] font-bold text-white uppercase tracking-wider">
+                     {isAgentSpeaking ? `${displayData.agentName} is speaking...` : isAiThinking ? "AI is thinking..." : "Interviewer"}
+                   </div>
+                </div>
               </div>
 
               <button
@@ -1001,8 +1159,8 @@ const InterviewSession = () => {
                       <div className="bg-emerald-400 h-full rounded-full animate-progress"></div>
                     </div>
                   </div>
-                </div>
-              )}
+               </div>
+            )}
             </div>
 
             <div className="space-y-4">
@@ -1126,6 +1284,72 @@ const InterviewSession = () => {
           </div>
 
           <div className="flex flex-col min-w-0 gap-4">
+            {/* ── Coding Question Card (inline, above transcript) ─────────────── */}
+            {codingPopupTask && !activeCodingTask && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 dark:bg-[#141417] overflow-hidden shadow-lg shadow-primary/5 animate-in slide-in-from-top-2 duration-300">
+                {/* Gradient accent line */}
+                <div className="h-0.5 w-full bg-gradient-to-r from-primary via-emerald-400 to-primary" />
+                <div className="p-4">
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                        <FiCode size={15} className="text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Coding Challenge</p>
+                        <p className="text-[13px] font-black text-white truncate">{codingPopupTask.title || "Coding Question"}</p>
+                      </div>
+                    </div>
+                    {/* Badges */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {codingPopupTask.difficulty && (
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                          codingPopupTask.difficulty === 'Easy'
+                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                            : codingPopupTask.difficulty === 'Medium'
+                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                            : 'bg-red-500/10 border-red-500/20 text-red-400'
+                        }`}>{codingPopupTask.difficulty}</span>
+                      )}
+                      {codingPopupTask.language && (
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 uppercase">
+                          {codingPopupTask.language}
+                        </span>
+                      )}
+                      {codingPopupTask.timeLimit && (
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-400">
+                          ⏱ {Math.floor(codingPopupTask.timeLimit / 60)}m
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Question snippet */}
+                  <p className="text-[11px] text-zinc-400 leading-relaxed line-clamp-2 mb-3">
+                    {codingPopupTask.question || "The interviewer has posed a coding question."}
+                  </p>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAttemptCodingQuestion}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-[#a3e635] text-black text-[11px] font-black rounded-xl transition-all active:scale-95 shadow-md shadow-primary/20"
+                    >
+                      <FiZap size={12} /> Attempt
+                    </button>
+                    <button
+                      onClick={handleSkipCodingQuestion}
+                      className="flex items-center gap-1.5 px-4 py-2 dark:bg-zinc-800 bg-gray-200 hover:bg-zinc-700 dark:text-zinc-300 text-gray-700 text-[11px] font-bold rounded-xl border border-white/8 transition-all active:scale-95"
+                    >
+                      Skip
+                    </button>
+                    <p className="ml-auto text-[9px] text-zinc-600 font-medium">⚠ Copy/paste disabled during attempt</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col dark:bg-zinc-900/60 bg-gray-100/60 rounded-2xl border dark:border-white/5 border-black/5 overflow-hidden shadow-2xl h-[640px]">
               <div className="p-3 flex items-center gap-2 dark:bg-zinc-900 bg-gray-50 border-b dark:border-white/5 border-black/5">
                 <div className="flex-1 flex gap-1">
@@ -1166,18 +1390,10 @@ const InterviewSession = () => {
                 ) : (
                   transcript.map((msg) => (
                     <div key={msg.id} className="group animate-message-in">
-                      <div
-                        className={`flex items-center gap-2 mb-1.5 ${msg.isAgent ? "" : "flex-row-reverse"}`}
-                      >
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden ${msg.isAgent ? "bg-indigo-500/90 dark:text-white text-black" : "dark:bg-zinc-800 bg-gray-100 dark:text-zinc-300 text-gray-700"}`}
-                        >
+                      <div className={`flex items-center gap-2 mb-1.5 ${msg.isAgent ? "" : "flex-row-reverse"}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden ${msg.isAgent ? "bg-indigo-500/90" : "dark:bg-zinc-800 bg-gray-100"}`}>
                           {msg.isAgent ? (
-                            <img
-                              src={getAgentImage(displayData.agentName)}
-                              alt={msg.speaker}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={getAgentImage(displayData.agentName)} alt={msg.speaker} className="w-full h-full object-cover" />
                           ) : user?.avatar ? (
                             <img
                               src={user.avatar}
@@ -1188,19 +1404,12 @@ const InterviewSession = () => {
                             "U"
                           )}
                         </div>
-                        <span className="text-xs font-semibold dark:text-zinc-400 text-gray-600 uppercase tracking-tighter">
+                        <span className="text-[10px] font-semibold dark:text-zinc-500 text-gray-500 uppercase tracking-tighter">
                           {msg.speaker} • {msg.timestamp}
                         </span>
                       </div>
-                      <div
-                        className={`flex ${msg.isAgent ? "justify-start" : "justify-end"}`}
-                      >
-                        <div
-                          className={`p-4 rounded-2xl text-sm w-[75%] transition-all shadow-sm ${msg.isAgent
-                              ? "dark:bg-zinc-800/80 bg-gray-200/80 dark:text-zinc-200 text-gray-800 border dark:border-white/5 border-black/5 rounded-tl-none"
-                              : "bg-indigo-500 dark:text-white text-black border border-indigo-500/20 rounded-tr-none"
-                            }`}
-                        >
+                      <div className={`flex ${msg.isAgent ? "justify-start" : "justify-end"}`}>
+                        <div className={`p-3 rounded-2xl text-[13px] w-[85%] transition-all ${msg.isAgent ? "dark:bg-zinc-800/80 bg-gray-200/80 dark:text-zinc-200 text-gray-800 rounded-tl-none" : "bg-indigo-500 text-white rounded-tr-none"}`}>
                           {msg.text}
                         </div>
                       </div>
@@ -1221,29 +1430,6 @@ const InterviewSession = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="rounded-2xl dark:bg-zinc-900/70 bg-gray-100/70 border dark:border-white/5 border-black/5 p-4">
-                <div className="flex items-center gap-2 mb-2 dark:text-zinc-300 text-gray-700">
-                  <FiMessageSquare size={14} />
-                  <span className="text-[11px] font-semibold">Notes</span>
-                </div>
-                <p className="text-[11px] dark:text-zinc-500 text-gray-500">
-                  Capture key points for your report review.
-                </p>
-              </div>
-              <div className="rounded-2xl dark:bg-zinc-900/70 bg-gray-100/70 border dark:border-white/5 border-black/5 p-4">
-                <div className="flex items-center gap-2 mb-2 dark:text-zinc-300 text-gray-700">
-                  <FiBarChart2 size={14} />
-                  <span className="text-[11px] font-semibold">Progress</span>
-                </div>
-                <div className="w-full dark:bg-zinc-800 bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-emerald-400 h-full w-2/3 rounded-full"></div>
-                </div>
-                <p className="text-[10px] dark:text-zinc-500 text-gray-500 mt-2">
-                  AI feedback generated at the end of the session.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

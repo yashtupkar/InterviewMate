@@ -42,6 +42,7 @@ const interviewSessionSchema = new mongoose.Schema({
     uploadedInfo: { type: String },
     role: { type: String },
     level: { type: String },
+    duration: { type: Number, default: 10 },
     agentName: { type: String, default: "Rohan" },
   },
   createdAt: {

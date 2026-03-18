@@ -70,7 +70,7 @@ const PastInterviews = () => {
   return (
     <>
       <Helmet>
-        <title>Past Interviews | InterviewMate</title>
+        <title>Past Interviews | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
         <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">

@@ -8,9 +8,9 @@ export const InterviewProvider = ({ children }) => {
     role: "Software Engineer",
     level: "Junior",
     content: "",
-    agentName: "Rohan",
-    agentVoiceProvider: "openai",
-    agentVoiceId: "echo",
+    agentName: "",
+    agentVoiceProvider: "",
+    agentVoiceId: "",
   });
   const [sessionId, setSessionId] = useState(null);
   const [transcript, setTranscript] = useState([]);

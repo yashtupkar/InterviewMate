@@ -13,11 +13,13 @@
   "type": "commonjs",
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
+    "@deepgram/sdk": "^5.0.0",
     "axios": "^1.13.6",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "mongoose": "^9.3.0",
+    "openai": "^6.32.0",
     "svix": "^1.88.0"
   },
   "devDependencies": {

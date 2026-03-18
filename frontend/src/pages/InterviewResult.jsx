@@ -136,7 +136,7 @@ const InterviewResult = () => {
     return (
       <>
         <Helmet>
-          <title>Analyzing Interview | PriPareAI</title>
+          <title>Interview Analysis | PlaceMateAI</title>
         </Helmet>
         <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6">
           <div className="relative w-20 h-20">
@@ -165,7 +165,7 @@ const InterviewResult = () => {
     return (
       <>
         <Helmet>
-          <title>Analysis Failed | InterviewMate</title>
+          <title>Analysis Failed | PlaceMateAI</title>
         </Helmet>
         <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6 text-center px-4">
           <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center border border-red-500/20 shadow-2xl shadow-red-500/5">
@@ -208,7 +208,7 @@ const InterviewResult = () => {
   return (
     <>
       <Helmet>
-        <title>Interview Result | InterviewMate</title>
+        <title>Interview Result | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen text-zinc-100 selection:bg-[#bef264]/30 pb-20 p-6">
         <div className="max-w-4xl mx-auto flex flex-col gap-8 animate-fade">

@@ -129,7 +129,7 @@ const Billing = () => {
     return (
         <>
             <Helmet>
-                <title>Billing | PriPareAI</title>
+                <title>Billing | PlaceMateAI</title>
             </Helmet>
             <div className="min-h-screen text-white py-12 px-4 md:px-8 border-l border-white/5 animate-fade-in custom-scrollbar overflow-y-auto">
                 <div className="max-w-6xl mx-auto pb-24">
@@ -218,7 +218,7 @@ const Billing = () => {
                                             <h3 className="text-xl font-black">Refer & Earn Credits</h3>
                                         </div>
                                         <p className="text-zinc-400 text-sm font-medium max-w-md">
-                                            Invite your friends to PriPareAI and earn bonus credits for every successful referral.
+                                            Invite your friends to PlaceMateAI and earn bonus credits for every successful referral.
                                         </p>
                                     </div>
                                     <Link 

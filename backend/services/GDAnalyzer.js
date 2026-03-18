@@ -90,7 +90,7 @@ RULES:
 - Use a natural Indian filler like "So," "Well," or "Actually."
 - NO "Good morning/evening."
 
-Example: "Hello everyone, I am Alex. I'd like to start our discussion on remote work. Actually, I feel that working from home makes us much more comfortable and productive."
+Example: "Hello everyone, I am Rohan. I'd like to start our discussion on remote work. Actually, I feel that working from home makes us much more comfortable and productive."
 
 Respond ONLY with the sentence.`;
 
