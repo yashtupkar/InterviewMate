@@ -36,8 +36,12 @@ app.use('/api/custom-interview', customInterviewRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'PrepiAi API is running...' });
+    res.json({ status: 'OK', message: 'PlaceMateAI API is running...' });
 });
+
+app.get("/",(req,res)=>{
+    res.send("Hello from PlaceMateAI's Backend!");
+})
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

@@ -1,13 +1,13 @@
-# <img src="./frontend/public/favicon.svg" width="40" height="40" valign="middle"> PrepiAi
+# <img src="./frontend/public/favicon.svg" width="40" height="40" valign="middle"> PlaceMateAI
 
 <div align="center">
   <p align="center">
     <h3>Ace Your Next Interview with AI-Powered Precision</h3>
     <br />
     <a href="#features">Features</a> ·
+    <a href="#custom-engine">Custom AI Engine</a> ·
     <a href="#tech-stack">Tech Stack</a> ·
-    <a href="#getting-started">Getting Started</a> ·
-    <a href="#contributing">Contributing</a>
+    <a href="#getting-started">Getting Started</a>
   </p>
 </div>
 
@@ -15,59 +15,68 @@
 
 ## 🌟 Overview
 
-**PrepiAi** is a cutting-edge platform designed to transform the way users prepare for their career milestones. By leveraging the power of **AI** and **Real-time Voice Communication**, PrepiAi provides a safe, realistic environment to practice mock interviews, participate in group discussions, and optimize professional profiles.
-
-Designed with a sleek **"Midnight Cyan"** aesthetic, it offers a premium experience that is as functional as it is beautiful.
+**PlaceMateAI** (formerly PrepiAi) is a cutting-edge platform designed to transform how users prepare for career breakthroughs by moving away from expensive third-party wrappers like Vapi. PlaceMateAI leverages a **Custom-Built AI Engine** to provide high-performance, low-latency mock interviews and group discussions at a fraction of the cost.
 
 ## 🚀 Key Features
 
-- 🤖 **AI-Powered Mock Interviews**: Real-time voice-based sessions with intelligent AI interviewers that provide instant feedback.
-- 👥 **Group Discussion (GD) Simulations**: Experience collaborative and competitive group discussion environments.
-- 👔 **LinkedIn Optimization**: AI-driven insights to help you stand out to recruiters and peers.
-- 📊 **Dynamic Dashboard**: Track your progress with data visualization tools (Recharts) showing your performance over time.
-- 🎫 **Referral System**: Earn rewards by inviting friends to join the platform.
-- 🔐 **Premium Authentication**: Secure and seamless sign-in/up experience powered by **Clerk**.
-- 💳 **Billing & Pricing**: Integrated subscription models and usage tracking with circular progress indicators.
-- 📱 **Responsive Design**: A fully fluid UI that looks stunning on desktops, tablets, and mobile devices.
+- 🤖 **Custom AI Mock Interviews**: Low-latency, voice-based sessions using Gemini 2.0 Flash Lite.
+- 👥 **Group Discussion (GD) Multi-Agent**: Participate in dynamic GDs with 4 distinct AI personalities.
+- 💻 **Real-time Coding Space**: Solve technical questions in an integrated IDE during interviews.
+- 📊 **Intelligent Reports**: Instant, deep-dive analysis of your performance across 8+ dimensions.
+- 👔 **LinkedIn Optimization**: AI insights to polish your professional profile.
+- 🔐 **Secure Auth**: Powered by **Clerk** for seamless user management.
+- 💳 **Affordable Pricing**: Built on a cost-efficient architecture to make prep accessible to everyone.
+
+---
+
+## 🧠 Custom AI Engine & Cost Efficiency
+
+PlaceMateAI has transitioned from **Vapi AI** to a proprietary orchestration engine to maximize affordability and control.
+
+### **The Architecture**
+*   **Speech-to-Text (STT)**: Browser-native `Web Speech API` (Zero Cost).
+*   **Large Language Model (LLM)**: `Google Gemini 2.0 Flash Lite` via OpenRouter (Ultra-low latency, ~₹0.0186/min).
+*   **Text-to-Speech (TTS)**: Browser-native `window.speechSynthesis` (Zero Cost).
+*   **Orchestration**: Custom React-Node logic for real-time multi-agent GD synchronization.
+
+### **Cost Summary**
+PlaceMateAI is **99% cheaper** to run than Vapi-based solutions.
+*   **20-Min Interview**: ₹280 (Vapi) vs **₹0.46** (PlaceMateAI).
+*   **30-Min GD Session**: ₹420 (Vapi) vs **₹1.68** (PlaceMateAI).
+
+For a detailed cost analysis, see [pricing.md](./pricing.md).
+
+---
 
 ## 🛠 Tech Stack
 
 ### Frontend
-![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
-![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![Redux](https://img.shields.io/badge/redux-%23593d88.svg?style=for-the-badge&logo=redux&logoColor=white)
-![Clerk](https://img.shields.io/badge/Clerk-6C47FF?style=for-the-badge&logo=clerk&logoColor=white)
-![Recharts](https://img.shields.io/badge/Recharts-22B5AD?style=for-the-badge)
-
-- **Vapi AI**: Powering the core voice-based AI communication.
-- **React Helmet Async**: SEO optimization and dynamic title management.
-- **Lucide Icons**: Clean, consistent iconography throughout the UI.
+- **React + Vite**: High-performance UI.
+- **TailwindCSS**: Sleek "Midnight Cyan" design system.
+- **Web Speech API**: Powering STT and TTS without server latency.
+- **Lucide Icons & Framer Motion**: Premium animations and iconography.
 
 ### Backend
-![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
-![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB)
-![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)
-![Mongoose](https://img.shields.io/badge/Mongoose-880000?style=for-the-badge&logo=mongodb&logoColor=white)
-
-- **Svix**: Securely handling webhook signatures and delivery.
-- **Clerk SDK**: Robust backend session verification.
+- **Node.js + Express**: Scalable API orchestration.
+- **MongoDB + Mongoose**: Real-time transcript and session storage.
+- **OpenRouter (Gemini)**: State-of-the-art LLM intelligence.
+- **Clerk**: Secure authentication and user sessions.
 
 ---
 
 ## 🏁 Getting Started
 
 ### Prerequisites
-- **Node.js**: v18.0.0 or later
-- **MongoDB**: Local instance or Atlas connection string
-- **NPM**: Package manager
+- **Node.js**: v18.0.0+
+- **MongoDB**: Atlas or Local instance
+- **OpenRouter API Key**: For LLM logic
 
 ### Installation
 
 1. **Clone the project**
    ```bash
-   git clone https://github.com/yourusername/prepiAi.git
-   cd prepiAi
+   git clone https://github.com/yourusername/PlaceMateAI.git
+   cd PlaceMateAI
    ```
 
 2. **Setup Backend**
@@ -75,10 +84,9 @@ Designed with a sleek **"Midnight Cyan"** aesthetic, it offers a premium experie
    cd backend
    npm install
    # Create .env and add:
-   # PORT=5000
-   # MONGODB_URI=your_uri
-   # CLERK_SECRET_KEY=your_key
-   # WEBHOOK_SECRET=your_secret
+   MONGODB_URI=your_uri
+   CLERK_SECRET_KEY=your_key
+   OPENROUTER_API_KEY=your_key
    ```
 
 3. **Setup Frontend**
@@ -86,60 +94,17 @@ Designed with a sleek **"Midnight Cyan"** aesthetic, it offers a premium experie
    cd ../frontend
    npm install
    # Create .env and add:
-   # VITE_CLERK_PUBLISHABLE_KEY=your_key
-   # VITE_API_BASE_URL=http://localhost:5000
+   VITE_CLERK_PUBLISHABLE_KEY=your_key
+   VITE_API_BASE_URL=http://localhost:5000
    ```
 
 ### Running Locally
 
-Execute these in separate terminals:
+**Backend:** `npm run dev` in `/backend`  
+**Frontend:** `npm run dev` in `/frontend`
 
-**Backend:**
-```bash
-cd backend
-npm run dev
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-Visit [http://localhost:5173](http://localhost:5173) to see the app in action!
+Visit [http://localhost:5173](http://localhost:5173).
 
 ---
 
-## 📁 Project Structure
-
-```text
-prepiAi/
-├── backend/            # Express.js server & MongoDB models
-│   ├── controllers/    # Business logic
-│   ├── models/         # Database schemas
-│   └── routes/         # API endpoints
-├── frontend/           # React + Vite application
-│   ├── src/
-│   │   ├── components/ # Reusable UI components
-│   │   ├── pages/      # View components
-│   │   ├── context/    # State management
-│   │   └── assets/     # Images and styles
-└── README.md           # You are here!
-```
-
-## 🤝 Contributing
-
-Contributions make the open-source community an amazing place!
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📜 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
----
-
-<p align="center">Made with ❤️ for Job Seekers everywhere</p>
+<p align="center">Made with ❤️ for the next generation of Job Seekers</p>
