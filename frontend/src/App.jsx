@@ -32,6 +32,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import axios from "axios";
 import CodingSpace from "./components/CodingSpace";
 import VoiceTest from "./pages/VoiceTest";
+const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -43,7 +44,7 @@ function App() {
 
   useEffect(() => {
     // Health check
-    fetch("http://localhost:5000/api/health")
+    fetch(`${backendURL}/api/health`)
       .then((res) => res.json())
       .then((data) => setBackendStatus(data.message))
       .catch((err) => setBackendStatus("Backend is offline"));
@@ -56,7 +57,7 @@ function App() {
           const token = await getToken();
           const referralCode = localStorage.getItem("referralCode");
           console.log("Syncing user with referral code:", referralCode);
-          const response = await fetch("http://localhost:5000/api/users/sync", {
+          const response = await fetch(`${backendURL}/api/users/sync`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
@@ -89,7 +90,7 @@ function App() {
 
       const fetchReferrer = async () => {
         try {
-          const res = await axios.get(`http://localhost:5000/api/referrals/info/${ref}`);
+          const res = await axios.get(`${backendURL}/api/referrals/info/${ref}`);
           if (res.data.success) {
             setReferredBy(res.data.referrer.name);
             if (!isSignedIn) {

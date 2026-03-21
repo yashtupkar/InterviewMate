@@ -10,6 +10,8 @@ import {
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 
+const backendURL = import.meta.env.VITE_BACKEND_URL;
+
 /* ─── Default demo question ──────────────────────────────────────────────── */
 const DEFAULT_TASK = {
   id: 1,
@@ -522,7 +524,7 @@ const CodingSpace = ({ task: taskProp, onSubmit, disableCopyPaste = false }) => 
     setOutput("Executing code…\n");
     try {
       const resp = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/coding/execute`,
+        `${backendURL}/api/coding/execute`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
