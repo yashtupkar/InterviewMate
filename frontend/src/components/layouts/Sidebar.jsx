@@ -21,6 +21,11 @@ import {
 
 import CircularUsage from "../common/CircularUsage";
 import Logo from "../common/Logo";
+import { MdSpaceDashboard, MdLiveHelp } from "react-icons/md";
+import { HiSparkles } from "react-icons/hi2";
+import { FaUsers } from "react-icons/fa";
+import { BsFileEarmarkTextFill, BsFileEarmarkPersonFill } from "react-icons/bs";
+import { IoChatboxEllipses } from "react-icons/io5";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -57,25 +62,25 @@ const Sidebar = ({ isOpen, onClose }) => {
   }, []);
 
   const menuItems = [
-    { name: "Overview", icon: <FiTrendingUp />, path: "/dashboard", active: location.pathname === "/dashboard" },
-    { name: "Create Interview", icon: <FiPlus />, path: "/dashboard/setup", active: location.pathname === "/dashboard/setup" },
-    { name: "Interview Reports", icon: <FiMessageSquare />, path: "/dashboard/interviews", active: location.pathname === "/dashboard/interviews" },
-    { name: "Group Discussion", icon: <FiUsers />, path: "/gd/setup", active: location.pathname === "/gd/setup" },
-    { name: "GD Reports", icon: <FiMessageCircle />, path: "/dashboard/gd-interviews", active: location.pathname === "/dashboard/gd-interviews" },
+    { name: "Overview", icon: <MdSpaceDashboard />, path: "/dashboard", active: location.pathname === "/dashboard" },
+    { name: "Mock Interviews", icon: <HiSparkles />, path: "/dashboard/setup", active: location.pathname === "/dashboard/setup" },
+    { name: "GD Simulator", icon: <FaUsers />, path: "/gd/setup", active: location.pathname === "/gd/setup" },
+    { name: "Reports", icon: <BsFileEarmarkTextFill />, path: "/dashboard/reports", active: location.pathname.startsWith("/dashboard/reports") },
+
   ];
 
   const exposureItems = [
 
     // { name: "Jobs", icon: <FiBriefcase />, path: "#", badge: "Coming soon" },
-    { name: "Resume builder", icon: <FiFileText />, path: "#", badge: "Coming.." },
+    { name: "Resume builder", icon: <BsFileEarmarkPersonFill />, path: "#", badge: "Coming.." },
     { name: "LinkedIn AI", icon: <FiLinkedin />, path: "/dashboard/linkedin", active: location.pathname === "/dashboard/linkedin", badge: "Working On" },
 
     // { name: "Leaderboard", icon: <FiAward />, path: "#", badge: "Coming So.." },
   ];
 
   const bottomItems = [
-    { name: "Feedback", icon: <FiMessageCircle />, path: "#" },
-    { name: "Help", icon: <FiHelpCircle />, path: "#" },
+    { name: "Feedback", icon: <IoChatboxEllipses />, path: "#" },
+    { name: "Help", icon: <MdLiveHelp />, path: "#" },
   ];
 
   return (
@@ -107,12 +112,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                 key={item.name}
                 to={item.path}
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${item.active
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${item.active
                     ? "bg-[#bef264]/10 text-[#bef264]"
                     : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
                   }`}
               >
-                <span className={item.active ? "text-[#bef264]" : "text-zinc-500"}>{item.icon}</span>
+                <span className={`text-lg ${item.active ? "text-[#bef264]" : "text-zinc-500"}`}>{item.icon}</span>
                 {item.name}
               </Link>
             ))}
@@ -128,8 +133,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                 key={item.name}
                 className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 cursor-not-allowed group"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-zinc-600">{item.icon}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg text-zinc-600">{item.icon}</span>
                   <span>{item.name}</span>
                 </div>
                 {item.badge && (
@@ -151,9 +156,9 @@ const Sidebar = ({ isOpen, onClose }) => {
               key={item.name}
               to={item.path}
               onClick={onClose}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors"
             >
-              <span className="text-zinc-500">{item.icon}</span>
+              <span className="text-lg text-zinc-500">{item.icon}</span>
               {item.name}
             </Link>
           ))}

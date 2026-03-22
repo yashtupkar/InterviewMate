@@ -9,7 +9,7 @@ import Homepage from "./pages/Homepage";
 import InterviewLayout from "./layout/InterviewLayout";
 import InterviewSession from "./pages/InterviewSession";
 import CreateInterview from "./pages/CreateInterview";
-import PastInterviews from "./pages/PastInterviews";
+import Reports from "./pages/Reports";
 import InterviewResult from "./pages/InterviewResult";
 import CustomInterviewSession from "./pages/CustomInterviewSession";
 import DashboardOverview from "./pages/DashboardOverview";
@@ -18,7 +18,6 @@ import { InterviewProvider } from "./context/InterviewContext";
 import GroupDiscussionSetup from "./pages/GroupDiscussionSetup";
 import GroupDiscussionSession from "./pages/GroupDiscussionSession";
 import GroupDiscussionResult from "./pages/GroupDiscussionResult";
-import PastGDs from "./pages/PastGDs";
 import PricingPage from "./pages/PricingPage";
 import LinkedInOptimisation from "./pages/LinkedInOptimisation";
 import Billing from "./pages/Billing";
@@ -163,8 +162,9 @@ function App() {
           <Route path="/dashboard" element={<InterviewLayout />}>
             <Route index element={<DashboardOverview />} />
             <Route path="setup" element={<CreateInterview />} />
-            <Route path="interviews" element={<PastInterviews />} />
-            <Route path="gd-interviews" element={<PastGDs />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="interviews" element={<Navigate to="/dashboard/reports" replace />} />
+            <Route path="gd-interviews" element={<Navigate to="/dashboard/reports" replace />} />
             <Route path="linkedin" element={<LinkedInOptimisation />} />
             <Route path="result/:sessionId" element={<InterviewResult />} />
           </Route>

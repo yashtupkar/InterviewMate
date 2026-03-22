@@ -1,20 +1,12 @@
 import { SignUp } from "@clerk/clerk-react";
 import { FiArrowLeft } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import Aurora from "../reactbits/Aurora";
+import Background from "../components/common/Background";
 
 const SignUpPage = () => {
   return (
     <div className="min-h-screen  flex items-center justify-center p-6 relative">
-            <div className="fixed inset-0 z-[-10] pointer-events-none ">
-              <div className="absolute inset-0 opacity-80">
-                <Aurora
-                  colorStops={["#00f5a0", "#7af298", "#00d9ff"]}
-                  amplitude={1.0}
-                  speed={0.5}
-                />
-              </div>
-            </div>
+      <Background />
       
       <div className="absolute top-8 left-8 z-20">
         <Link to="/" className="flex items-center gap-2 text-zinc-400 hover:text-[#bef264] transition-colors font-black uppercase tracking-widest text-[10px]">

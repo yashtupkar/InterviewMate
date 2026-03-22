@@ -15,6 +15,8 @@ import {
 } from "react-icons/fi";
 import { useInterview } from "../context/InterviewContext";
 import { useAuth } from "@clerk/clerk-react";
+import Lottie from "lottie-react";
+import loadingAnimation from "../assets/lottie/Digital marketing social media and data analysis.json";
 
 const SCORE_LABELS = {
   correctness: "Correctness",
@@ -139,11 +141,9 @@ const InterviewResult = () => {
           <title>Interview Analysis | PlaceMateAI</title>
         </Helmet>
         <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6">
-          <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-4 border-[#bef264]/10" />
-          <div className="absolute inset-0 rounded-full border-t-4 border-[#bef264] animate-spin" />
-          <FiLoader className="absolute inset-0 m-auto text-[#bef264]" size={24} />
-        </div>
+          <div className="w-64 h-64">
+            <Lottie animationData={loadingAnimation} loop={true} />
+          </div>
         <div className="text-center px-4">
           <h2 className="text-xl font-black text-white tracking-tight">Analyzing Your Performance</h2>
           <p className="text-zinc-500 text-sm mt-2 font-medium max-w-xs">

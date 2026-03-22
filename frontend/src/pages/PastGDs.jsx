@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FiMoreVertical, FiMessageSquare, FiUsers, FiClock } from "react-icons/fi";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInHours, format } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
 import EmptyState from "../components/common/EmptyState";
 
@@ -50,37 +50,19 @@ const PastGDs = () => {
   );
 
   return (
-    <>
-      <Helmet>
-        <title>Past Group Discussions | PlaceMateAI</title>
-      </Helmet>
-      <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
-        <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold dark:text-white text-black">
-            Group Discussions
-          </h2>
-          <button
-            onClick={() => navigate("/gd/setup")}
-            className="flex items-center justify-center gap-2 px-6 py-2 bg-[#bef264] hover:bg-[#bef264]-hover text-black font-bold rounded-lg transition-all active:scale-95 whitespace-nowrap text-sm"
-          >
-            <FiUsers size={16} />
-            New GD
-          </button>
-        </div>
-
+    <div className="w-full animate-fade-in-up">
         <div className="overflow-hidden rounded-xl border dark:border-white/5 border-black/5 bg-black">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b dark:border-white/5 border-black/5 dark:text-zinc-400 text-gray-600 text-xs font-medium dark:bg-[#1a1a1a]/50 bg-gray-100/50">
-                  <th className="px-6 py-4 font-medium">Topic</th>
-                  <th className="px-6 py-4 font-medium">Category</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium">Score</th>
-                  <th className="px-6 py-4 font-medium">Time</th>
-                  <th className="px-6 py-4 font-medium">Created</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium">Topic</th>
+                  <th className="px-6 py-4 font-medium hidden lg:table-cell">Category</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium">Status</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium">Score</th>
+                  <th className="px-6 py-4 font-medium hidden md:table-cell">Time</th>
+                  <th className="px-6 py-4 font-medium hidden lg:table-cell">Created</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -93,7 +75,7 @@ const PastGDs = () => {
                           <div className="h-4 w-32 skeleton" />
                         </div>
                       </td>
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 hidden sm:table-cell">
                         <div className="h-4 w-20 skeleton" />
                       </td>
                       <td className="px-6 py-6">
@@ -102,10 +84,10 @@ const PastGDs = () => {
                       <td className="px-6 py-6">
                         <div className="h-4 w-8 skeleton" />
                       </td>
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 hidden md:table-cell">
                         <div className="h-6 w-24 skeleton" />
                       </td>
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 hidden lg:table-cell">
                         <div className="h-4 w-24 skeleton" />
                       </td>
                     </tr>
@@ -117,41 +99,41 @@ const PastGDs = () => {
                       onClick={() => navigate(`/gd/result/${session._id}`)}
                       className="border-b dark:border-white/5 border-black/5 dark:bg-[#1a1a1a]/50 bg-gray-100/50 dark:hover:bg-[#1a1a1a] hover:bg-white transition-colors cursor-pointer group"
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#bef264]/10 flex items-center justify-center border border-[#bef264]/20">
-                            <FiMessageSquare className="text-[#bef264]" size={16} />
+                      <td className="px-4 sm:px-6 py-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#bef264]/10 flex items-center justify-center border border-[#bef264]/20 shrink-0">
+                            <FiMessageSquare className="text-[#bef264]" size={14} />
                           </div>
-                          <span className="dark:text-white text-black font-medium group-hover:text-[#bef264] transition-colors truncate max-w-[200px]">
+                          <span className="dark:text-white text-black font-medium group-hover:text-[#bef264] transition-colors truncate max-w-[100px] sm:max-w-[200px] text-xs sm:text-sm">
                             {session.topic}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 hidden lg:table-cell">
                         <span className="dark:text-zinc-300 text-gray-700 capitalize">
                           {session.category || "General"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-4 text-center sm:text-left">
                         <span
-                          className={`inline-flex px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-md ${session.status === "completed"
+                          className={`inline-flex px-1.5 py-0.5 sm:px-2 sm:py-1 text-[8px] sm:text-[10px] font-black uppercase tracking-widest rounded-md ${session.status === "completed"
                               ? "dark:bg-[#253321] dark:text-[#93dc65] bg-green-600 text-white border dark:border-[#3e5338]"
                               : session.status === "analysis_failed"
                                 ? "dark:bg-red-500/10 dark:text-red-400 border bg-red-500 text-white dark:border-red-500/20"
                                 : "dark:bg-yellow-500/10 dark:text-yellow-400 border bg-yellow-500 text-white dark:border-yellow-500/20"
                             }`}
                         >
-                          {session.status}
+                          {session.status === "completed" ? "Done" : session.status.split('_')[0]}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`font-black ${(session.report?.overallScore || 0) >= 75 ? "text-emerald-400" :
+                      <td className="px-4 sm:px-6 py-4">
+                        <span className={`font-black text-xs sm:text-sm ${(session.report?.overallScore || 0) >= 75 ? "text-emerald-400" :
                             (session.report?.overallScore || 0) >= 50 ? "text-amber-400" : "text-red-400"
                           }`}>
                           {session.report?.overallScore ?? "—"}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 hidden md:table-cell">
                         <div className="flex flex-col">
                           <span className="dark:text-zinc-300 text-zinc-700 font-bold">
                             {Math.floor((session.duration || 0) / 60)}m {(session.duration || 0) % 60}s
@@ -161,18 +143,18 @@ const PastGDs = () => {
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 dark:text-zinc-300 text-gray-700 font-medium truncate max-w-[120px]">
-                        {formatDistanceToNow(new Date(session.createdAt), {
-                          addSuffix: true,
-                        })}
+                      <td className="px-6 py-4 dark:text-zinc-300 text-gray-700 font-medium truncate max-w-[100px] hidden lg:table-cell">
+                          {differenceInHours(new Date(), new Date(session.createdAt)) < 12
+                            ? formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })
+                            : format(new Date(session.createdAt), "MMM d, yyyy")}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 sm:px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
                           <button
-                            className="dark:text-zinc-500 text-gray-500 dark:hover:text-white hover:text-black transition-colors p-2"
+                            className="dark:text-zinc-500 text-gray-500 dark:hover:text-white hover:text-black transition-colors p-1.5"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <FiMoreVertical size={16} />
+                            <FiMoreVertical size={14} />
                           </button>
                         </div>
                       </td>
@@ -207,9 +189,7 @@ const PastGDs = () => {
             ))}
           </div>
         )}
-        </div>
-      </div>
-    </>
+    </div>
   );
 };
 

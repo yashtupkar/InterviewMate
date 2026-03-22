@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FiMoreVertical, FiLoader, FiPlus } from "react-icons/fi";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInHours, format } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
 import { interviewAgents } from "../constants/agents";
 import EmptyState from "../components/common/EmptyState";
@@ -69,36 +69,19 @@ const PastInterviews = () => {
   );
 
   return (
-    <>
-      <Helmet>
-        <title>Past Interviews | PlaceMateAI</title>
-      </Helmet>
-      <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
-        <div className="max-w-6xl mx-auto px-6 w-full animate-fade-in-up mt-8">
-          <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-bold dark:text-white text-black">
-                    Your Interviews
-                  </h2>
-                  <button
-                    onClick={() => navigate("/create-interview")}
-                    className="flex items-center justify-center gap-2 px-6 py-2 bg-[#bef264] hover:bg-[#bef264]-hover text-black font-bold rounded-lg transition-all active:scale-95 whitespace-nowrap text-sm"
-                  >
-                    <FiPlus size={16} />
-                    Create Interview
-                  </button>
-                </div>
-
+    <div className="w-full animate-fade-in-up">
         <div className="overflow-hidden rounded-xl border dark:border-white/5 border-black/5 d bg-black">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b dark:border-white/5 border-black/5 dark:text-zinc-400 text-gray-600 text-xs font-medium dark:bg-[#1a1a1a]/50 bg-gray-100/50">
-                  <th className="px-6 py-4 font-medium">Interviewer</th>
-                  <th className="px-6 py-4 font-medium">Job Title</th>
-                  <th className="px-6 py-4 font-medium">Interview Type</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium">Created</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium">Interviewer</th>
+                  <th className="px-6 py-4 font-medium hidden sm:table-cell">Job Title</th>
+                  <th className="px-6 py-4 font-medium hidden lg:table-cell">Interview Type</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium">Status</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium">Score</th>
+                  <th className="px-6 py-4 font-medium hidden lg:table-cell">Created</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -114,13 +97,16 @@ const PastInterviews = () => {
                       <td className="px-6 py-6 font-medium">
                         <div className="h-4 w-32 skeleton" />
                       </td>
-                      <td className="px-6 py-6">
+                      <td className="px-6 py-6 hidden sm:table-cell">
                         <div className="h-4 w-20 skeleton" />
                       </td>
                       <td className="px-6 py-6">
                         <div className="h-6 w-20 rounded-md skeleton" />
                       </td>
                       <td className="px-6 py-6">
+                        <div className="h-4 w-8 skeleton" />
+                      </td>
+                      <td className="px-6 py-6 hidden md:table-cell">
                         <div className="h-4 w-24 skeleton" />
                       </td>
                       <td className="px-6 py-6">
@@ -145,31 +131,31 @@ const PastInterviews = () => {
                         }
                         className="border-b dark:border-white/5 border-black/5 dark:bg-[#1a1a1a]/50 bg-gray-100/50 dark:hover:bg-[#1a1a1a] hover:bg-white transition-colors cursor-pointer group"
                       >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
+                        <td className="px-4 sm:px-6 py-4">
+                          <div className="flex items-center gap-2 sm:gap-3">
                             <img
                               src={agent.image}
                               alt={agentName}
-                              className="w-8 h-8 rounded-full border dark:border-zinc-700 border-gray-300 object-cover"
+                              className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border dark:border-zinc-700 border-gray-300 object-cover shrink-0"
                             />
-                            <span className="dark:text-zinc-200 text-gray-800 font-medium group-hover:text-indigo-400 transition-colors">
+                            <span className="dark:text-zinc-200 text-gray-800 font-medium group-hover:text-indigo-400 transition-colors text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">
                               {agentName}
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="dark:text-white text-black font-medium">
+                        <td className="px-6 py-4 hidden sm:table-cell">
+                          <span className="dark:text-white text-black font-medium truncate max-w-[120px] lg:max-w-none block">
                             {session.metadata?.role || "Interview Session"}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 hidden lg:table-cell">
                           <span className="dark:text-zinc-300 text-gray-700 capitalize">
                             {session.interviewType}
                           </span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 sm:px-6 py-4">
                           <span
-                            className={`inline-flex px-3 py-1 text-[11px] font-semibold rounded-md ${
+                            className={`inline-flex px-1.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[11px] font-semibold rounded-md ${
                               session.status === "completed"
                                 ? "dark:bg-[#253321] dark:text-[#93dc65] bg-green-600 text-white border dark:border-[#3e5338]"
                                 : session.status === "analysis_pending"
@@ -180,37 +166,42 @@ const PastInterviews = () => {
                             }`}
                           >
                             {session.status === "completed"
-                              ? "Completed"
+                              ? "Done"
                               : session.status === "analysis_pending"
-                                ? "Analyzing..."
-                                : session.status === "analysis_failed"
-                                  ? "Analysis Failed"
-                                  : "Incomplete"}
+                                ? "..."
+                                : "Fail"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 dark:text-zinc-300 text-gray-700 font-medium truncate max-w-[120px]">
-                          {formatDistanceToNow(new Date(session.createdAt), {
-                            addSuffix: true,
-                          })}
+                        <td className="px-4 sm:px-6 py-4">
+                          <span className={`font-black text-xs sm:text-sm ${(session.report?.overallScore || 0) >= 75 ? "text-emerald-400" :
+                              (session.report?.overallScore || 0) >= 50 ? "text-amber-400" : "text-red-400"
+                            }`}>
+                            {session.report?.overallScore ?? "—"}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-6 py-4 dark:text-zinc-300 text-gray-700 font-medium truncate max-w-[100px] hidden lg:table-cell">
+                          {differenceInHours(new Date(), new Date(session.createdAt)) < 12
+                            ? formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })
+                            : format(new Date(session.createdAt), "MMM d, yyyy")}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1 sm:gap-2">
                             {(session.status === "analysis_pending" ||
                               session.status === "analysis_failed") && (
                               <button
                                 onClick={(e) =>
                                   handleGenerateReport(e, session._id)
                                 }
-                                className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20"
+                                className="text-[8px] sm:text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wider bg-indigo-500/10 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded border border-indigo-500/20"
                               >
-                                Generate Report
+                                {session.status === "analysis_pending" ? "Retry" : "Gen"}
                               </button>
                             )}
                             <button
-                              className="dark:text-zinc-500 text-gray-500 dark:hover:text-white hover:text-black transition-colors p-2"
+                              className="dark:text-zinc-500 text-gray-500 dark:hover:text-white hover:text-black transition-colors p-1.5"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <FiMoreVertical size={16} />
+                              <FiMoreVertical size={14} />
                             </button>
                           </div>
                         </td>
@@ -219,7 +210,7 @@ const PastInterviews = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-4">
+                    <td colSpan="7" className="px-6 py-4">
                       <EmptyState message="no interview found yet" />
                     </td>
                   </tr>
@@ -246,9 +237,7 @@ const PastInterviews = () => {
             ))}
           </div>
         )}
-        </div>
-      </div>
-    </>
+    </div>
   );
 };
 

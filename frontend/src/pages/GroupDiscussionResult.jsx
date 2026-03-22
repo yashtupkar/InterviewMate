@@ -14,6 +14,8 @@ import {
   FiLoader,
   FiClock,
 } from "react-icons/fi";
+import Lottie from "lottie-react";
+import loadingAnimation from "../assets/lottie/Digital marketing social media and data analysis.json";
 import { AppContext } from "../context/AppContext";
 
 const SCORE_LABELS = {
@@ -113,10 +115,8 @@ const GroupDiscussionResult = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-zinc-100 flex flex-col items-center justify-center gap-6">
-        <div className="relative w-20 h-20">
-          <div className="absolute inset-0 rounded-full border-4 border-[#bef264]/10" />
-          <div className="absolute inset-0 rounded-full border-t-4 border-[#bef264] animate-spin" />
-          <FiLoader className="absolute inset-0 m-auto text-[#bef264]" size={24} />
+        <div className="w-64 h-64">
+          <Lottie animationData={loadingAnimation} loop={true} />
         </div>
         <div className="text-center">
           <h2 className="text-xl font-black text-white tracking-tight">Generating Your Report</h2>

@@ -5,16 +5,20 @@ import {
   FiPlus, FiArrowRight, FiClock, FiCheckCircle,
   FiStar, FiActivity, FiUsers, FiMessageSquare,
   FiVideo, FiTrendingUp, FiTarget, FiAward,
-  FiMoreHorizontal, FiChevronRight, FiCheck
+  FiMoreHorizontal, FiChevronRight, FiCheck,
+  FiLoader
 } from "react-icons/fi";
 import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
+  ResponsiveContainer, Tooltip
 } from 'recharts';
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, differenceInHours, format } from "date-fns";
 import { interviewAgents } from "../constants/agents";
 import CircularUsage from "../components/common/CircularUsage";
+import { GoClockFill } from "react-icons/go";
+import { FaCheckCircle, FaUsers } from "react-icons/fa";
 
 const DashboardOverview = () => {
   const { getToken } = useAuth();
@@ -53,39 +57,89 @@ const DashboardOverview = () => {
     fetchData();
   }, [getToken]);
 
-  const completedInterviews = interviews.filter(i => i.status === 'completed');
-  const completedGDs = gds.filter(g => g.status === 'completed');
+  const completedInterviews = interviews.filter(i => i.status === 'completed' || i.report?.overallScore !== undefined);
+  const completedGDs = gds.filter(g => g.status === 'completed' || g.report?.overallScore !== undefined);
   const totalSessions = interviews.length + gds.length;
 
   const avgScore = totalSessions > 0
     ? Math.round([...completedInterviews, ...completedGDs].reduce((acc, curr) => acc + (curr.report?.overallScore || 0), 0) / totalSessions)
     : 0;
 
-  const performanceData = completedInterviews.length + completedGDs.length > 0 
-    ? [...completedInterviews, ...completedGDs]
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-      .map(session => ({
-        date: format(new Date(session.createdAt), 'MMM dd'),
-        score: session.report?.overallScore || 0,
-        type: session.interviewType ? 'Interview' : 'GD',
-        fullDate: format(new Date(session.createdAt), 'PPPP')
-      }))
-      .slice(-7)
-    : [
-      { date: 'Mon', score: 65, fullDate: 'Monday' },
-      { date: 'Tue', score: 70, fullDate: 'Tuesday' },
-      { date: 'Wed', score: 68, fullDate: 'Wednesday' },
-      { date: 'Thu', score: 75, fullDate: 'Thursday' },
-      { date: 'Fri', score: 82, fullDate: 'Friday' },
-      { date: 'Sat', score: 85, fullDate: 'Saturday' },
-      { date: 'Sun', score: 92, fullDate: 'Sunday' },
+  const skillMatrix = React.useMemo(() => {
+    const getAvg = (list, fields) => {
+      const getValue = (obj, f) => {
+        if (!obj) return undefined;
+        if (obj[f] !== undefined) return obj[f];
+        if (obj.detailedAnalysis?.overall?.[f] !== undefined) return obj.detailedAnalysis.overall[f];
+        if (obj.detailedAnalysis?.[f] !== undefined) return obj.detailedAnalysis[f];
+        if (obj.overall?.[f] !== undefined) return obj.overall[f];
+        return undefined;
+      };
+
+      const valid = list.filter(s => fields.some(f => getValue(s.report, f) !== undefined));
+      if (valid.length === 0) return 0;
+
+      return Math.round(valid.reduce((acc, s) => {
+        const val = fields.reduce((fieldAcc, f) => {
+          const v = getValue(s.report, f);
+          return fieldAcc || (v !== undefined ? v : 0);
+        }, 0);
+        return acc + (val || 0);
+      }, 0) / valid.length);
+    };
+
+    const dims = [
+      { subject: 'Comm', fullMark: 100 },
+      { subject: 'Depth', fullMark: 100 },
+      { subject: 'Initiative', fullMark: 100 },
+      { subject: 'Logic', fullMark: 100 },
+      { subject: 'Confidence', fullMark: 100 },
     ];
+
+    if (completedInterviews.length === 0 && completedGDs.length === 0) {
+      return dims.map(d => ({ 
+        ...d, 
+        Interview: 0, 
+        GD: 0 
+      }));
+    }
+
+    return [
+      { 
+        subject: 'Comm', 
+        Interview: getAvg(completedInterviews, ['communication', 'communicationScore']),
+        GD: getAvg(completedGDs, ['communicationScore', 'speakingScore'])
+      },
+      { 
+        subject: 'Depth', 
+        Interview: getAvg(completedInterviews, ['correctness', 'technicalScore']),
+        GD: getAvg(completedGDs, ['depthScore', 'topicDepth'])
+      },
+      { 
+        subject: 'Initiative', 
+        Interview: getAvg(completedInterviews, ['clarity', 'creativity']),
+        GD: getAvg(completedGDs, ['initiationScore', 'contributionScore'])
+      },
+      { 
+        subject: 'Logic', 
+        Interview: getAvg(completedInterviews, ['relevance', 'problemSolving']),
+        GD: getAvg(completedGDs, ['relevanceScore'])
+      },
+      { 
+        subject: 'Confidence', 
+        Interview: getAvg(completedInterviews, ['efficiency', 'confidenceScore']),
+        GD: getAvg(completedGDs, ['confidenceScore'])
+      },
+    ];
+  }, [completedInterviews, completedGDs]);
 
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#bef264] border-t-transparent rounded-full animate-spin"></div>
+          <div className="min-h-screen flex items-center justify-center">
+            <FiLoader className="w-8 h-8 text-[#bef264] animate-spin" />
+          </div>
           <p className="text-zinc-500 font-medium">Loading your dashboard...</p>
         </div>
       </div>
@@ -111,44 +165,74 @@ const DashboardOverview = () => {
         }
       `}} />
 
-      <div className="px-4 md:px-8 py-8 md:py-12 max-w-7xl mx-auto space-y-12 animate-fade-in text-zinc-100 selection:bg-[#bef264] selection:text-black">
+      <div className="px-4 md:px-8 py-8 md:py-12 max-w-6xl mx-auto space-y-12 animate-fade-in text-zinc-100 selection:bg-[#bef264] selection:text-black">
         
         {/* Welcome Section */}
         <section>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
-              <span className="text-[#bef264] font-bold tracking-widest text-xs uppercase mb-2 block">Performance Overview</span>
-              <h2 className="text-4xl font-black tracking-tighter text-white">Welcome back, {user?.firstName}.        <span className="text-3xl animate-wave">👋</span>
+              <span
+                className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4"              >Performance Overview</span>
+              <h2 className="text-4xl font-black tracking-tighter text-white">Welcome back, {user?.firstName}.        <span className="text-4xl animate-wave">👋</span>
 </h2>
               <p className="text-zinc-400 mt-2 max-w-lg">You're making great progress in your interview preparations. Keep the momentum going to achieve your targeted role.</p>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 w-full md:w-auto">
               {subscription ? (
-                <div className="glass-panel px-6 py-4 rounded-3xl flex flex-col justify-center border border-[#bef264]/20 shadow-[0_8px_32px_-8px_rgba(190,242,100,0.1)] min-w-[240px]">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">{subscription.tier} Plan</span>
-                    <Link to="/billing" className="text-[#bef264] text-[10px] uppercase font-black tracking-wider hover:text-white transition-colors">Upgrade</Link>
+                <div className="glass-panel w-full px-6 py-5 md:py-4 rounded-[2.5rem] border border-[#bef264]/20 flex flex-col sm:flex-row items-center gap-6 md:gap-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:border-[#bef264]/40 transition-all duration-500 group">
+                  <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-center gap-3 w-full sm:w-auto">
+                    <div className="flex items-center gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-[#bef264] shadow-[0_0_8px_#bef264] animate-pulse"></div>
+                       <span className="text-white text-[10px] font-black uppercase tracking-[0.2em]">{subscription.tier} tier</span>
+                    </div>
+                    <Link to="/billing" className="text-[9px] font-black uppercase tracking-widest text-black bg-[#bef264] hover:bg-white transition-all px-4 py-2 rounded-2xl flex items-center gap-2 group-hover:scale-105 active:scale-95 whitespace-nowrap">
+                      Upgrade <FiArrowRight size={12} />
+                    </Link>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex flex-col gap-1 items-center bg-zinc-900/50 p-2 rounded-xl border border-white/5">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Talk</span>
-                      <span className="text-sm font-black text-white">{subscription.credits.talkTime}/{subscription.limits.talkTime}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 items-center bg-zinc-900/50 p-2 rounded-xl border border-white/5">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Int</span>
-                      <span className="text-sm font-black text-white">{subscription.credits.interviews}/{subscription.limits.interviews}</span>
-                    </div>
-                    <div className="flex flex-col gap-1 items-center bg-zinc-900/50 p-2 rounded-xl border border-white/5">
-                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">GD</span>
-                      <span className="text-sm font-black text-white">{subscription.credits.gdSessions}/{subscription.limits.gdSessions}</span>
-                    </div>
+                  
+                  <div className="h-12 w-px bg-white/5 hidden sm:block"></div>
+                  <div className="h-px w-full bg-white/5 sm:hidden"></div>
+                  
+                  <div className="flex items-center justify-around sm:justify-start gap-4 md:gap-8 w-full sm:w-auto overflow-x-auto no-scrollbar py-1">
+                    <CircularUsage 
+                      label="Talk" 
+                      value={Math.round(subscription.credits.talkTime || 0)} 
+                      max={subscription.limits.talkTime || 30} 
+                      unit="m" 
+                      color="#bef264" 
+                      size={44}
+                      strokeWidth={2.5}
+                    />
+                    <CircularUsage 
+                      label="Mocks" 
+                      value={subscription.credits.interviews || 0} 
+                      max={subscription.limits.interviews || 5} 
+                      color="#bef264" 
+                      size={44}
+                      strokeWidth={2.5}
+                    />
+                    <CircularUsage 
+                      label="GD" 
+                      value={subscription.credits.gdSessions || 0} 
+                      max={subscription.limits.gdSessions || 2} 
+                      color="#bef264" 
+                      size={44}
+                      strokeWidth={2.5}
+                    />
                   </div>
                 </div>
               ) : (
-                <div className="glass-panel px-8 py-5 rounded-3xl flex flex-col justify-center border border-[#bef264]/20 border border-[#bef264]/20 shadow-[0_8px_32px_-8px_rgba(190,242,100,0.1)]">
-                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">Plan Status</span>
-                  <span className="text-lg font-black text-white mt-1">Free Tier</span>
-                </div>
+                <Link to="/billing" className="glass-panel w-full px-8 md:px-10 py-5 rounded-[2.5rem] flex flex-col justify-center border border-white/5 hover:border-[#bef264]/30 group transition-all duration-500 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#bef264]/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-[#bef264]/10 transition-colors"></div>
+                  <span className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] mb-1 group-hover:text-[#bef264] transition-colors">Current Plan</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl font-black text-white">Free Tier</span>
+                    <div className="px-2 py-0.5 rounded bg-zinc-800 text-[8px] font-black text-zinc-400 uppercase tracking-widest border border-white/5">Limited</div>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 font-bold mt-2 flex items-center gap-1 group-hover:text-zinc-300 transition-colors">
+                    Upgrade for full features <FiChevronRight />
+                  </span>
+                </Link>
               )}
             </div>
           </div>
@@ -157,22 +241,22 @@ const DashboardOverview = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <FiClock size={64} />
+            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+              <GoClockFill size={24} />
             </div>
             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Talk Time</p>
-            <h3 className="text-4xl font-black text-white">{subscription ? Math.round(subscription.credits.talkTime || 0) : '12'}<span className="text-lg text-zinc-500">m</span></h3>
+            <h3 className="text-4xl font-black text-white">{subscription ? Math.round(subscription.credits.talkTime || 0) : '0'}<span className="text-lg text-zinc-500">m</span></h3>
             <div className="mt-6 flex items-center gap-2">
               <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
-                <FiTrendingUp size={12} /> +2.1h
+                <FiTrendingUp size={12} /> Active
               </span>
-              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">this week</span>
+              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">usage</span>
             </div>
           </div>
           
           <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <FiCheckCircle size={64} />
+            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+              <FaCheckCircle size={24} />
             </div>
             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Mocks Completed</p>
             <h3 className="text-4xl font-black text-white">{completedInterviews.length}</h3>
@@ -185,8 +269,8 @@ const DashboardOverview = () => {
           </div>
 
           <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <FiUsers size={64} />
+            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+              <FaUsers size={24} />
             </div>
             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">GD Sessions</p>
             <h3 className="text-4xl font-black text-white">{gds.length}</h3>
@@ -199,16 +283,16 @@ const DashboardOverview = () => {
           </div>
 
           <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <FiTarget size={64} />
+            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+              <FiTarget size={24} />
             </div>
             <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Avg Session Score</p>
-            <h3 className="text-4xl font-black text-white">{avgScore > 0 ? avgScore : 84}<span className="text-lg text-zinc-500">%</span></h3>
+            <h3 className="text-4xl font-black text-white">{avgScore > 0 ? avgScore : 0}<span className="text-lg text-zinc-500">%</span></h3>
             <div className="mt-6 flex items-center gap-2">
-              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
-                <FiTrendingUp size={12} /> +5%
+              <span className={`text-xs font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${avgScore > 70 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[#bef264]/10 text-[#bef264]'}`}>
+                <FiTrendingUp size={12} /> {avgScore > 75 ? 'Excellent' : avgScore > 50 ? 'Steady' : 'Improving'}
               </span>
-              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">vs last week</span>
+              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Global Rank</span>
             </div>
           </div>
         </div>
@@ -230,9 +314,7 @@ const DashboardOverview = () => {
                 <div className="absolute top-0 right-0 w-80 h-80 bg-[#bef264]/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-[#bef264]/20 transition-colors duration-700"></div>
                 <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
                   <div className="w-full md:w-1/2">
-                    <div className="w-14 h-14 bg-[#bef264]/20 text-[#bef264] rounded-2xl flex items-center justify-center mb-6">
-                      <FiVideo size={28} />
-                    </div>
+                    
                     <h4 className="text-2xl font-black text-white mb-3">Voice Mock Interview</h4>
                     <p className="text-zinc-400 mb-8 text-sm leading-relaxed font-medium">Engage with our advanced AI behavioral model. Get real-time sentiment analysis and body language feedback.</p>
                     <button className="bg-[#bef264] text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-transform flex items-center gap-3">
@@ -267,9 +349,7 @@ const DashboardOverview = () => {
 
               {/* Secondary Activities */}
               <div onClick={() => navigate('/gd/setup')} className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10">
-                <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center mb-5">
-                  <FiUsers size={24} />
-                </div>
+                
                 <h4 className="text-lg font-black text-white mb-2">GD Simulator</h4>
                 <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">Practice group dynamics with 5 AI personas. Master the art of leading and listening.</p>
                 <div className="flex items-center gap-2 text-amber-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
@@ -279,9 +359,7 @@ const DashboardOverview = () => {
               </div>
 
               <div onClick={() => navigate('/billing')} className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10">
-                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center mb-5">
-                  <FiAward size={24} />
-                </div>
+              
                 <h4 className="text-lg font-black text-white mb-2">Upgrade Plan</h4>
                 <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">Get specific improvements, advanced insights, and extended usage limits tailored to you.</p>
                 <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
@@ -293,50 +371,84 @@ const DashboardOverview = () => {
           </div>
 
           {/* Right Column: Analytics & Charts */}
-          <div className="lg:col-span-5 md:col-span-12 space-y-8">
-            <div className="glass-panel p-6 rounded-3xl h-full border border-white/5 flex flex-col w-full">
-              <h3 className="text-lg font-black text-white mb-2">Performance Trend</h3>
-              <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-6">Score progression</p>
+          <div className="lg:col-span-5 md:col-span-12 space-y-8 h-full">
+            <div className="glass-panel p-6 rounded-3xl h-full border border-white/5 flex flex-col w-full min-h-[460px]">
+              <div className="flex justify-between items-start mb-10">
+                <div>
+                  <h3 className="text-lg font-black text-white mb-1">Analytical Skill Analysis</h3>
+                  <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Multi-dimensional performance</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#bef264]"></div>
+                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Mock Interview</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                    <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">GD Platform</span>
+                  </div>
+                </div>
+              </div>
               
-              <div className="w-full h-[300px] mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={performanceData}>
-                    <defs>
-                      <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#bef264" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#bef264" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#bef264" vertical={false} opacity={0.1} />
-                    <XAxis
-                      dataKey="date"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#a1a1aa', fontSize: 10, fontWeight: 700 }}
-                      dy={10}
+              <div className="w-full flex-1 flex items-center justify-center -mt-4">
+                <ResponsiveContainer width="100%" height={320}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={skillMatrix}>
+                    <PolarGrid stroke="rgba(255,255,255,0.05)" />
+                    <PolarAngleAxis 
+                      dataKey="subject" 
+                      tick={{ fill: '#71717a', fontSize: 10, fontWeight: 800 }} 
                     />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#71717a', fontSize: 10, fontWeight: 700 }}
-                      domain={[0, 100]}
+                    <PolarRadiusAxis 
+                      angle={30} 
+                      domain={[0, 100]} 
+                      tick={false} 
+                      axisLine={false} 
                     />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '12px' }}
-                      itemStyle={{ color: '#bef264', fontWeight: 700 }}
-                      labelStyle={{ color: '#ffffff', marginBottom: '4px', fontWeight: 800 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="score"
+                    <Radar
+                      name="Interview"
+                      dataKey="Interview"
                       stroke="#bef264"
-                      strokeWidth={4}
-                      fillOpacity={1}
-                      fill="url(#colorScore)"
-                      animationDuration={2000}
+                      fill="#bef264"
+                      fillOpacity={0.2}
+                      strokeWidth={3}
                     />
-                  </AreaChart>
+                    <Radar
+                      name="GD"
+                      dataKey="GD"
+                      stroke="#f59e0b"
+                      fill="#f59e0b"
+                      fillOpacity={0.2}
+                      strokeWidth={3}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#18181b', 
+                        border: '1px solid #27272a', 
+                        borderRadius: '12px',
+                        fontSize: '12px'
+                      }}
+                      itemStyle={{ fontWeight: 800 }}
+                    />
+                  </RadarChart>
                 </ResponsiveContainer>
+              </div>
+
+              <div className="mt-6 flex justify-around p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                <div className="text-center">
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">Top Skill</p>
+                  <p className="text-sm font-black text-[#bef264]">
+                    {avgScore > 0 
+                      ? skillMatrix.reduce((a,b) => (a.Interview + a.GD > b.Interview + b.GD ? a : b)).subject 
+                      : 'Pending'}
+                  </p>
+                </div>
+                <div className="w-px h-8 bg-white/5"></div>
+                <div className="text-center">
+                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">Status</p>
+                  <p className="text-sm font-black text-white">
+                    {totalSessions > 5 ? 'Stable' : totalSessions > 0 ? 'Building' : 'Incomplete'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -382,7 +494,9 @@ const DashboardOverview = () => {
                         <span className="px-2 py-1 rounded bg-[#bef264]/10 text-[#bef264] border border-[#bef264]/20 text-[9px] font-black uppercase tracking-[0.1em]">Done</span>
                       </td>
                       <td className="px-5 py-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                        {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
+                        {differenceInHours(new Date(), new Date(session.createdAt)) < 12
+                          ? formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })
+                          : format(new Date(session.createdAt), "MMM d, yyyy")}
                       </td>
                       <td className="px-5 py-3">
                         <span className="text-base font-black text-white group-hover:text-[#bef264] transition-colors">{session.report?.overallScore || '-'}<span className="text-[10px] text-zinc-500 ml-1">%</span></span>
@@ -406,7 +520,6 @@ const DashboardOverview = () => {
             </div>
           </div>
         </section>
-
       </div>
     </>
   );

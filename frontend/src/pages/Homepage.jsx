@@ -9,7 +9,7 @@ import Testimonials from "../components/home/Testimonials";
 import FAQ from "../components/home/FAQ";
 import CTA from "../components/home/CTA";
 import PricingSection from "../components/home/PricingSection";
-import Aurora from "../reactbits/Aurora";
+import Background from "../components/common/Background";
 
 const Homepage = ({ backendStatus }) => {
   const location = useLocation();
@@ -29,25 +29,16 @@ const Homepage = ({ backendStatus }) => {
         <title>PlaceMateAI | AI Interview Practice</title>
       </Helmet>
       <div className="min-h-screen  overflow-x-hidden selection:bg-indigo-500/30">
-      {/* Fixed Aurora Background for the entire page */}
-      <div className="fixed inset-0 z-[-10] pointer-events-none bg-background">
-        <div className="absolute inset-0 opacity-80">
-          <Aurora
-            colorStops={["#00f5a0", "#7af298", "#00d9ff"]}
-            amplitude={1.0}
-            speed={0.5}
-          />
-        </div>
-      </div>
+        <Background />
 
-      <Hero backendStatus={backendStatus} />
-      <Steps />
-      <Features />
-      <Roles />
-      <PricingSection />
-      <Testimonials />
-      <FAQ />
-      <CTA />
+        <Hero backendStatus={backendStatus} />
+        <Steps />
+        <Features />
+        <Roles />
+        <PricingSection />
+        <Testimonials />
+        <FAQ />
+        <CTA />
       </div>
     </>
   );
