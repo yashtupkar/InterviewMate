@@ -28,7 +28,7 @@ const PLAN_CONFIG = {
         amountPaise: 19900,   // ₹199
         billingCycle: 'monthly',
         expiryDays: 30,
-        credits: { talkTime: 150, interviews: 10, gdSessions: 15 },
+        credits: 200,
         isTopup: false
     },
     placement_pro_monthly: {
@@ -37,7 +37,7 @@ const PLAN_CONFIG = {
         amountPaise: 49900,   // ₹499
         billingCycle: 'monthly',
         expiryDays: 30,
-        credits: { talkTime: 500, interviews: 50, gdSessions: 75 },
+        credits: 600,
         isTopup: false
     },
     infinite_elite_monthly: {
@@ -46,7 +46,7 @@ const PLAN_CONFIG = {
         amountPaise: 89900,   // ₹899
         billingCycle: 'monthly',
         expiryDays: 30,
-        credits: { talkTime: 1000, interviews: 1000, gdSessions: 1000 },
+        credits: 1200,
         isTopup: false
     },
     // Yearly plans
@@ -56,7 +56,7 @@ const PLAN_CONFIG = {
         amountPaise: 199900,  // ₹1,999
         billingCycle: 'yearly',
         expiryDays: 365,
-        credits: { talkTime: 150, interviews: 10, gdSessions: 15 },
+        credits: 2000, 
         isTopup: false
     },
     placement_pro_yearly: {
@@ -65,7 +65,7 @@ const PLAN_CONFIG = {
         amountPaise: 499900,  // ₹4,999
         billingCycle: 'yearly',
         expiryDays: 365,
-        credits: { talkTime: 500, interviews: 50, gdSessions: 75 },
+        credits: 6000,
         isTopup: false
     },
     infinite_elite_yearly: {
@@ -74,26 +74,35 @@ const PLAN_CONFIG = {
         amountPaise: 899900,  // ₹8,999
         billingCycle: 'yearly',
         expiryDays: 365,
-        credits: { talkTime: 1000, interviews: 1000, gdSessions: 1000 },
+        credits: 12000,
         isTopup: false
     },
     // Top-ups (one-time credits)
-    topup_interview: {
+    quick_boost: {
         tier: null,
-        planName: 'Single Interview Top-up',
-        amountPaise: 8900,    // ₹89
+        planName: 'Quick Boost (30 Credits)',
+        amountPaise: 2900,    // ₹29
         billingCycle: 'one_time',
         expiryDays: null,
-        creditDelta: { interviews: 1 },
+        creditDelta: 30,
         isTopup: true
     },
-    topup_gd: {
+    power_pack: {
         tier: null,
-        planName: 'Single GD Session Top-up',
-        amountPaise: 7900,    // ₹79
+        planName: 'Power Pack (70 Credits)',
+        amountPaise: 4900,    // ₹49
         billingCycle: 'one_time',
         expiryDays: null,
-        creditDelta: { gdSessions: 1 },
+        creditDelta: 70, // 60 + 10 bonus
+        isTopup: true
+    },
+    pro_master: {
+        tier: null,
+        planName: 'Pro Master (200 Credits)',
+        amountPaise: 9900,    // ₹99
+        billingCycle: 'one_time',
+        expiryDays: null,
+        creditDelta: 200, // 150 + 50 bonus
         isTopup: true
     },
 };

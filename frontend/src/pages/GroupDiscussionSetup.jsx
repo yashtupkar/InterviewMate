@@ -116,8 +116,8 @@ const GroupDiscussionSetup = () => {
   };
 
   const handleStart = async () => {
-    if (subscription && subscription.tier !== 'Infinite Elite' && subscription.credits.gdSessions <= 0) {
-      toast.error("You have run out of GD session credits. Redirecting to billing...");
+    if (subscription && subscription.tier !== 'Infinite Elite' && (subscription.credits || 0) < 8) {
+      toast.error("You need at least 8 credits to start a GD session. Redirecting to billing...");
       setTimeout(() => navigate("/billing"), 2000);
       return;
     }
@@ -355,13 +355,13 @@ const GroupDiscussionSetup = () => {
                 <button
                   onClick={handleStart}
                   disabled={isStarting || !micReady}
-                  className={`w-full ${subscription && subscription.tier !== 'Infinite Elite' && subscription.credits.gdSessions <= 0 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-[#bef264] hover:bg-[#bef264]/90 text-black'} font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50`}
+                  className={`w-full ${subscription && subscription.tier !== 'Infinite Elite' && (subscription.credits || 0) <= 0 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-[#bef264] hover:bg-[#bef264]/90 text-black'} font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50`}
                 >
                   {isStarting ? (
                     <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                  ) : subscription && subscription.tier !== 'Infinite Elite' && subscription.credits.gdSessions <= 0 ? (
+                  ) : subscription && subscription.tier !== 'Infinite Elite' && (subscription.credits || 0) < 8 ? (
                     <>
-                      Pay as you go
+                      Get Credits
                       <FiCreditCard className="group-hover:translate-x-1 transition-transform" />
                     </>
                   ) : (

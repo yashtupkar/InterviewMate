@@ -154,8 +154,8 @@ const CreateInterview = () => {
   };
 
   const startInterview = async () => {
-    if (subscription && subscription.tier !== 'Infinite Elite' && subscription.credits.interviews <= 0) {
-      toast.error("You have run out of interview credits. Redirecting to billing...");
+    if (subscription && subscription.tier !== 'Infinite Elite' && (subscription.credits || 0) < 10) {
+      toast.error("You need at least 10 credits to start an interview. Redirecting to billing...");
       setTimeout(() => navigate("/billing"), 2000);
       return;
     }
@@ -625,16 +625,16 @@ const CreateInterview = () => {
                 <button
                   onClick={startInterview}
                   disabled={loading}
-                  className={`w-full px-10 ${subscription && subscription.tier !== 'Infinite Elite' && subscription.credits.interviews <= 0 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-[#bef264] hover:bg-[#bef264]/90 text-black'} cursor-pointer font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/10 active:scale-95 group`}
+                  className={`w-full px-10 ${subscription && subscription.tier !== 'Infinite Elite' && subscription.credits <= 0 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-[#bef264] hover:bg-[#bef264]/90 text-black'} cursor-pointer font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/10 active:scale-95 group`}
                 >
                   {loading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                       Starting Interview...
                     </>
-                  ) : subscription && subscription.tier !== 'Infinite Elite' && subscription.credits.interviews <= 0 ? (
+                  ) : subscription && subscription.tier !== 'Infinite Elite' && subscription.credits < 10 ? (
                     <>
-                      Pay as you go
+                      Get Credits
                       <FiCreditCard size={20} className="group-hover:translate-x-1 transition-transform" />
                     </>
                   ) : (

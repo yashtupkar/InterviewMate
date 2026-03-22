@@ -38,6 +38,10 @@ const interviewSessionSchema = new mongoose.Schema({
     suggestions: [String],
     detailedAnalysis: mongoose.Schema.Types.Mixed,
   },
+  actualDuration: {
+    type: Number,
+    default: 0,
+  },
   metadata: {
     uploadedInfo: { type: String },
     role: { type: String },

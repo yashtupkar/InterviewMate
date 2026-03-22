@@ -19,7 +19,6 @@ import {
   FiGift
 } from "react-icons/fi";
 
-import CircularUsage from "../common/CircularUsage";
 import Logo from "../common/Logo";
 import { MdSpaceDashboard, MdLiveHelp } from "react-icons/md";
 import { HiSparkles } from "react-icons/hi2";
@@ -166,39 +165,31 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Compact Subscriptions Card - Circular Redesign */}
         {subscription && (
-          <div className="bg-[#bef264]/10 rounded-2xl p-3 border-y border-[#bef264] space-y-3 shadow-sm mx-1">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[9px] font-black text-zinc-300 uppercase tracking-[0.15em] leading-none">
-                {subscription.tier} Plan
+          <div className="bg-[#bef264] rounded-2xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 hover:scale-[1.02]">
+            <div className="flex items-center justify-between px-0.5">
+              <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] leading-none opacity-80">
+                {subscription.tier} 
               </span>
-              <Link to="/pricing" onClick={onClose} className="text-[9px] font-black text-[#bef264] hover:text-[#d9ff96] transition-colors uppercase tracking-widest leading-none">
+              <Link to="/pricing" onClick={onClose} className="text-[10px] font-black text-black/60 hover:text-black transition-colors uppercase tracking-widest leading-none border-b border-black/10 hover:border-black transition-all pb-0.5">
                 Upgrade
               </Link>
             </div>
 
-            <div className="flex justify-around items-center pt-1">
-              <CircularUsage
-                label="Talk"
-                value={subscription.credits.talkTime}
-                max={subscription.limits.talkTime}
-                unit="m"
-                color="#bef264"
-                size={50}
-              />
-              <CircularUsage
-                label="Int"
-                value={subscription.credits.interviews}
-                max={subscription.limits.interviews}
-                color="#60a5fa"
-                size={50}
-              />
-              <CircularUsage
-                label="GD"
-                value={subscription.credits.gdSessions}
-                max={subscription.limits.gdSessions}
-                color="#a78bfa"
-                size={50}
-              />
+            <div className="space-y-2.5">
+              <div className="flex justify-between items-center text-[10px] font-black tracking-widest text-black">
+                 <span className="uppercase opacity-60">Credits</span>
+                 <span className="text-black text-xs italic">
+                   {Math.round(subscription.credits || 0)} <span className="text-black/30 mx-0.5 not-italic">/</span> {subscription.limits.credits || 200}
+                 </span>
+              </div>
+              <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5">
+                <div 
+                  className="h-full bg-black rounded-full transition-all duration-1000 ease-out relative"
+                  style={{ width: `${Math.min(100, ((subscription.credits || 0) / (subscription.limits.credits || 200)) * 100)}%` }}
+                >
+                   <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
+                </div>
+              </div>
             </div>
           </div>
         )}

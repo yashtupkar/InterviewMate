@@ -24,7 +24,7 @@ const PaymentStatusModal = ({
 
     const isSuccess = status === 'success';
     const isRefunded = status === 'refunded';
-    const isTopup = planId?.startsWith('topup_');
+    const isTopup = planId?.startsWith('topup_') || ['quick_boost', 'power_pack', 'pro_master'].includes(planId);
 
     const getTitle = () => {
         if (isRefunded) return "Refund Initiated";

@@ -20,16 +20,10 @@ export const WelcomePopup = ({ referrerName, onSignIn, onClose }) => {
             <span className="text-white font-black">{referrerName || 'Your friend'}</span> wants you to ace your next interview. Sign up now to claim your welcome credits!
           </p>
 
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-              <p className="text-[#bef264] text-xl font-black mb-1">+1</p>
-              <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest leading-none">Interview</p>
+            <div className="bg-[#bef264]/10 border border-[#bef264]/20 rounded-2xl p-4 col-span-2">
+              <p className="text-[#bef264] text-xl font-black mb-1">+20</p>
+              <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest leading-none">Welcome Credits Added</p>
             </div>
-            <div className="bg-white/5 border border-white/5 rounded-2xl p-4">
-              <p className="text-purple-400 text-xl font-black mb-1">+1</p>
-              <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest leading-none">GD Session</p>
-            </div>
-          </div>
 
           <button 
             onClick={onSignIn}
@@ -68,8 +62,7 @@ export const SuccessPopup = ({ onClose }) => {
         </p>
 
         <div className="flex gap-4 justify-center mb-8">
-            <span className="px-4 py-2 bg-[#bef264]/10 border border-[#bef264]/20 rounded-xl text-[#bef264] text-[10px] font-black uppercase tracking-widest">Interview +1</span>
-            <span className="px-4 py-2 bg-[#bef264]/10 border border-[#bef264]/20 rounded-xl text-[#bef264] text-[10px] font-black uppercase tracking-widest">GD Session +1</span>
+            <span className="px-6 py-2 bg-[#bef264]/10 border border-[#bef264]/20 rounded-xl text-[#bef264] text-[10px] font-black uppercase tracking-widest">+20 Bonus Credits</span>
         </div>
 
         <button 

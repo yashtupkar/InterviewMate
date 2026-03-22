@@ -6,7 +6,8 @@ import {
   FiStar, FiActivity, FiUsers, FiMessageSquare,
   FiVideo, FiTrendingUp, FiTarget, FiAward,
   FiMoreHorizontal, FiChevronRight, FiCheck,
-  FiLoader
+  FiLoader,
+  FiZap
 } from "react-icons/fi";
 import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
@@ -16,9 +17,8 @@ import {
 } from 'recharts';
 import { formatDistanceToNow, differenceInHours, format } from "date-fns";
 import { interviewAgents } from "../constants/agents";
-import CircularUsage from "../components/common/CircularUsage";
 import { GoClockFill } from "react-icons/go";
-import { FaCheckCircle, FaUsers } from "react-icons/fa";
+import { FaCheckCircle, FaClock, FaUsers } from "react-icons/fa";
 
 const DashboardOverview = () => {
   const { getToken } = useAuth();
@@ -133,6 +133,24 @@ const DashboardOverview = () => {
     ];
   }, [completedInterviews, completedGDs]);
 
+  const totalPrepTime = [...completedInterviews, ...completedGDs].reduce((acc, session) => {
+    // Determine raw duration: try actualDuration first, then duration, then metadata
+    let raw = session.actualDuration || session.duration || session.metadata?.duration || 10;
+    
+    // Heuristic: If duration > 150, it's almost certainly seconds (a 2.5 min session).
+    // If it's 10, it's probably minutes.
+    let durationMins = raw > 150 ? Math.round(raw / 60) : raw;
+    
+    return acc + durationMins;
+  }, 0);
+
+  const formatPrepTime = (totalMins) => {
+    if (totalMins < 60) return `${totalMins}m`;
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  };
+
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[60vh]">
@@ -163,6 +181,13 @@ const DashboardOverview = () => {
         .neon-glow {
             box-shadow: 0 0 20px rgba(190, 242, 100, 0.15);
         }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .animate-shimmer {
+            animation: shimmer 2s infinite linear;
+        }
       `}} />
 
       <div className="px-4 md:px-8 py-8 md:py-12 max-w-6xl mx-auto space-y-12 animate-fade-in text-zinc-100 selection:bg-[#bef264] selection:text-black">
@@ -179,59 +204,51 @@ const DashboardOverview = () => {
             </div>
             <div className="flex gap-4 w-full md:w-auto">
               {subscription ? (
-                <div className="glass-panel w-full px-6 py-5 md:py-4 rounded-[2.5rem] border border-[#bef264]/20 flex flex-col sm:flex-row items-center gap-6 md:gap-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] hover:border-[#bef264]/40 transition-all duration-500 group">
-                  <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-center gap-3 w-full sm:w-auto">
-                    <div className="flex items-center gap-2">
-                       <div className="w-1.5 h-1.5 rounded-full bg-[#bef264] shadow-[0_0_8px_#bef264] animate-pulse"></div>
-                       <span className="text-white text-[10px] font-black uppercase tracking-[0.2em]">{subscription.tier} tier</span>
-                    </div>
-                    <Link to="/billing" className="text-[9px] font-black uppercase tracking-widest text-black bg-[#bef264] hover:bg-white transition-all px-4 py-2 rounded-2xl flex items-center gap-2 group-hover:scale-105 active:scale-95 whitespace-nowrap">
-                      Upgrade <FiArrowRight size={12} />
+                <div className="bg-[#bef264] rounded-3xl p-6 flex flex-col gap-5 shadow-[0_20px_50px_-12px_rgba(190,242,100,0.4)] min-w-[280px] group transition-all duration-500 hover:scale-[1.02]">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-black text-black uppercase tracking-[0.2em] leading-none shrink-0 opacity-80">
+                      {subscription.tier} 
+                    </span>
+                    <Link to="/pricing" className="text-[10px] font-black text-black/60 hover:text-black transition-all uppercase tracking-widest leading-none border-b border-black/10 hover:border-black pb-0.5 flex items-center gap-1">
+                      Upgrade <FiChevronRight />
                     </Link>
                   </div>
-                  
-                  <div className="h-12 w-px bg-white/5 hidden sm:block"></div>
-                  <div className="h-px w-full bg-white/5 sm:hidden"></div>
-                  
-                  <div className="flex items-center justify-around sm:justify-start gap-4 md:gap-8 w-full sm:w-auto overflow-x-auto no-scrollbar py-1">
-                    <CircularUsage 
-                      label="Talk" 
-                      value={Math.round(subscription.credits.talkTime || 0)} 
-                      max={subscription.limits.talkTime || 30} 
-                      unit="m" 
-                      color="#bef264" 
-                      size={44}
-                      strokeWidth={2.5}
-                    />
-                    <CircularUsage 
-                      label="Mocks" 
-                      value={subscription.credits.interviews || 0} 
-                      max={subscription.limits.interviews || 5} 
-                      color="#bef264" 
-                      size={44}
-                      strokeWidth={2.5}
-                    />
-                    <CircularUsage 
-                      label="GD" 
-                      value={subscription.credits.gdSessions || 0} 
-                      max={subscription.limits.gdSessions || 2} 
-                      color="#bef264" 
-                      size={44}
-                      strokeWidth={2.5}
-                    />
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-[11px] font-black tracking-[0.15em] text-black">
+                       <span className="uppercase opacity-60">Usage</span>
+                       <span className="text-black text-sm italic">
+                         {Math.round(subscription.credits || 0)} <span className="text-black/30 mx-0.5 not-italic">/</span> {subscription.limits.credits || 200}
+                       </span>
+                    </div>
+                    <div className="h-2.5 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5 shadow-inner">
+                      <div 
+                        className="h-full bg-black rounded-full transition-all duration-1000 ease-out relative"
+                        style={{ width: `${Math.min(100, ((subscription.credits || 0) / (subscription.limits.credits || 200)) * 100)}%` }}
+                      >
+                         <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <Link to="/billing" className="glass-panel w-full px-8 md:px-10 py-5 rounded-[2.5rem] flex flex-col justify-center border border-white/5 hover:border-[#bef264]/30 group transition-all duration-500 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#bef264]/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-[#bef264]/10 transition-colors"></div>
-                  <span className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em] mb-1 group-hover:text-[#bef264] transition-colors">Current Plan</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl font-black text-white">Free Tier</span>
-                    <div className="px-2 py-0.5 rounded bg-zinc-800 text-[8px] font-black text-zinc-400 uppercase tracking-widest border border-white/5">Limited</div>
+                <Link to="/billing" className="bg-[#bef264] rounded-[2rem] px-8 py-6 flex flex-col justify-center shadow-[0_20px_50px_-12px_rgba(190,242,100,0.3)] group transition-all duration-500 hover:scale-[1.02]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FiZap className="text-black/40 group-hover:text-black transition-colors" size={18} />
+                    <span className="text-black/60 text-[10px] font-black uppercase tracking-[0.3em] group-hover:text-black transition-colors">Current Plan</span>
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-bold mt-2 flex items-center gap-1 group-hover:text-zinc-300 transition-colors">
-                    Upgrade for full features <FiChevronRight />
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-black text-black italic">Free Tier</span>
+                    <div className="px-2 py-0.5 rounded bg-black/10 text-[9px] font-black text-black uppercase tracking-widest border border-black/5 uppercase italic">Limited Access</div>
+                  </div>
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="text-[11px] text-black/60 font-black uppercase tracking-widest group-hover:text-black transition-colors">
+                      Upgrade to Premium
+                    </span>
+                    <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center group-hover:bg-black group-hover:text-[#bef264] transition-all shadow-sm">
+                      <FiArrowRight />
+                    </div>
+                  </div>
                 </Link>
               )}
             </div>
@@ -242,15 +259,15 @@ const DashboardOverview = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
             <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
-              <GoClockFill size={24} />
+              <FaClock size={24} />
             </div>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Talk Time</p>
-            <h3 className="text-4xl font-black text-white">{subscription ? Math.round(subscription.credits.talkTime || 0) : '0'}<span className="text-lg text-zinc-500">m</span></h3>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Prep Time</p>
+            <h3 className="text-4xl font-black text-white">{formatPrepTime(totalPrepTime)}</h3>
             <div className="mt-6 flex items-center gap-2">
               <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
-                <FiTrendingUp size={12} /> Active
+                <FiActivity size={12} /> {totalSessions} Sessions
               </span>
-              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">usage</span>
+              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Aggregate</span>
             </div>
           </div>
           
@@ -316,6 +333,9 @@ const DashboardOverview = () => {
                   <div className="w-full md:w-1/2">
                     
                     <h4 className="text-2xl font-black text-white mb-3">Voice Mock Interview</h4>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="bg-[#bef264]/10 text-[#bef264] text-[9px] font-black px-2 py-0.5 rounded border border-[#bef264]/20 uppercase tracking-widest">10 Credits / Interview</span>
+                    </div>
                     <p className="text-zinc-400 mb-8 text-sm leading-relaxed font-medium">Engage with our advanced AI behavioral model. Get real-time sentiment analysis and body language feedback.</p>
                     <button className="bg-[#bef264] text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-transform flex items-center gap-3">
                       Start Session <FiArrowRight />
@@ -350,7 +370,10 @@ const DashboardOverview = () => {
               {/* Secondary Activities */}
               <div onClick={() => navigate('/gd/setup')} className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10">
                 
-                <h4 className="text-lg font-black text-white mb-2">GD Simulator</h4>
+                <h4 className="text-lg font-black text-white mb-1">GD Simulator</h4>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">8 Credits / GD</span>
+                </div>
                 <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">Practice group dynamics with 5 AI personas. Master the art of leading and listening.</p>
                 <div className="flex items-center gap-2 text-amber-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
                   <span>Join simulator</span>

@@ -84,8 +84,7 @@ const Referrals = () => {
                                     <h3 className="text-lg font-black mb-1">For Them</h3>
                                     <p className="text-zinc-500 text-xs font-bold mb-3">Instant credits upon signup.</p>
                                     <div className="flex gap-2">
-                                        <span className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 text-[9px] font-black uppercase tracking-widest">+1 Interview</span>
-                                        <span className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 text-[9px] font-black uppercase tracking-widest">+1 GD Session</span>
+                                        <span className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 text-[9px] font-black uppercase tracking-widest">+20 Credits</span>
                                     </div>
                                 </div>
                            </div>
@@ -100,8 +99,7 @@ const Referrals = () => {
                                     <h3 className="text-lg font-black mb-1">For You</h3>
                                     <p className="text-zinc-500 text-xs font-bold mb-3">Credits after their first session.</p>
                                     <div className="flex gap-2">
-                                        <span className="px-2.5 py-1 bg-[#bef264]/10 border border-[#bef264]/20 rounded-lg text-[#bef264] text-[9px] font-black uppercase tracking-widest">+1 Interview</span>
-                                        <span className="px-2.5 py-1 bg-[#bef264]/10 border border-[#bef264]/20 rounded-lg text-[#bef264] text-[9px] font-black uppercase tracking-widest">+1 GD Session</span>
+                                        <span className="px-2.5 py-1 bg-[#bef264]/10 border border-[#bef264]/20 rounded-lg text-[#bef264] text-[9px] font-black uppercase tracking-widest">+20 Credits</span>
                                     </div>
                                 </div>
                            </div>
@@ -226,7 +224,7 @@ const Referrals = () => {
                                                 </td>
                                                 <td className="px-8 py-6 text-right">
                                                     <span className={ref.status === 'rewarded' ? 'text-[#bef264]' : 'text-zinc-600'}>
-                                                        {ref.status === 'rewarded' ? '+1/+1 Credits' : 'Pending First Act'}
+                                                        {ref.status === 'rewarded' ? '+20 Credits' : 'Pending First Act'}
                                                     </span>
                                                 </td>
                                             </tr>
@@ -272,8 +270,8 @@ const Referrals = () => {
                                     <TermSection 
                                         title="2. REWARD DISTRIBUTION" 
                                         items={[
-                                            "Referee (the friend) receives +1 Interview and +1 GD credit immediately upon successful signup.",
-                                            "Referrer receives +1 Interview and +1 GD credit ONLY AFTER the referee completes their first voice interview or group discussion session.",
+                                            "Referee (the friend) receives +20 Credits immediately upon successful signup.",
+                                            "Referrer receives +20 Credits ONLY AFTER the referee completes their first voice interview or group discussion session.",
                                             "Credits are added automatically to your current subscription balance."
                                         ]} 
                                     />

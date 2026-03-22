@@ -118,7 +118,45 @@ function App() {
 
   return (
     <InterviewProvider>
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          style: {
+            background: '#121214',
+            color: '#fff',
+            border: '1px solid rgba(136, 136, 136, 0.28)',
+            padding: '12px 20px',
+            borderRadius: '16px',
+            fontSize: '14px',
+            fontWeight: '600',
+            fontFamily: 'inherit',
+          },
+          success: {
+            style: {
+              background: '#09090b',
+            },
+            iconTheme: {
+              primary: '#bef264',
+              secondary: '#000',
+            },
+          },
+          error: {
+            style: {
+              background: '#09090b',
+            },
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+          // Custom style for generic/warning toasts
+          blank: {
+            style: {
+              background: '#09090b',
+            },
+          }
+        }}
+      />
 
       {showWelcome && (
         <WelcomePopup

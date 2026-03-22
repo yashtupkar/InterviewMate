@@ -1,7 +1,9 @@
 import React from 'react';
 
-const CircularUsage = ({ label, value, max, unit = "", color, size = 44, strokeWidth = 3 }) => {
-  const percentage = Math.min((value / max) * 100, 100);
+const CircularUsage = ({ label, value = 0, max = 100, unit = "", color, size = 44, strokeWidth = 3 }) => {
+  const safeValue = Number(value) || 0;
+  const safeMax = Number(max) || 100;
+  const percentage = safeMax > 0 ? Math.min((safeValue / safeMax) * 100, 100) : 0;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percentage / 100) * circumference;

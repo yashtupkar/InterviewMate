@@ -13,9 +13,8 @@ const subscriptionSchema = new mongoose.Schema({
         default: 'Free'
     },
     credits: {
-        talkTime: { type: Number, default: 20 },
-        interviews: { type: Number, default: 2 },
-        gdSessions: { type: Number, default: 3 }
+        type: Number,
+        default: 25 // 25 Credits for Free Tier
     },
     planExpiry: {
         type: Date

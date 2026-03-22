@@ -409,9 +409,13 @@ const InterviewSession = () => {
     const token = await getToken();
     try {
       const response = await axios.post(
-        `${backend_URL}/api/vapi-interview/report-from-transcript`,
-        { sessionId: currentSessionId, transcript: finalTranscript },
-        { headers: { Authorization: `Bearer ${token}` } },
+        `${backend_URL}/api/vapi-interview/generate-report`,
+        { 
+          sessionId: currentSessionId, 
+          transcript: finalTranscript,
+          duration: Math.round(interviewDuration / 60) // Send minutes to keep backend consistent
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.data.status === "completed" && response.data.report) {
@@ -535,18 +539,8 @@ const InterviewSession = () => {
           setIsVideoOn(false);
           setIsMuted(true);
 
-          // Deduct credit
-          (async () => {
-            try {
-              const token = await getToken();
-              await axios.post(`${backend_URL}/api/subscription/deduct-interview`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              console.log("Interview credit deducted.");
-            } catch (err) {
-              console.error("Failed to deduct interview credit:", err);
-            }
-          })();
+          // Credits were deducted upfront at session start
+          console.log("Interview session ended. Points already deducted.");
         });
 
         vapi.current.on("volume-level", (volume) => {

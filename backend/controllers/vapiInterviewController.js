@@ -6,15 +6,20 @@ const {
 } = require("../services/InterviewResponseAnalyzer");
 const axios = require("axios");
 const { rewardReferrer } = require("./referralController");
+const CreditService = require("../services/creditService");
 
 // Start an interview session
 const startInterview = async (req, res) => {
   try {
     const { interviewType, role, level, content, agentName } = req.body;
-    const userId = req.user?._id || req.body.userId; // Matches userAuth.js
-
     if (!userId) {
       return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // Check balance (min 5 mins = 2.5 credits)
+    const hasBalance = await CreditService.hasBalance(userId, "mock_interview", 5);
+    if (!hasBalance) {
+      return res.status(403).json({ message: "Insufficient credits to start an interview. Please top up." });
     }
 
     // Create a new session
@@ -186,8 +191,14 @@ const generateReportFromTranscript = async (req, res) => {
           improvements: reportData.growthAreas || [],
           detailedAnalysis: reportData,
         };
+        session.actualDuration = (req.body.duration || 10) * 60; // Store as seconds
         session.status = "completed";
         await rewardReferrer(userId);
+
+        // Deduct credits based on duration (req.body.duration in seconds or minutes?)
+        // Let's assume duration is in minutes if provided, else default to 10
+        const durationMin = req.body.duration || 10;
+        await CreditService.deduct(userId, "mock_interview", durationMin);
       } catch (reportError) {
         console.error("Error generating report from transcript:", reportError);
         session.status = "analysis_failed";

@@ -7,6 +7,7 @@ const {
   analyzeGDTranscript,
 } = require("../services/GDAnalyzer");
 const { rewardReferrer } = require("./referralController");
+const CreditService = require("../services/creditService");
 
 // ── Agent Roster ──────────────────────────────────────────────────────────────
 const AGENT_ROSTER = [
@@ -163,8 +164,20 @@ const startGDSession = async (req, res) => {
   try {
     const { category = "general", topicIndex, timeLimit = 600, prepTime = false } = req.body;
     const userId = req.user?._id;
-
     if (!userId) return res.status(401).json({ message: "User not authenticated" });
+
+    // ── Credit Deduction Upfront ──
+    const deduction = await CreditService.deduct(userId, "gd_session");
+    if (!deduction.success) {
+      return res.status(402).json({ 
+        message: "Insufficient credits to start a GD session. 8 credits required.",
+        needed: 8,
+        available: deduction.available
+      });
+    }
+
+    // User successfully paid 8 credits to enter
+    const hasBalance = true; // Legacy variable bypass
 
     const topicPool = GD_TOPICS[category] || GD_TOPICS.general;
     const selectedTopic =
@@ -372,7 +385,7 @@ const generateGDReport = async (req, res) => {
       return res.status(400).json({ message: "No transcript to analyze" });
     }
 
-    if (duration) session.duration = duration;
+    if (duration) session.duration = duration; // Frontend sends seconds
     session.status = "analysis_pending";
     await session.save();
 

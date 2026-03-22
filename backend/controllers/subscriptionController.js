@@ -12,7 +12,7 @@ const mongoose = require('mongoose');
 
 // ─── Helper: ensure user + subscription exist ─────────────────────────────────
 const ensureSubscription = async (clerkId) => {
-    const user = await User.findOne({ clerkId }).populate('subscription');
+    let user = await User.findOne({ clerkId }).populate('subscription');
     if (!user) throw Object.assign(new Error('User not found'), { statusCode: 404 });
 
     let subscription = user.subscription;
@@ -21,14 +21,31 @@ const ensureSubscription = async (clerkId) => {
         user.subscription = subscription._id;
         await user.save();
     }
+
+    // Migration Handler: Convert legacy credit object to unified credits
+    // Mongoose might return NaN or skip the field if type mismatch (Object vs Number)
+    if (subscription.credits === undefined || isNaN(subscription.credits) || typeof subscription.credits !== 'number') {
+        const rawSub = await mongoose.connection.db.collection('subscriptions').findOne({ _id: subscription._id });
+        if (rawSub && rawSub.credits && typeof rawSub.credits === 'object') {
+            const old = rawSub.credits;
+            // Generous conversion: 1 Interview = 10 Cr, 1 GD = 8 Cr, 1 min TalkTime = 0.5 Cr
+            const migratedCredits = (old.interviews || 0) * 10 + (old.gdSessions || 0) * 6 + (old.talkTime || 0) * 0.5;
+            subscription.credits = Math.max(migratedCredits, 25);
+            await subscription.save();
+        } else if (subscription.credits === undefined || isNaN(subscription.credits)) {
+            subscription.credits = 25;
+            await subscription.save();
+        }
+    }
+
     return { user, subscription };
 };
 
 const TIER_LIMITS = {
-    Free: { talkTime: 20, interviews: 2, gdSessions: 3 },
-    'Student Flash': { talkTime: 150, interviews: 10, gdSessions: 15 },
-    'Placement Pro': { talkTime: 500, interviews: 50, gdSessions: 75 },
-    'Infinite Elite': { talkTime: 1000, interviews: 1000, gdSessions: 1000 },
+    Free: { credits: 25 },
+    'Student Flash': { credits: 200 },
+    'Placement Pro': { credits: 600 },
+    'Infinite Elite': { credits: 1200 },
 };
 
 // ─── GET /subscription/status ─────────────────────────────────────────────────
@@ -49,10 +66,7 @@ const getSubscriptionStatus = async (req, res) => {
         if (latestPaidOrder) {
             const hoursSincePurchase = (Date.now() - new Date(latestPaidOrder.createdAt).getTime()) / (1000 * 60 * 60);
             const tierLimits = TIER_LIMITS[subscription.tier] || TIER_LIMITS.Free;
-            const usagePercent = (
-                ((tierLimits.interviews - subscription.credits.interviews) / tierLimits.interviews) * 100 +
-                ((tierLimits.gdSessions - subscription.credits.gdSessions) / tierLimits.gdSessions) * 100
-            ) / 2;
+            const usagePercent = ((tierLimits.credits - subscription.credits) / tierLimits.credits) * 100;
 
             refundEligible = hoursSincePurchase < 24 && usagePercent < 10;
             if (latestPaidOrder && hoursSincePurchase < 24) {
@@ -375,11 +389,8 @@ const requestRefund = async (req, res) => {
 
         // ── Check: < 10% credits consumed ──
         const tierLimits = TIER_LIMITS[subscription.tier] || TIER_LIMITS.Free;
-        const interviewsUsed = tierLimits.interviews - subscription.credits.interviews;
-        const gdUsed = tierLimits.gdSessions - subscription.credits.gdSessions;
-        const totalUsed = interviewsUsed + gdUsed;
-        const totalLimit = tierLimits.interviews + tierLimits.gdSessions;
-        const usagePercent = (totalUsed / totalLimit) * 100;
+        const creditsUsed = tierLimits.credits - subscription.credits;
+        const usagePercent = (creditsUsed / tierLimits.credits) * 100;
 
         if (usagePercent >= 10) {
             return res.status(400).json({
@@ -414,7 +425,7 @@ const requestRefund = async (req, res) => {
 
             // Downgrade to Free
             subscription.tier = 'Free';
-            subscription.credits = { talkTime: 20, interviews: 2, gdSessions: 3 };
+            subscription.credits = 25;
             subscription.planExpiry = null;
             subscription.billingCycle = null;
             // Remove this order from history
@@ -444,62 +455,57 @@ const requestRefund = async (req, res) => {
     }
 };
 
-// ─── POST /subscription/deduct-interview ──────────────────────────────────────
-const deductInterviewCredit = async (req, res) => {
+// ─── POST /subscription/deduct-credits ────────────────────────────────────────
+const deductCredits = async (req, res) => {
     try {
+        const { amount, service } = req.body;
         const { subscription } = await ensureSubscription(req.auth.userId);
 
-        if (subscription.tier === 'Infinite Elite') {
-            return res.json({ message: 'Unlimited credits for Infinite Elite plan', credits: subscription.credits });
+        if (subscription.tier === 'Infinite Elite' && service !== 'tools') {
+            return res.json({ message: `Unlimited credits for ${service} on Infinite Elite`, credits: subscription.credits });
         }
 
-        if (subscription.credits.interviews <= 0) {
-            return res.status(400).json({ message: 'Insufficient interview credits' });
+        if (subscription.credits < amount) {
+            return res.status(400).json({ message: `Insufficient credits for ${service}. Need ${amount}, have ${subscription.credits.toFixed(1)}` });
         }
 
-        subscription.credits.interviews -= 1;
+        subscription.credits -= amount;
         await subscription.save();
-        res.json({ message: 'Interview credit deducted', credits: subscription.credits });
+        res.json({ message: 'Credits deducted', credits: subscription.credits, deducted: amount });
     } catch (error) {
         res.status(error.statusCode || 500).json({ message: error.message });
     }
 };
 
-// ─── POST /subscription/deduct-gd ─────────────────────────────────────────────
+// ─── Legacy Wrappers (Optional but usually good for backward compat) ──────────
+const deductInterviewCredit = async (req, res) => {
+    // Default to 20 min session (10 credits) if duration not provided
+    const { duration = 20 } = req.body;
+    const amount = duration * 0.5;
+    req.body.amount = amount;
+    req.body.service = 'mock_interview';
+    return deductCredits(req, res);
+};
+
 const deductGdCredit = async (req, res) => {
-    try {
-        const { subscription } = await ensureSubscription(req.auth.userId);
-
-        if (subscription.tier === 'Infinite Elite') {
-            return res.json({ message: 'Unlimited credits for Infinite Elite plan', credits: subscription.credits });
-        }
-
-        if (subscription.credits.gdSessions <= 0) {
-            return res.status(400).json({ message: 'Insufficient GD credits' });
-        }
-
-        subscription.credits.gdSessions -= 1;
-        await subscription.save();
-        res.json({ message: 'GD session credit deducted', credits: subscription.credits });
-    } catch (error) {
-        res.status(error.statusCode || 500).json({ message: error.message });
-    }
+    const { duration = 20 } = req.body;
+    const amount = duration * 0.3;
+    req.body.amount = amount;
+    req.body.service = 'gd_session';
+    return deductCredits(req, res);
 };
 
 // ─── Internal helper: apply plan config to subscription ───────────────────────
 async function applyPlanToSubscription(subscription, plan) {
     if (plan.isTopup) {
         // Top-ups: add delta credits, don't change tier
-        if (plan.creditDelta.interviews) {
-            subscription.credits.interviews += plan.creditDelta.interviews;
-        }
-        if (plan.creditDelta.gdSessions) {
-            subscription.credits.gdSessions += plan.creditDelta.gdSessions;
-        }
+        subscription.credits += plan.creditDelta;
     } else {
         // Plan purchase: set tier + reset credits + set expiry
         subscription.tier = plan.tier;
-        subscription.credits = { ...plan.credits };
+        // Logic: if they have credits left, we add them to the new plan credits?
+        // Or reset? pricing.md implies "Credits Provided". Let's ADD for better UX.
+        subscription.credits = (subscription.credits || 0) + plan.credits;
 
         const currentExpiry = subscription.planExpiry && subscription.planExpiry > new Date()
             ? subscription.planExpiry
@@ -516,4 +522,5 @@ module.exports = {
     requestRefund,
     deductInterviewCredit,
     deductGdCredit,
+    deductCredits,
 };

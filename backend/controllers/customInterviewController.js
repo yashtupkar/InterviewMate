@@ -1,6 +1,7 @@
 const { OpenAI } = require("openai");
 const InterviewSession = require("../models/interviewSessionModel");
 const { AnalyzeFullTranscript } = require("../services/InterviewResponseAnalyzer");
+const CreditService = require("../services/creditService");
 
 // Initialize OpenAI client for OpenRouter (LLM)
 const getOpenAIClient = () => {
@@ -37,6 +38,16 @@ const startCustomSession = async (req, res) => {
 
     if (!userId) {
       return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // ── Credit Deduction Upfront ──
+    const deduction = await CreditService.deduct(userId, "mock_interview");
+    if (!deduction.success) {
+      return res.status(402).json({ 
+        message: "Insufficient credits to start an interview. 10 credits required.",
+        needed: 10,
+        available: deduction.available
+      });
     }
 
     // 1. Create a new session in DB
@@ -156,7 +167,7 @@ const customInterviewController = {
   // 2. Save Transcript Only
   saveTranscriptOnly: async (req, res) => {
     try {
-      const { sessionId, transcript } = req.body;
+      const { sessionId, transcript, actualDuration } = req.body;
       const userId = req.user?._id || req.body.userId;
 
       if (!userId) {
@@ -181,6 +192,7 @@ const customInterviewController = {
         .join("\n");
 
       session.transcript = formattedTranscript;
+      session.actualDuration = actualDuration || 0;
       session.status = "analysis_pending"; 
       await session.save();
 

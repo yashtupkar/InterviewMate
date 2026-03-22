@@ -69,8 +69,9 @@ const Billing = () => {
     });
 
     const topups = [
-        { planId: "topup_interview", name: "Single Interview", price: "89" },
-        { planId: "topup_gd",        name: "Single GD Session", price: "79" },
+        { planId: "quick_boost", name: "Quick Boost", price: "29", credits: "30" },
+        { planId: "power_pack",  name: "Power Pack",  price: "49", credits: "70" },
+        { planId: "pro_master",  name: "Pro Master",  price: "99", credits: "200" },
     ];
 
     if (loading) {
@@ -123,10 +124,22 @@ const Billing = () => {
                                         </p>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <UsageStat label="Talk Time" value={`${subscription?.credits?.talkTime}m`} icon={<FiClock />} />
-                                    <UsageStat label="Interviews" value={subscription?.credits?.interviews} icon={<FiActivity />} />
-                                    <UsageStat label="GD Sessions" value={subscription?.credits?.gdSessions} icon={<FiPlus />} />
+                                <div className="flex flex-col w-full gap-3 mt-2">
+                                    <div className="flex justify-between items-end">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-[#bef264] shadow-[0_0_8px_#bef264]"></div>
+                                            <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em]">Prep Economy Usage</span>
+                                        </div>
+                                        <span className="text-white text-base font-black italic tracking-tight">
+                                            {Math.round(subscription?.credits || 0)} <span className="text-zinc-500 mx-1 not-italic opacity-50">/</span> {subscription?.limits?.credits || 200} <span className="text-[10px] text-[#bef264] uppercase ml-1 not-italic tracking-widest">Credits</span>
+                                        </span>
+                                    </div>
+                                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden p-[1px] border border-white/5">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-[#bef264] via-[#dcfc9f] to-white rounded-full shadow-[0_0_15px_rgba(190,242,100,0.3)] transition-all duration-1000 ease-out"
+                                            style={{ width: `${Math.min(100, ((subscription?.credits || 0) / (subscription?.limits?.credits || 200)) * 100)}%` }}
+                                        ></div>
+                                    </div>
                                 </div>
                            </div>
                         </div>
@@ -168,6 +181,7 @@ const Billing = () => {
                                         <div>
                                             <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-0.5">{item.name}</div>
                                             <div className="text-lg font-black italic">₹{item.price}</div>
+                                            <div className="text-[9px] font-bold text-[#bef264] mt-1">{item.credits} Credits</div>
                                         </div>
                                     </div>
                                     <div className="p-2 bg-white/5 rounded-lg group-hover:bg-[#bef264] group-hover:text-black transition-all">
@@ -267,14 +281,7 @@ const Billing = () => {
 
 // ── Shared Sub-components ─────────────────────────────────────────────────────────────
 
-const UsageStat = ({ label, value, icon }) => (
-    <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-1.5 text-[#bef264] text-[10px] font-black uppercase tracking-widest">
-            {icon} {label}
-        </div>
-        <div className="text-2xl font-black text-white italic">{value}</div>
-    </div>
-);
+
 
 const StatusBadge = ({ status }) => {
     const config = {

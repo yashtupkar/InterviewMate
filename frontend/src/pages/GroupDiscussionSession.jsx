@@ -773,15 +773,7 @@ export default function GroupDiscussionSession() {
       setSessionEnded(true);
       setIsEnding(false);
 
-      // Deduct credit
-      try {
-        await axios.post(`${backend_URL}/api/subscription/deduct-gd`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log("GD credit deducted.");
-      } catch (err) {
-        console.error("Failed to deduct GD credit:", err);
-      }
+      console.log("GD session ended. Credits were deducted upfront.");
     } catch (err) {
       console.error("Report err:", err);
     }

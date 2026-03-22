@@ -68,14 +68,15 @@ const PricingSection = ({
       yearlyPlanId: "student_flash_yearly",
       monthlyPrice: "199",
       yearlyPrice: "1,999",
+      credits: "200 Credits",
       description: "Perfect for a quick preparation boost.",
       features: [
-        "150m Talk Time",
-        "10 Mock Interviews",
-        "15 GD Sessions",
-        "Expert Feedback",
+       
+        "Mock Interviews (10 Credits)",
+        "GD Sessions (8 Credits)",
+        "Expert AI Feedback",
         "Practice Coding Problems",
-        "24/7 Access",
+        "24/7 AI Mentor Access",
       ],
       recommended: false,
     },
@@ -85,16 +86,17 @@ const PricingSection = ({
       yearlyPlanId: "placement_pro_yearly",
       monthlyPrice: "499",
       yearlyPrice: "4,999",
+      credits: "600 Credits",
       description: "Complete package for serious job seekers.",
       features: [
-        "500m Talk Time",
-        "50 Mock Interviews",
-        "75 GD Sessions",
-        "Practice Coding Problems",
-        "Expert Feedback",
-        "Priority Support",
-        "Career Analytics",
-        "Flash 2.0 AI",
+      
+        "Mock Interviews (10 Credits)",
+        "GD Sessions (8 Credits)",
+        "Expert AI Feedback",
+        "LinkedIn & Resume Tools",
+        "Priority AI Processing",
+        "Career Analytics Pro",
+        "Advanced Flash 2.0 AI",
       ],
       recommended: true,
     },
@@ -104,15 +106,16 @@ const PricingSection = ({
       yearlyPlanId: "infinite_elite_yearly",
       monthlyPrice: "899",
       yearlyPrice: "8,999",
+      credits: "1,200 Credits",
       description: "The ultimate unlimited preparation experience.",
       features: [
-        "1000m Talk Time Cap",
-        "Unlimited* Interviews",
-        "Unlimited* GD Sessions",
-        "Expert Feedback",
-        "Practice Coding Problems",
-        "LinkedIn AI Tools",
-        "WhatsApp Support",
+     
+        "Mock Interviews (10 Credits)",
+        "GD Sessions (8 Credits)",
+        "LinkedIn & Resume Pro",
+        "WhatsApp Career Support",
+        "Early Access to Features",
+        "Expert AI Mock Reviews",
       ],
       recommended: false,
     },
@@ -122,15 +125,22 @@ const PricingSection = ({
       yearlyPlanId: null,
       monthlyPrice: "0",
       yearlyPrice: "0",
+      credits: "30 Credits",
       description: "Get started with PlaceMateAI.",
-      features: ["20m Talk Time", "2 Mock Interviews", "3 GD Sessions", "Basic Feedback", "Practice Coding Problems"],
+      features: [
+        "Mock Interviews (10 Credits)", 
+        "GD Sessions (8 Credits)", 
+        "Basic Feedback", 
+        "Practice Coding Problems"
+      ],
       recommended: false,
     },
   ];
 
   const topUps = [
-    { planId: "topup_interview", name: "Single Interview", price: "₹89" },
-    { planId: "topup_gd", name: "Single GD Session", price: "₹79" },
+    { planId: "quick_boost", name: "Quick Boost", price: "₹29", credits: "30 Credits" },
+    { planId: "power_pack", name: "Power Pack", price: "₹49", credits: "70 Credits" },
+    { planId: "pro_master", name: "Pro Master", price: "₹99", credits: "200 Credits" },
   ];
 
   const getPlanId = (plan) =>
@@ -245,13 +255,18 @@ const PricingSection = ({
                     <p className="text-zinc-400 text-xs h-10 leading-relaxed">{plan.description}</p>
                 </div>
 
-                <div className="mb-6 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-white">
-                    ₹{billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
-                    </span>
-                    <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-                    /{billingCycle === "monthly" ? "mo" : "yr"}
-                    </span>
+                <div className="mb-6">
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black text-white">
+                        ₹{billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                        </span>
+                        <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                        /{billingCycle === "monthly" ? "mo" : "yr"}
+                        </span>
+                    </div>
+                    <div className="mt-1 text-[#bef264] text-[11px] font-black uppercase tracking-[0.1em] px-2 py-0.5 bg-[#bef264]/10 rounded-md w-fit">
+                        {plan.credits}
+                    </div>
                 </div>
 
                 {onPlanSelect ? (
@@ -320,8 +335,11 @@ const PricingSection = ({
                     <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 group-hover/item:text-zinc-400">
                       {item.name}
                     </div>
-                    <div className="text-sm font-black text-[#bef264]">
+                    <div className="text-[10px] font-black text-[#bef264]">
                       {item.price}
+                    </div>
+                    <div className="text-[8px] font-bold text-zinc-400 mt-1">
+                      {item.credits}
                     </div>
                   </button>
                 ) : (

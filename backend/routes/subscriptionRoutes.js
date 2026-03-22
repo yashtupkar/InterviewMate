@@ -9,6 +9,7 @@ const {
     requestRefund,
     deductInterviewCredit,
     deductGdCredit,
+    deductCredits,
 } = require('../controllers/subscriptionController');
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
@@ -56,5 +57,6 @@ router.post('/request-refund',  ClerkExpressRequireAuth(), refundRateLimit, requ
 
 router.post('/deduct-interview', ClerkExpressRequireAuth(), deductInterviewCredit);
 router.post('/deduct-gd',        ClerkExpressRequireAuth(), deductGdCredit);
+router.post('/deduct-credits',   ClerkExpressRequireAuth(), deductCredits);
 
 module.exports = router;

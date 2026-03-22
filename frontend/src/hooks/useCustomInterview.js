@@ -502,18 +502,20 @@ export const useCustomInterview = () => {
                 const token = await getToken();
                 if (contextTranscript.length > 0) {
                     await axios.post(`${backend_URL}/api/custom-interview/save-transcript`,
-                        { sessionId, transcript: contextTranscript },
+                        { 
+                            sessionId, 
+                            transcript: contextTranscript,
+                            actualDuration: interviewDuration // Sending the total seconds tracked in state
+                        },
                         { headers: { Authorization: `Bearer ${token}` } }
                     );
                 }
-                await axios.post(`${backend_URL}/api/subscription/deduct-interview`, {}, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                // Redundant legacy deduction removed to prevent double-charging
             } catch (err) {
                 console.error("Failed to complete end-call operations:", err);
             }
         })();
-    }, [getToken, contextTranscript, sessionId, backend_URL, setCallStatus]);
+    }, [getToken, contextTranscript, sessionId, backend_URL, setCallStatus, interviewDuration]);
 
     const handleGenerateReport = async (forcedTranscript = null) => {
         if (isProcessing) return;
@@ -526,7 +528,11 @@ export const useCustomInterview = () => {
         try {
             const response = await axios.post(
                 `${backend_URL}/api/vapi-interview/report-from-transcript`,
-                { sessionId, transcript: finalTranscript },
+                { 
+                  sessionId, 
+                  transcript: finalTranscript,
+                  duration: Math.round(interviewDuration / 60) 
+                },
                 { headers: { Authorization: `Bearer ${token}` } },
             );
             if (response.data.status === "completed" && response.data.report) {

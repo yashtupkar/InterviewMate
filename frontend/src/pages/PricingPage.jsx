@@ -11,12 +11,12 @@ const PricingPage = () => {
 
     const faqItems = [
         {
-            q: "How does Talk Time work?",
-            a: "Talk Time is the total duration you can spend interacting with our AI interviewers. It resets every month on your billing date. Unused talk time does not carry over."
+            q: "How do Credits work?",
+            a: "PlaceMateAI uses a unified credit system (1 Credit = ₹1). Mock Interviews cost 10 credits (flat), GD Sessions cost 8 credits (flat), and AI tools (Resume/LinkedIn) cost 2 credits per use. Credits provided in monthly plans reset each billing cycle, while Top-up credits never expire."
         },
         {
             q: "Can I get a refund?",
-            a: "Yes! We offer a full refund within 24 hours of purchase if you have used less than 10% of your plan credits. Use the 'Request Refund' link in your billing settings. Refunds are processed automatically — 5-7 business days for cards, 1-3 days for UPI."
+            a: "Yes! We offer a full refund within 24 hours of purchase if you have used less than 10% of your plan credits. Use the 'Request Refund' link in your billing settings. Refunds are processed automatically within 5-7 business days."
         },
         {
             q: "Can I cancel my subscription anytime?",
@@ -69,8 +69,8 @@ const PricingPage = () => {
 
                 <div className="max-w-5xl mx-auto px-4 pt-20 text-center">
                     <div className="text-zinc-600 text-[10px] font-black uppercase tracking-widest leading-relaxed">
-                        *Infinite Elite fair use: 1000 mins Talk Time / mo. <br />
-                        🔒 Secure payments via Razorpay. No hidden charges. Full refund within 24h if &lt;10% used.
+                        *Infinite Elite: Unlimited Interviews & GDs for fair personal use. <br />
+                        🔒 Secure payments via Razorpay. No hidden charges. Full refund within 24h if &lt;10% credits used.
                     </div>
                 </div>
             </div>
