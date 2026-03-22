@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/clerk-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FiUser, FiLogOut, FiSettings, FiLayout, FiCreditCard, FiGift } from "react-icons/fi";
 import Logo from "../common/Logo";
 
@@ -10,7 +10,18 @@ const Layout = ({ children }) => {
   const { user } = useUser();
   const { signOut, openUserProfile } = useClerk();
   const navigate = useNavigate();
+  const location = useLocation();
   const menuRef = React.useRef(null);
+
+  const handlePricingClick = (e) => {
+    if (location.pathname === "/") {
+      e.preventDefault();
+      const element = document.getElementById("pricing");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -48,7 +59,7 @@ const Layout = ({ children }) => {
         <div className="hidden md:flex gap-8 text-sm items-center">
           <Link to="/about" className="text-white font-semibold hover:text-primary transition-colors">About</Link>
           <Link to="/features" className="text-white font-semibold hover:text-primary transition-colors">Features</Link>
-          <Link to="/pricing" className="text-white font-semibold hover:text-primary transition-colors">Pricing</Link>
+          <Link to="/#pricing" onClick={handlePricingClick} className="text-white font-semibold hover:text-primary transition-colors">Pricing</Link>
           <Link to="/contact" className="text-white font-semibold hover:text-primary transition-colors">Contact</Link>
         </div>
         <div className="flex gap-2 md:gap-4 items-center">

@@ -5,6 +5,7 @@ import axios from "axios";
 import { FiMoreVertical, FiMessageSquare, FiUsers, FiClock } from "react-icons/fi";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
+import EmptyState from "../components/common/EmptyState";
 
 const PastGDs = () => {
   const { getToken } = useAuth();
@@ -179,8 +180,8 @@ const PastGDs = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-zinc-500 font-medium">
-                      No GD sessions found.
+                    <td colSpan="7" className="px-6 py-4">
+                      <EmptyState message="no group discussions found yet" />
                     </td>
                   </tr>
                 )}

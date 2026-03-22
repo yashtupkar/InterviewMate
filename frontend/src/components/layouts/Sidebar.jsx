@@ -22,7 +22,7 @@ import {
 import CircularUsage from "../common/CircularUsage";
 import Logo from "../common/Logo";
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -79,13 +79,21 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64  bg-black border-r border-white/20 flex flex-col z-50">
+    <aside className={`fixed left-0 top-0 h-screen w-64 bg-black border-r border-white/20 flex flex-col z-[50] transition-transform duration-300 ease-in-out md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
       {/* Logo */}
-      <div className="px-6 py-4 flex items-center gap-2">
-        <Logo size={32} />
-        <span className="text-white text-2xl cursor-pointer   font-semibold tracking-tight">
-          PlaceMate<span className="text-primary">AI</span>
-        </span>
+      <div className="px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Logo size={32} />
+          <span className="text-white text-2xl cursor-pointer font-semibold tracking-tight">
+            PlaceMate<span className="text-primary">AI</span>
+          </span>
+        </div>
+        <button 
+          onClick={onClose}
+          className="md:hidden p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors border border-transparent hover:border-white/10"
+        >
+          <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="20" width="20" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </div>
 
       {/* Navigation */}
@@ -98,6 +106,7 @@ const Sidebar = () => {
               <Link
                 key={item.name}
                 to={item.path}
+                onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${item.active
                     ? "bg-[#bef264]/10 text-[#bef264]"
                     : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
@@ -141,6 +150,7 @@ const Sidebar = () => {
             <Link
               key={item.name}
               to={item.path}
+              onClick={onClose}
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors"
             >
               <span className="text-zinc-500">{item.icon}</span>
@@ -156,7 +166,7 @@ const Sidebar = () => {
               <span className="text-[9px] font-black text-zinc-300 uppercase tracking-[0.15em] leading-none">
                 {subscription.tier} Plan
               </span>
-              <Link to="/pricing" className="text-[9px] font-black text-[#bef264] hover:text-[#d9ff96] transition-colors uppercase tracking-widest leading-none">
+              <Link to="/pricing" onClick={onClose} className="text-[9px] font-black text-[#bef264] hover:text-[#d9ff96] transition-colors uppercase tracking-widest leading-none">
                 Upgrade
               </Link>
             </div>
@@ -209,7 +219,7 @@ const Sidebar = () => {
                 </div>
               </button>
               <button
-                onClick={() => { openUserProfile(); setIsProfileOpen(false); }}
+                onClick={() => { openUserProfile(); setIsProfileOpen(false); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
               >
                 <FiUsers className="text-zinc-500" />
@@ -217,7 +227,7 @@ const Sidebar = () => {
               </button>
               <Link
                 to="/billing"
-                onClick={() => setIsProfileOpen(false)}
+                onClick={() => { setIsProfileOpen(false); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
               >
                 <FiCreditCard className="text-zinc-500" />
@@ -225,14 +235,14 @@ const Sidebar = () => {
               </Link>
               <Link
                 to="/referrals"
-                onClick={() => setIsProfileOpen(false)}
+                onClick={() => { setIsProfileOpen(false); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
               >
                 <FiGift className="text-zinc-500" />
                 Referrals
               </Link>
               <button
-                onClick={() => signOut()}
+                onClick={() => { signOut(); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
               >
                 <FiLogOut />

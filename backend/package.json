@@ -18,8 +18,10 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.3.1",
     "mongoose": "^9.3.0",
     "openai": "^6.32.0",
+    "razorpay": "^2.9.6",
     "svix": "^1.88.0"
   },
   "devDependencies": {

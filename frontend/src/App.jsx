@@ -34,6 +34,8 @@ import CodingSpace from "./components/CodingSpace";
 import VoiceTest from "./pages/VoiceTest";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
+import ProtectedRoute from "./components/ProtectedRoute";
+
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
   const { getToken, isSignedIn } = useAuth();
@@ -155,86 +157,88 @@ function App() {
           element={<PrivacyPolicy />}
         />
 
-        {/* Dashboard Routes */}
-        <Route path="/dashboard" element={<InterviewLayout />}>
-          <Route index element={<DashboardOverview />} />
-          <Route path="setup" element={<CreateInterview />} />
-          <Route path="interviews" element={<PastInterviews />} />
-          <Route path="gd-interviews" element={<PastGDs />} />
-          <Route path="linkedin" element={<LinkedInOptimisation />} />
-          <Route path="result/:sessionId" element={<InterviewResult />} />
-        </Route>
+        {/* Protected Routes Wrapper */}
+        <Route element={<ProtectedRoute />}>
+          {/* Dashboard Routes */}
+          <Route path="/dashboard" element={<InterviewLayout />}>
+            <Route index element={<DashboardOverview />} />
+            <Route path="setup" element={<CreateInterview />} />
+            <Route path="interviews" element={<PastInterviews />} />
+            <Route path="gd-interviews" element={<PastGDs />} />
+            <Route path="linkedin" element={<LinkedInOptimisation />} />
+            <Route path="result/:sessionId" element={<InterviewResult />} />
+          </Route>
 
-        {/* Sub-routes under interview that need Sidebar */}
-        <Route path="/interview" element={<InterviewLayout />}>
-          <Route index element={<Navigate to="setup" replace />} />
-          <Route path="setup" element={<CreateInterview />} />
-          <Route path="result/:sessionId" element={<InterviewResult />} />
-        </Route>
+          {/* Sub-routes under interview that need Sidebar */}
+          <Route path="/interview" element={<InterviewLayout />}>
+            <Route index element={<Navigate to="setup" replace />} />
+            <Route path="setup" element={<CreateInterview />} />
+            <Route path="result/:sessionId" element={<InterviewResult />} />
+          </Route>
 
-        {/* Standalone Session Routes (No Sidebar) */}
-        <Route
-          path="/session"
-          element={<InterviewSession />}
-        />
-      
-        <Route
-          path="/session/:sessionId"
-          element={<InterviewSession />}
-        />
-        <Route
-          path="/session-custom/:sessionId"
-          element={<CustomInterviewSession />}
-        />
-        <Route
-          path="/session-custom"
-          element={<CustomInterviewSession />}
-        />
-
-
-        {/* Group Discussion Routes */}
-        <Route path="/gd" element={<InterviewLayout />}>
-          <Route index element={<Navigate to="setup" replace />} />
-          <Route path="setup" element={<GroupDiscussionSetup />} />
+          {/* Standalone Session Routes (No Sidebar) */}
           <Route
-            path="result/:sessionId"
-            element={<GroupDiscussionResult />}
+            path="/session"
+            element={<InterviewSession />}
           />
-        </Route>
+        
+          <Route
+            path="/session/:sessionId"
+            element={<InterviewSession />}
+          />
+          <Route
+            path="/session-custom/:sessionId"
+            element={<CustomInterviewSession />}
+          />
+          <Route
+            path="/session-custom"
+            element={<CustomInterviewSession />}
+          />
 
-        {/* Pricing Route */}
-        <Route path="/pricing" element={<InterviewLayout />}>
-          <Route index element={<PricingPage />} />
-        </Route>
 
-        <Route path="/billing" element={<InterviewLayout />}>
-          <Route index element={<Billing />} />
-        </Route>
+          {/* Group Discussion Routes */}
+          <Route path="/gd" element={<InterviewLayout />}>
+            <Route index element={<Navigate to="setup" replace />} />
+            <Route path="setup" element={<GroupDiscussionSetup />} />
+            <Route
+              path="result/:sessionId"
+              element={<GroupDiscussionResult />}
+            />
+          </Route>
 
-        <Route path="/referrals" element={<InterviewLayout />}>
-          <Route index element={<Referrals />} />
+          {/* Pricing Route - Protected because it uses InterviewLayout/Sidebar */}
+          <Route path="/pricing" element={<InterviewLayout />}>
+            <Route index element={<PricingPage />} />
+          </Route>
+
+          <Route path="/billing" element={<InterviewLayout />}>
+            <Route index element={<Billing />} />
+          </Route>
+
+          <Route path="/referrals" element={<InterviewLayout />}>
+            <Route index element={<Referrals />} />
+          </Route>
+
+          {/* Standalone GD Session (No Sidebar) */}
+          <Route
+            path="/gd/session/:sessionId"
+            element={<GroupDiscussionSession />}
+          />
+
+          {/* Testing routes */}
+          <Route
+            path="/voices"
+            element={<VoiceTest />}
+          />
+          <Route
+            path="/code"
+            element={<CodingSpace />}
+          />
         </Route>
 
         {/* Auth Routes */}
         <Route path="/signin/*" element={<SignInPage />} />
         <Route path="/signup/*" element={<SignUpPage />} />
-
-        {/* Standalone GD Session (No Sidebar) */}
-        <Route
-          path="/gd/session/:sessionId"
-          element={<GroupDiscussionSession />}
-        />
-
- {/* Testing routes */}
-        <Route
-          path="/voices"
-          element={<VoiceTest />}
-        />
-        <Route
-          path="/code"
-          element={<CodingSpace />}
-        />
-
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

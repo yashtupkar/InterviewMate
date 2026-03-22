@@ -11,7 +11,7 @@ const {
 const auth = require("../middleware/auth"); // Corrected middleware name
 
 vapiInterviewRouter.post("/start", auth, startInterview);
-vapiInterviewRouter.get("/report/:sessionId", getInterviewReport);
+vapiInterviewRouter.get("/report/:sessionId", auth, getInterviewReport);
 vapiInterviewRouter.post(
   "/report-from-transcript",
   auth,

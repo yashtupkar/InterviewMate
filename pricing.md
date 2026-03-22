@@ -36,15 +36,21 @@ To capture the market and make preparation accessible to 100% of students, I pro
 
 ### **Target: The "Zero-Friction" Plan**
 
-| Plan Name | Selling Price | Includes | Est. COGS | Net Profit | Margin (%) |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Student Flash** | **₹199** | 10 Interviews + 15 GDs | ~₹30 | **₹169** | 85% |
-| **Placement Pro** | **₹499** | 50 Interviews + 75 GDs | ~₹150 | **₹349** | 70% |
-| **Infinite Elite** | **₹899** | Unlimited* (1000m cap) | ~₹200 | **₹699** | 78% |
+| Plan Name | Monthly Price | Yearly Price (Save ~20%) | Includes | Est. Monthly COGS | Monthly Net Profit | Margin (%) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Student Flash** | **₹199** | **₹1,999** | 10 Interviews + 15 GDs | ~₹30 | **₹169** | 85% |
+| **Placement Pro** | **₹499** | **₹4,999** | 50 Interviews + 75 GDs | ~₹150 | **₹349** | 70% |
+| **Infinite Elite** | **₹899** | **₹8,999** | Unlimited* (1000m cap) | ~₹200 | **₹699** | 78% |
 
 ---
 
 ## 4. Full Analysis & Strategic Insights
+
+### **A. Yearly Subscription Economics**
+*   **Customer LTV**: By offering yearly plans (e.g., ₹1,999 for Student Flash), you lock in the user for a full cycle, significantly increasing Life Time Value (LTV).
+*   **Upfront Cash Flow**: Yearly payments provide immediate cash flow to offset infrastructure and development costs.
+*   **Retention**: Students preparing for placements over a year are 4x more likely to convert to a yearly plan than to renew monthly 12 times.
+
 
 ### **A. Competitive Advantage**
 *   **The Power of Custom AI**: Most competitors still pay the "Vapi Tax" or utilize human labor. 

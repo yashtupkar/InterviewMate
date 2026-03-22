@@ -6,6 +6,7 @@ import { FiMoreVertical, FiLoader, FiPlus } from "react-icons/fi";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@clerk/clerk-react";
 import { interviewAgents } from "../constants/agents";
+import EmptyState from "../components/common/EmptyState";
 
 const PastInterviews = () => {
   const { getToken } = useAuth();
@@ -218,8 +219,8 @@ const PastInterviews = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-zinc-500">
-                      No interviews found.
+                    <td colSpan="6" className="px-6 py-4">
+                      <EmptyState message="no interview found yet" />
                     </td>
                   </tr>
                 )}

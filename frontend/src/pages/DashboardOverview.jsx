@@ -2,16 +2,15 @@ import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  FiPlus, FiArrowUpRight, FiClock, FiCheckCircle,
+  FiPlus, FiArrowRight, FiClock, FiCheckCircle,
   FiStar, FiActivity, FiUsers, FiMessageSquare,
-  FiCalendar, FiTrendingUp, FiTarget, FiAward
+  FiVideo, FiTrendingUp, FiTarget, FiAward,
+  FiMoreHorizontal, FiChevronRight, FiCheck
 } from "react-icons/fi";
 import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
-  Radar, RadarChart, PolarGrid,
-  PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { formatDistanceToNow, format } from "date-fns";
 import { interviewAgents } from "../constants/agents";
@@ -30,7 +29,7 @@ const DashboardOverview = () => {
     const fetchData = async () => {
       try {
         const token = await getToken();
-         const [interviewsRes, gdsRes, subscriptionRes] = await Promise.all([
+        const [interviewsRes, gdsRes, subscriptionRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/vapi-interview/user`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
@@ -56,41 +55,37 @@ const DashboardOverview = () => {
 
   const completedInterviews = interviews.filter(i => i.status === 'completed');
   const completedGDs = gds.filter(g => g.status === 'completed');
-
-  const avgInterviewScore = completedInterviews.length > 0
-    ? Math.round(completedInterviews.reduce((acc, curr) => acc + (curr.report?.overallScore || 0), 0) / completedInterviews.length)
-    : 0;
-
-  const avgGDScore = completedGDs.length > 0
-    ? Math.round(completedGDs.reduce((acc, curr) => acc + (curr.report?.overallScore || 0), 0) / completedGDs.length)
-    : 0;
-
   const totalSessions = interviews.length + gds.length;
 
-  const performanceData = [...completedInterviews, ...completedGDs]
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-    .map(session => ({
-      date: format(new Date(session.createdAt), 'MMM dd'),
-      score: session.report?.overallScore || 0,
-      type: session.interviewType ? 'Interview' : 'GD',
-      fullDate: format(new Date(session.createdAt), 'PPPP')
-    }))
-    .slice(-7);
+  const avgScore = totalSessions > 0
+    ? Math.round([...completedInterviews, ...completedGDs].reduce((acc, curr) => acc + (curr.report?.overallScore || 0), 0) / totalSessions)
+    : 0;
 
-  // Mock data for radar if no completed sessions, else we could derive it
-  const radarData = [
-    { subject: 'Communication', A: 85, fullMark: 100 },
-    { subject: 'Technical', A: 78, fullMark: 100 },
-    { subject: 'Clarity', A: 92, fullMark: 100 },
-    { subject: 'Problem Solving', A: 88, fullMark: 100 },
-    { subject: 'Confidence', A: 80, fullMark: 100 },
-  ];
+  const performanceData = completedInterviews.length + completedGDs.length > 0 
+    ? [...completedInterviews, ...completedGDs]
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      .map(session => ({
+        date: format(new Date(session.createdAt), 'MMM dd'),
+        score: session.report?.overallScore || 0,
+        type: session.interviewType ? 'Interview' : 'GD',
+        fullDate: format(new Date(session.createdAt), 'PPPP')
+      }))
+      .slice(-7)
+    : [
+      { date: 'Mon', score: 65, fullDate: 'Monday' },
+      { date: 'Tue', score: 70, fullDate: 'Tuesday' },
+      { date: 'Wed', score: 68, fullDate: 'Wednesday' },
+      { date: 'Thu', score: 75, fullDate: 'Thursday' },
+      { date: 'Fri', score: 82, fullDate: 'Friday' },
+      { date: 'Sat', score: 85, fullDate: 'Saturday' },
+      { date: 'Sun', score: 92, fullDate: 'Sunday' },
+    ];
 
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#bef264 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-[#bef264] border-t-transparent rounded-full animate-spin"></div>
           <p className="text-zinc-500 font-medium">Loading your dashboard...</p>
         </div>
       </div>
@@ -102,418 +97,321 @@ const DashboardOverview = () => {
       <Helmet>
         <title>Dashboard | PlaceMateAI</title>
       </Helmet>
-      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-10 animate-fade-in">
-        {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl md:text-2xl font-black text-white mb-2 flex items-center gap-3">
-            Welcome back, {user?.firstName}
-            <span className="text-3xl animate-wave">👋</span>
-          </h1>
-          <p className="text-zinc-400 font-medium text-sm md:text-base">Here's what's happening with your interview prep today.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            to="/dashboard/setup"
-            className="bg-[#bef264] hover:bg-[#bef264-hover active:scale-95 text-black font-bold px-6 py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.15)] flex items-center gap-2 group"
-          >
-            <FiPlus className="group-hover:rotate-90 transition-transform duration-300" />
-            New Interview
-          </Link>
-          <Link
-            to="/gd/setup"
-            className="bg-white/5 hover:bg-white/10 active:scale-95 text-white font-bold px-6 py-3 rounded-2xl transition-all border border-white/10 flex items-center gap-2 group"
-          >
-            <FiUsers className="group-hover:scale-110 transition-transform duration-300" />
-            Start GD
-          </Link>
-        </div>
-      </div>
+      
+      {/* Include custom generic styles matching Stitch mockup context */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .glass-panel {
+            background: rgba(38, 37, 40, 0.4);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(190, 242, 100, 0.1);
+            border-left: 1px solid rgba(190, 242, 100, 0.1);
+        }
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(190, 242, 100, 0.15);
+        }
+      `}} />
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          icon={<FiTarget className="text-blue-400" />}
-          title="Total Sessions"
-          value={totalSessions}
-          trend="+12%"
-          description="Sessions completed"
-          color="blue"
-        />
-        <MetricCard
-          icon={<FiAward className="text-purple-400" />}
-          title="Avg Interview Score"
-          value={`${avgInterviewScore}%`}
-          trend="+5%"
-          description="Based on evaluations"
-          color="purple"
-        />
-        <MetricCard
-          icon={<FiMessageSquare className="text-amber-400" />}
-          title="Avg GD Score"
-          value={`${avgGDScore}%`}
-          trend="+2%"
-          description="Topic mastery"
-          color="amber"
-        />
-        {subscription ? (
-          <div className="bg-[#bef264]/5 rounded-3xl p-6 border-y border-[#bef264] space-y-4 shadow-sm h-full flex flex-col justify-center">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.15em] leading-none">
-                {subscription.tier} Plan
+      <div className="px-4 md:px-8 py-8 md:py-12 max-w-7xl mx-auto space-y-12 animate-fade-in text-zinc-100 selection:bg-[#bef264] selection:text-black">
+        
+        {/* Welcome Section */}
+        <section>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <span className="text-[#bef264] font-bold tracking-widest text-xs uppercase mb-2 block">Performance Overview</span>
+              <h2 className="text-4xl font-black tracking-tighter text-white">Welcome back, {user?.firstName}.        <span className="text-3xl animate-wave">👋</span>
+</h2>
+              <p className="text-zinc-400 mt-2 max-w-lg">You're making great progress in your interview preparations. Keep the momentum going to achieve your targeted role.</p>
+            </div>
+            <div className="flex gap-4">
+              {subscription ? (
+                <div className="glass-panel px-6 py-4 rounded-3xl flex flex-col justify-center border border-[#bef264]/20 shadow-[0_8px_32px_-8px_rgba(190,242,100,0.1)] min-w-[240px]">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">{subscription.tier} Plan</span>
+                    <Link to="/billing" className="text-[#bef264] text-[10px] uppercase font-black tracking-wider hover:text-white transition-colors">Upgrade</Link>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-1 items-center bg-zinc-900/50 p-2 rounded-xl border border-white/5">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Talk</span>
+                      <span className="text-sm font-black text-white">{subscription.credits.talkTime}/{subscription.limits.talkTime}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 items-center bg-zinc-900/50 p-2 rounded-xl border border-white/5">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Int</span>
+                      <span className="text-sm font-black text-white">{subscription.credits.interviews}/{subscription.limits.interviews}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 items-center bg-zinc-900/50 p-2 rounded-xl border border-white/5">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">GD</span>
+                      <span className="text-sm font-black text-white">{subscription.credits.gdSessions}/{subscription.limits.gdSessions}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="glass-panel px-8 py-5 rounded-3xl flex flex-col justify-center border border-[#bef264]/20 border border-[#bef264]/20 shadow-[0_8px_32px_-8px_rgba(190,242,100,0.1)]">
+                  <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">Plan Status</span>
+                  <span className="text-lg font-black text-white mt-1">Free Tier</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <FiClock size={64} />
+            </div>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Talk Time</p>
+            <h3 className="text-4xl font-black text-white">{subscription ? Math.round(subscription.credits.talkTime || 0) : '12'}<span className="text-lg text-zinc-500">m</span></h3>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
+                <FiTrendingUp size={12} /> +2.1h
               </span>
-              <Link to="/billing" className="text-[10px] font-black text-[#bef264] hover:text-[#d9ff96] transition-colors uppercase tracking-widest leading-none">
-                Upgrade
+              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">this week</span>
+            </div>
+          </div>
+          
+          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <FiCheckCircle size={64} />
+            </div>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Mocks Completed</p>
+            <h3 className="text-4xl font-black text-white">{completedInterviews.length}</h3>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
+                <FiCheck size={12} /> {completedInterviews.filter(i => new Date(i.createdAt) > new Date(Date.now() - 86400000)).length} today
+              </span>
+              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Goal: 20</span>
+            </div>
+          </div>
+
+          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <FiUsers size={64} />
+            </div>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">GD Sessions</p>
+            <h3 className="text-4xl font-black text-white">{gds.length}</h3>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
+                <FiCheck size={12} /> {completedGDs.filter(i => new Date(i.createdAt) > new Date(Date.now() - 86400000)).length} today
+              </span>
+              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">Keep practicing</span>
+            </div>
+          </div>
+
+          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <FiTarget size={64} />
+            </div>
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Avg Session Score</p>
+            <h3 className="text-4xl font-black text-white">{avgScore > 0 ? avgScore : 84}<span className="text-lg text-zinc-500">%</span></h3>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
+                <FiTrendingUp size={12} /> +5%
+              </span>
+              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">vs last week</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Grid - Asymmetric Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Main Activities */}
+          <div className="lg:col-span-7 md:col-span-12 space-y-8">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black text-white">Recommended Focus</h3>
+              <Link to="/paths" className="text-[#bef264] text-xs font-black uppercase tracking-widest hover:text-[#dcfc9f] transition-colors">
+                View all paths
               </Link>
             </div>
             
-            <div className="flex justify-around items-center pt-1">
-              <CircularUsage 
-                label="Talk" 
-                value={subscription.credits.talkTime} 
-                max={subscription.limits.talkTime} 
-                unit="m"
-                color="#bef264"
-                size={70}
-              />
-              <CircularUsage 
-                label="Int" 
-                value={subscription.credits.interviews} 
-                max={subscription.limits.interviews} 
-                color="#60a5fa"
-                size={70}
-              />
-              <CircularUsage 
-                label="GD" 
-                value={subscription.credits.gdSessions} 
-                max={subscription.limits.gdSessions} 
-                color="#a78bfa"
-                size={70}
-              />
-            </div>
-          </div>
-        ) : (
-          <MetricCard
-            icon={<FiActivity className="text-emerald-400" />}
-            title="Preparation Level"
-            value="Ready"
-            badge="Gold Tier"
-            description="Overall status"
-            color="emerald"
-          />
-        )}
-      </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Featured Activity */}
+              <div onClick={() => navigate('/dashboard/setup')} className="md:col-span-2 glass-panel p-8 rounded-[2rem] group cursor-pointer border border-[#bef264]/10 hover:border-[#bef264]/40 transition-all duration-500 relative overflow-hidden shadow-[0_0_40px_rgba(190,242,100,0.05)]">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-[#bef264]/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-[#bef264]/20 transition-colors duration-700"></div>
+                <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+                  <div className="w-full md:w-1/2">
+                    <div className="w-14 h-14 bg-[#bef264]/20 text-[#bef264] rounded-2xl flex items-center justify-center mb-6">
+                      <FiVideo size={28} />
+                    </div>
+                    <h4 className="text-2xl font-black text-white mb-3">Voice Mock Interview</h4>
+                    <p className="text-zinc-400 mb-8 text-sm leading-relaxed font-medium">Engage with our advanced AI behavioral model. Get real-time sentiment analysis and body language feedback.</p>
+                    <button className="bg-[#bef264] text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-transform flex items-center gap-3">
+                      Start Session <FiArrowRight />
+                    </button>
+                  </div>
+                  <div className="w-full md:w-1/2 bg-black/40 p-6 rounded-[2rem] border border-white/5">
+                    <p className="text-[10px] uppercase font-black text-zinc-500 mb-6 tracking-widest">Live Feedback Preview</p>
+                    <div className="space-y-5">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                           <span className="text-white">Confidence</span>
+                           <span className="text-[#bef264]">85%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-[#bef264] w-[85%] shadow-[0_0_10px_#bef264]"></div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-bold">
+                           <span className="text-white">Pacing</span>
+                           <span className="text-zinc-500">40%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-zinc-500 w-[40%]"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-surface/40 border border-white/5 rounded-[2rem] p-6 md:p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-white font-bold text-lg mb-1">Performance Trend</h3>
-              <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider">Score progression over time</p>
-            </div>
-            <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest">
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#bef264]"></div> <span className="text-zinc-400 font-bold">Score</span></div>
-            </div>
-          </div>
-          <div className="h-[300px] w-full mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={performanceData}>
-                <defs>
-                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#bef264" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#bef264" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#bef264" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#bef264', fontSize: 10, fontWeight: 700 }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#71717a', fontSize: 10, fontWeight: 700 }}
-                  domain={[0, 100]}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-color)', borderRadius: '12px' }}
-                  itemStyle={{ color: '#bef264', fontWeight: 700 }}
-                  labelStyle={{ color: 'var(--text-main)', marginBottom: '4px', fontWeight: 800 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke="#bef264"
-                  strokeWidth={4}
-                  fillOpacity={1}
-                  fill="url(#colorScore)"
-                  animationDuration={2000}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+              {/* Secondary Activities */}
+              <div onClick={() => navigate('/gd/setup')} className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10">
+                <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center mb-5">
+                  <FiUsers size={24} />
+                </div>
+                <h4 className="text-lg font-black text-white mb-2">GD Simulator</h4>
+                <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">Practice group dynamics with 5 AI personas. Master the art of leading and listening.</p>
+                <div className="flex items-center gap-2 text-amber-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                  <span>Join simulator</span>
+                  <FiChevronRight size={14} />
+                </div>
+              </div>
 
-        <div className="bg-surface/40 border border-white/5 rounded-[2rem] p-8 flex flex-col">
-          <h3 className="text-white font-bold text-lg mb-1">Skills Distribution</h3>
-          <p className="text-zinc-500 text-xs font-semibold uppercase tracking-wider mb-8">Comprehensive assessment</p>
-          <div className="flex-1 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                <PolarGrid stroke="var(--border-color)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 700 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar
-                  name="Skills"
-                  dataKey="A"
-                  stroke="#bef264"
-                  fill="#bef264"
-                  fillOpacity={0.6}
-                  animationDuration={2000}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-8 space-y-4">
-            <SkillItem label="Communication" value={85} color="bg-blue-400" />
-            <SkillItem label="Problem Solving" value={70} color="bg-indigo-400" />
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Interviews */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <FiClock className="text-zinc-500" />
-                Recent Interviews
-              </h3>
-              <Link to="/dashboard/interviews" className="text-zinc-500 hover:text-white text-xs font-black uppercase tracking-widest transition-colors">
-                View All
-              </Link>
-            </div>
-
-            <div className="grid gap-3">
-              {interviews.slice(0, 3).length > 0 ? (
-                interviews.slice(0, 3).map((session) => (
-                  <RecentItem
-                    key={session._id}
-                    title={session.metadata?.role || "Interview Session"}
-                    subtitle={`${session.metadata?.agentName || "Rohan"} • ${session.interviewType}`}
-                    date={session.createdAt}
-                    score={session.report?.overallScore}
-                    status={session.status}
-                    onClick={() => navigate(`/interview/result/${session._id}`)}
-                    type="interview"
-                    agentName={session.metadata?.agentName}
-                  />
-                ))
-              ) : (
-                <EmptyState message="No interviews yet. Take your first one!" />
-              )}
+              <div onClick={() => navigate('/billing')} className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10">
+                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-500 rounded-xl flex items-center justify-center mb-5">
+                  <FiAward size={24} />
+                </div>
+                <h4 className="text-lg font-black text-white mb-2">Upgrade Plan</h4>
+                <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">Get specific improvements, advanced insights, and extended usage limits tailored to you.</p>
+                <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                  <span>View Options</span>
+                  <FiChevronRight size={14} />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-4 pt-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <FiUsers className="text-zinc-500" />
-                Recent Group Discussions
-              </h3>
-              <Link to="/dashboard/gd-interviews" className="text-zinc-500 hover:text-white text-xs font-black uppercase tracking-widest transition-colors">
-                View All
-              </Link>
-            </div>
-
-            <div className="grid gap-3">
-              {gds.slice(0, 3).length > 0 ? (
-                gds.slice(0, 3).map((session) => (
-                  <RecentItem
-                    key={session._id}
-                    title={session.topic}
-                    subtitle={session.category || "General"}
-                    date={session.createdAt}
-                    score={session.report?.overallScore}
-                    status={session.status}
-                    onClick={() => navigate(`/gd/result/${session._id}`)}
-                    type="gd"
-                  />
-                ))
-              ) : (
-                <EmptyState message="No GDs yet. Start practicing with peers!" />
-              )}
+          {/* Right Column: Analytics & Charts */}
+          <div className="lg:col-span-5 md:col-span-12 space-y-8">
+            <div className="glass-panel p-6 rounded-3xl h-full border border-white/5 flex flex-col w-full">
+              <h3 className="text-lg font-black text-white mb-2">Performance Trend</h3>
+              <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider mb-6">Score progression</p>
+              
+              <div className="w-full h-[300px] mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={performanceData}>
+                    <defs>
+                      <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#bef264" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#bef264" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#bef264" vertical={false} opacity={0.1} />
+                    <XAxis
+                      dataKey="date"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#a1a1aa', fontSize: 10, fontWeight: 700 }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#71717a', fontSize: 10, fontWeight: 700 }}
+                      domain={[0, 100]}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '12px' }}
+                      itemStyle={{ color: '#bef264', fontWeight: 700 }}
+                      labelStyle={{ color: '#ffffff', marginBottom: '4px', fontWeight: 800 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#bef264"
+                      strokeWidth={4}
+                      fillOpacity={1}
+                      fill="url(#colorScore)"
+                      animationDuration={2000}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Quick Actions / Tips */}
-        <div className="space-y-6">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <FiAward className="text-zinc-500" />
-            Quick Actions
-          </h3>
-          <div className="space-y-4">
-            <QuickActionCard
-              icon={<FiStar className="text-indigo-400" />}
-              title="Technical Interview"
-              desc="Prepare for coding rounds"
-              link="/dashboard/setup"
-              color="border-indigo-500/10 hover:bg-indigo-500/5 hover:border-indigo-500/20"
-            />
-            <QuickActionCard
-              icon={<FiUsers className="text-[#bef264" />}
-              title="Join Group Discussion"
-              desc="Improve team collaboration"
-              link="/gd/setup"
-              color="border-[#bef264] hover:bg-[#bef264] hover:border-[#bef264]"
-            />
-            <QuickActionCard
-              icon={<FiActivity className="text-orange-400" />}
-              title="Daily Challenges"
-              desc="Consistency is key"
-              link="#"
-              color="border-orange-500/10 hover:bg-orange-500/5 hover:border-orange-500/20"
-              comingSoon
-            />
-          </div>
-
-          <div className="p-8 rounded-[2rem] bg-gradient-to-br from-[#bef264] to-[#bef210] text-black relative overflow-hidden group shadow-[0_20px_40px_rgba(190,242,100,0.1)]">
-            <div className="relative z-10">
-              <h4 className="font-black text-2xl mb-2">Pro Tip 💡</h4>
-              <p className="text-black/70 text-sm font-semibold leading-relaxed mb-6">
-                Reviewing your transcripts is the fastest way to identify verbal fillers and improve your clarity.
-              </p>
-              <button className="bg-black text-white font-bold px-5 py-2 rounded-xl text-sm transition-transform active:scale-95">
-                Read Guide
+        {/* Recent Activity Table */}
+        <section>
+          <div className="glass-panel rounded-3xl overflow-hidden border border-white/5">
+            <div className="p-5 border-b border-white/5 flex justify-between items-center">
+              <h3 className="text-lg font-black text-white">Recent Feedback</h3>
+              <button className="text-zinc-500 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full">
+                <FiMoreHorizontal size={18} />
               </button>
             </div>
-            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-              <FiTrendingUp size={120} />
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-zinc-900/50">
+                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Type</th>
+                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Title</th>
+                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Status</th>
+                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Date</th>
+                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Score</th>
+                    <th className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-sm">
+                  {([...completedInterviews, ...completedGDs].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5)).map((session, idx) => (
+                    <tr key={session._id || idx} className="hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => navigate(session.interviewType ? `/interview/result/${session._id}` : `/gd/result/${session._id}`)}>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${session.interviewType ? 'bg-[#bef264]/10 text-[#bef264]' : 'bg-amber-500/10 text-amber-500'}`}>
+                            {session.interviewType ? <FiVideo size={14} /> : <FiUsers size={14} />}
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">{session.interviewType ? 'Interview' : 'GD'}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                         <span className="font-bold text-white group-hover:text-[#bef264] transition-colors line-clamp-1">{session.interviewType ? session.metadata?.role || "Interview" : session.topic}</span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="px-2 py-1 rounded bg-[#bef264]/10 text-[#bef264] border border-[#bef264]/20 text-[9px] font-black uppercase tracking-[0.1em]">Done</span>
+                      </td>
+                      <td className="px-5 py-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                        {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="text-base font-black text-white group-hover:text-[#bef264] transition-colors">{session.report?.overallScore || '-'}<span className="text-[10px] text-zinc-500 ml-1">%</span></span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <button className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-[#bef264] transition-colors flex items-center gap-1">
+                          Review <FiChevronRight size={12} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {interviews.length === 0 && gds.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-10 text-center text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                        No sessions completed yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+
       </div>
     </>
   );
 };
 
-const MetricCard = ({ icon, title, value, trend, badge, description, color }) => (
-  <div className="bg-surface/40 border-y border-[#bef264] rounded-3xl p-4 transition-all hover:bg-surface/60 group relative overflow-hidden">
-    {/* <div className="flex items-center justify-between mb-4 relative z-10">
-      <div className={`p-3 rounded-2xl bg-zinc-800/50 group-hover:scale-110 transition-transform`}>{icon}</div>
-      {trend && (
-        <span className="text-[10px] font-black text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg">
-          {trend}
-        </span>
-      )}
-      {badge && (
-        <span className="text-[10px] font-black text-emerald-400 border border-emerald-400/20 px-2 py-1 rounded-lg uppercase tracking-wider">
-          {badge}
-        </span>
-      )}
-    </div> */}
-    <div className="relative z-10">
-      <h3 className="text-zinc-500 font-bold text-xs uppercase tracking-widest mb-1">{title}</h3>
-      <div className="flex items-end justify-between">
-        <span className="text-3xl font-black text-white">{value}</span>
-      </div>
-      <p className="text-zinc-600 text-[10px] font-bold mt-2 uppercase tracking-[0.2em]">{description}</p>
-    </div>
-    <div className={`absolute top-0 right-0 w-32 h-32 bg-current opacity-[0.02] blur-3xl -mr-16 -mt-16 rounded-full group-hover:opacity-[0.05] transition-opacity`}></div>
-  </div>
-);
-
-const SkillItem = ({ label, value, color }) => (
-  <div className="space-y-2">
-    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500">
-      <span>{label}</span>
-      <span className="text-white">{value}%</span>
-    </div>
-    <div className="h-2 w-full bg-zinc-800/50 rounded-full overflow-hidden p-0.5 border border-white/5">
-      <div className={`h-full ${color} rounded-full transition-all duration-1000 ease-out`} style={{ width: `${value}%` }}></div>
-    </div>
-  </div>
-);
-
-const RecentItem = ({ title, subtitle, date, score, status, onClick, type, agentName }) => {
-  const agent = interviewAgents.find(a => a.name === agentName) || { image: "/assets/interviewers/male1.png" };
-
-  return (
-    <div
-      onClick={onClick}
-      className="flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 rounded-[1.5rem] transition-all cursor-pointer group"
-    >
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          {type === 'interview' ? (
-            <img src={agent.image} className="w-12 h-12 rounded-2xl object-cover bg-zinc-800 border border-white/10" alt="" />
-          ) : (
-            <div className="w-12 h-12 rounded-2xl bg-zinc-800 border border-white/10 flex items-center justify-center">
-              <FiMessageSquare className="text-zinc-500" size={20} />
-            </div>
-          )}
-          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-surface ${status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-        </div>
-        <div>
-          <h4 className="text-white font-bold text-sm group-hover:text-[#bef264 transition-colors line-clamp-1">{title}</h4>
-          <p className="text-zinc-500 text-xs font-medium">{subtitle}</p>
-        </div>
-      </div>
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-3">
-          {score !== undefined && (
-            <span className={`text-sm font-black ${score >= 75 ? 'text-emerald-400' : score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
-              {score}%
-            </span>
-          )}
-          <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-tighter">
-            {formatDistanceToNow(new Date(date), { addSuffix: true })}
-          </span>
-        </div>
-        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-[0.1em] border ${status === 'completed' ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' :
-          status === 'analysis_pending' ? 'border-blue-500/20 text-blue-400 bg-blue-500/5' :
-            'border-zinc-500/20 text-zinc-500'
-          }`}>
-          {status === 'completed' ? 'Completed' : status === 'analysis_pending' ? 'Analyzing' : status}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-const QuickActionCard = ({ icon, title, desc, link, color, comingSoon }) => (
-  <Link
-    to={link}
-    className={`flex items-center gap-4 p-4 border rounded-2xl transition-all group ${color} ${comingSoon ? 'opacity-50 pointer-events-none' : ''}`}
-  >
-    <div className="p-3 rounded-xl bg-zinc-800/30 group-hover:scale-110 transition-transform">{icon}</div>
-    <div>
-      <h4 className="text-white font-bold text-sm flex items-center gap-2">
-        {title}
-        {comingSoon && <span className="text-[8px] bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500 uppercase font-black">Coming Soon</span>}
-      </h4>
-      <p className="text-zinc-500 text-xs font-medium">{desc}</p>
-    </div>
-    {!comingSoon && <FiArrowUpRight className="ml-auto text-zinc-600 group-hover:text-white transition-colors" />}
-  </Link>
-);
-
-const EmptyState = ({ message }) => (
-  <div className="p-10 border-2 border-dashed border-white/5 rounded-[2rem] bg-white/[0.01] flex flex-col items-center justify-center text-center">
-    <div className="w-14 h-14 rounded-2xl bg-zinc-800/50 flex items-center justify-center mb-4 transition-transform hover:rotate-12">
-      <FiActivity className="text-zinc-600" size={24} />
-    </div>
-    <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest">{message}</p>
-  </div>
-);
-
 export default DashboardOverview;
+
 

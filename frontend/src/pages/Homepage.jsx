@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import Hero from "../components/home/Hero";
 import Steps from "../components/home/Steps";
@@ -7,9 +8,21 @@ import Roles from "../components/home/Roles";
 import Testimonials from "../components/home/Testimonials";
 import FAQ from "../components/home/FAQ";
 import CTA from "../components/home/CTA";
+import PricingSection from "../components/home/PricingSection";
 import Aurora from "../reactbits/Aurora";
 
 const Homepage = ({ backendStatus }) => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === "#pricing") {
+      const element = document.getElementById("pricing");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [location]);
+
   return (
     <>
       <Helmet>
@@ -31,6 +44,7 @@ const Homepage = ({ backendStatus }) => {
       <Steps />
       <Features />
       <Roles />
+      <PricingSection />
       <Testimonials />
       <FAQ />
       <CTA />

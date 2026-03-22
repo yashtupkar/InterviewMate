@@ -19,7 +19,7 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use('/api/webhooks', express.raw({ type: 'application/json' })); // Raw body for webhooks
+app.use('/api/webhooks', express.raw({ type: '*/*' })); // Raw body for Clerk + Razorpay webhooks
 app.use(cors());
 app.use(express.json());
 

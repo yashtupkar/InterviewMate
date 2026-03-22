@@ -118,7 +118,9 @@ const startInterview = async (req, res) => {
 const getInterviewReport = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const session = await InterviewSession.findById(sessionId);
+    const userId = req.user._id;
+
+    const session = await InterviewSession.findOne({ _id: sessionId, userId });
 
     if (!session) {
       return res.status(404).json({ message: "Session not found" });

@@ -9,7 +9,7 @@ const subscriptionSchema = new mongoose.Schema({
     },
     tier: {
         type: String,
-        enum: ['Free', 'Pro', 'Elite'],
+        enum: ['Free', 'Student Flash', 'Placement Pro', 'Infinite Elite'],
         default: 'Free'
     },
     credits: {
@@ -20,12 +20,18 @@ const subscriptionSchema = new mongoose.Schema({
     planExpiry: {
         type: Date
     },
+    billingCycle: {
+        type: String,
+        enum: ['monthly', 'yearly', null],
+        default: null
+    },
+    lastPaymentAt: {
+        type: Date
+    },
+    // References to Order documents — full details live in Order collection
     paymentHistory: [{
-        orderId: String,
-        amount: Number,
-        currency: { type: String, default: 'INR' },
-        date: { type: Date, default: Date.now },
-        status: { type: String, default: 'pending' }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order'
     }]
 }, { timestamps: true });
 

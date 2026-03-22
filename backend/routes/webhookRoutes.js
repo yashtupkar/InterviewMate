@@ -6,8 +6,14 @@ const GDSession = require('../models/gdSessionModel');
 const InterviewSession = require('../models/interviewSessionModel');
 const Referral = require('../models/Referral');
 const asyncHandler = require('../utils/asyncHandler');
+const { handleRazorpayWebhook } = require('../controllers/subscriptionController');
 
 const router = express.Router();
+
+// ─── Razorpay Webhook ─────────────────────────────────────────────────────────
+// Raw body is already provided by express.raw() in index.js for /api/webhooks/*
+router.post('/razorpay', handleRazorpayWebhook);
+
 
 router.post('/clerk', asyncHandler(async (req, res) => {
     const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
