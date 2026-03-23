@@ -9,7 +9,7 @@ const InterviewLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-zinc-900 overflow-x-hidden">
+    <div className="flex min-h-screen bg-zinc-900">
       {/* Mobile Menu Button - Top Header */}
       <div className="md:hidden fixed top-0 left-0 w-full z-[40] bg-zinc-900 border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">

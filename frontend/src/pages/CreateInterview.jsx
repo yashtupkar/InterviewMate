@@ -42,7 +42,8 @@ const CreateInterview = () => {
   const [resumeContent, setResumeContent] = useState("");
   const [duration, setDuration] = useState(10); // 5, 10, 15, 20 minutes
   const [showAllAgents, setShowAllAgents] = useState(false);
-  const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] = useState(false);
+  const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] =
+    useState(false);
   const [availableVoices, setAvailableVoices] = useState([]);
 
   useEffect(() => {
@@ -69,16 +70,25 @@ const CreateInterview = () => {
     const text = `Hi, I am ${agent.name}. I'll be your interviewer today.`;
     const utterance = new SpeechSynthesisUtterance(text);
 
-    const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+    const voices =
+      availableVoices.length > 0
+        ? availableVoices
+        : window.speechSynthesis.getVoices();
     let voice = null;
     for (const kw of config.keywords) {
-      voice = voices.find(v => v.name.includes(kw) && v.lang.includes("en"));
+      voice = voices.find((v) => v.name.includes(kw) && v.lang.includes("en"));
       if (voice) break;
     }
     if (!voice) {
-      voice = voices.find(v => (config.gender === 'female' ? (v.name.includes("Female") || v.name.includes("Zira")) : (v.name.includes("Male") || v.name.includes("David"))) && v.lang.includes("en"));
+      voice = voices.find(
+        (v) =>
+          (config.gender === "female"
+            ? v.name.includes("Female") || v.name.includes("Zira")
+            : v.name.includes("Male") || v.name.includes("David")) &&
+          v.lang.includes("en"),
+      );
     }
-    if (!voice) voice = voices.find(v => v.lang.includes("en"));
+    if (!voice) voice = voices.find((v) => v.lang.includes("en"));
 
     if (voice) utterance.voice = voice;
     utterance.rate = config.rate;
@@ -99,9 +109,12 @@ const CreateInterview = () => {
       try {
         const token = await getToken();
         if (token) {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const res = await axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
           setSubscription(res.data);
         }
       } catch (err) {
@@ -113,7 +126,10 @@ const CreateInterview = () => {
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (experienceDropdownRef.current && !experienceDropdownRef.current.contains(event.target)) {
+      if (
+        experienceDropdownRef.current &&
+        !experienceDropdownRef.current.contains(event.target)
+      ) {
         setIsExperienceDropdownOpen(false);
       }
     }
@@ -154,8 +170,14 @@ const CreateInterview = () => {
   };
 
   const startInterview = async () => {
-    if (subscription && subscription.tier !== 'Infinite Elite' && (subscription.credits || 0) < 10) {
-      toast.error("You need at least 10 credits to start an interview. Redirecting to billing...");
+    if (
+      subscription &&
+      subscription.tier !== "Infinite Elite" &&
+      (subscription.credits || 0) < 10
+    ) {
+      toast.error(
+        "You need at least 10 credits to start an interview. Redirecting to billing...",
+      );
       setTimeout(() => navigate("/billing"), 2000);
       return;
     }
@@ -193,7 +215,7 @@ const CreateInterview = () => {
       ...interviewData,
       content: combinedContent,
       userName: user?.firstName || "Candidate",
-      duration: duration
+      duration: duration,
     };
 
     setLoading(true);
@@ -204,11 +226,19 @@ const CreateInterview = () => {
         finalInterviewData,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      const { systemPrompt, sessionId: newSessionId, duration: serverDuration } = response.data;
+      const {
+        systemPrompt,
+        sessionId: newSessionId,
+        duration: serverDuration,
+      } = response.data;
       setSessionId(newSessionId);
 
       navigate(`/session-custom/${newSessionId}`, {
-        state: { systemPrompt, isCustom: true, duration: serverDuration || duration },
+        state: {
+          systemPrompt,
+          isCustom: true,
+          duration: serverDuration || duration,
+        },
       });
     } catch (error) {
       console.error(error);
@@ -226,19 +256,21 @@ const CreateInterview = () => {
         <title>Interview Setup | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
-        <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto animate-fade mt-8">
+        <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto mt-8 relative">
           {/* Pre-call Preview / Green Room - Sticky Section */}
-          <div className="w-full lg:w-1/2 flex flex-col sticky top-16 space-y-6 animate-fade-in-left">
+          <div className="w-full lg:w-1/2 flex flex-col lg:sticky lg:top-16 h-fit space-y-6 animate-fade-in-left">
             <div className="space-y-4">
-              <div
-                className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
+              <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 AI Mock Interview
               </div>
               <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
-                Ace your <span className="text-[#bef264] italic">Job</span> Interview
+                Ace your <span className="text-[#bef264] italic">Job</span>{" "}
+                Interview
               </h1>
               <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-md">
-                Prepare for your dream job with real-time AI feedback. Practice speaking in a professional environment with our advanced AI interviewers.
+                Prepare for your dream job with real-time AI feedback. Practice
+                speaking in a professional environment with our advanced AI
+                interviewers.
               </p>
             </div>
 
@@ -278,30 +310,45 @@ const CreateInterview = () => {
                   onClick={() => setIsMicEnabled(!isMicEnabled)}
                   className={`p-4 rounded-2xl transition-all cursor-pointer ${!isMicEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
                 >
-                  {!isMicEnabled ? <FiMicOff className="text-xl" /> : <FiMic className="text-xl" />}
+                  {!isMicEnabled ? (
+                    <FiMicOff className="text-xl" />
+                  ) : (
+                    <FiMic className="text-xl" />
+                  )}
                 </button>
                 <button
                   onClick={toggleVideo}
                   className={`p-4 rounded-2xl transition-all cursor-pointer ${!isCameraEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
                 >
-                  {!isCameraEnabled ? <FiVideoOff className="text-xl" /> : <FiVideo className="text-xl" />}
+                  {!isCameraEnabled ? (
+                    <FiVideoOff className="text-xl" />
+                  ) : (
+                    <FiVideo className="text-xl" />
+                  )}
                 </button>
               </div>
 
               <div className="absolute top-6 left-6 flex items-center space-x-2 bg-zinc-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
-                <div className={`w-2 h-2 rounded-full ${isCameraEnabled && isMicEnabled ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}></div>
+                <div
+                  className={`w-2 h-2 rounded-full ${isCameraEnabled && isMicEnabled ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}
+                ></div>
                 <span className="text-[10px] font-black tracking-widest text-white uppercase opacity-90">
-                  {isCameraEnabled && isMicEnabled ? "System Ready" : "Setup Required"}
+                  {isCameraEnabled && isMicEnabled
+                    ? "System Ready"
+                    : "Setup Required"}
                 </span>
               </div>
             </div>
 
             <div className="dark:bg-[#1a1a1a] bg-white p-7 shadow-xl rounded-[2rem] border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
               <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
-                <FiShield className="mr-3 text-[#bef264] text-xl" /> Professional Environment
+                <FiShield className="mr-3 text-[#bef264] text-xl" />{" "}
+                Professional Environment
               </h3>
               <p className="text-[13px] dark:text-zinc-500 text-gray-600 leading-relaxed font-medium">
-                Ensure you are in a quiet room with good lighting. Our AI interviewer will analyze both your tone and content to provide detailed feedback.
+                Ensure you are in a quiet room with good lighting. Our AI
+                interviewer will analyze both your tone and content to provide
+                detailed feedback.
               </p>
             </div>
           </div>
@@ -403,7 +450,9 @@ const CreateInterview = () => {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setIsExperienceDropdownOpen(!isExperienceDropdownOpen)}
+                  onClick={() =>
+                    setIsExperienceDropdownOpen(!isExperienceDropdownOpen)
+                  }
                   className="w-full flex items-center justify-between px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] outline-none text-[13px] font-bold shadow-sm transition-all cursor-pointer hover:border-zinc-700"
                 >
                   <span>
@@ -412,11 +461,16 @@ const CreateInterview = () => {
                         { value: "Junior", label: "Entry Level" },
                         { value: "Mid-Level", label: "Mid-Level Associate" },
                         { value: "Senior", label: "Senior Professional" },
-                        { value: "Architect", label: "Architect / Lead" }
-                      ].find((level) => level.value === (interviewData.level || "Junior"))?.label
+                        { value: "Architect", label: "Architect / Lead" },
+                      ].find(
+                        (level) =>
+                          level.value === (interviewData.level || "Junior"),
+                      )?.label
                     }
                   </span>
-                  <FiChevronDown className={`transition-transform duration-300 text-zinc-500 ${isExperienceDropdownOpen ? "rotate-180" : ""}`} />
+                  <FiChevronDown
+                    className={`transition-transform duration-300 text-zinc-500 ${isExperienceDropdownOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
 
                 {isExperienceDropdownOpen && (
@@ -431,13 +485,16 @@ const CreateInterview = () => {
                         key={level.value}
                         type="button"
                         onClick={() => {
-                          handleInputChange({ target: { name: "level", value: level.value } });
+                          handleInputChange({
+                            target: { name: "level", value: level.value },
+                          });
                           setIsExperienceDropdownOpen(false);
                         }}
-                        className={`w-full text-left px-5 py-3.5 text-[13px] transition-all cursor-pointer ${(interviewData.level || "Junior") === level.value
-                          ? "bg-[#bef264/10 text-[#bef264] font-black"
-                          : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-                          }`}
+                        className={`w-full text-left px-5 py-3.5 text-[13px] transition-all cursor-pointer ${
+                          (interviewData.level || "Junior") === level.value
+                            ? "bg-[#bef264]/10 text-[#bef264] font-black"
+                            : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                        }`}
                       >
                         {level.label}
                       </button>
@@ -463,7 +520,16 @@ const CreateInterview = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-3 transition-all duration-300">
                   {interviewAgents
-                    .filter(a => ["Rohan", "Sophia", "Marcus", "Emma", "Drew", "Rachel"].includes(a.name))
+                    .filter((a) =>
+                      [
+                        "Rohan",
+                        "Sophia",
+                        "Marcus",
+                        "Emma",
+                        "Drew",
+                        "Rachel",
+                      ].includes(a.name),
+                    )
                     .slice(0, showAllAgents ? undefined : 4)
                     .map((agent) => (
                       <div
@@ -487,16 +553,18 @@ const CreateInterview = () => {
                               ? `#${agent.bg}15`
                               : "",
                         }}
-                        className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${interviewData.agentName === agent.name
-                          ? "shadow-xl shadow-black/40 scale-[1.02]"
-                          : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900"
-                          }`}
+                        className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${
+                          interviewData.agentName === agent.name
+                            ? "shadow-xl shadow-black/40 scale-[1.02]"
+                            : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900"
+                        }`}
                       >
                         <div
-                          className={`relative rounded-full p-0.5 transition-all duration-300 ${interviewData.agentName === agent.name
-                            ? "scale-110"
-                            : ""
-                            }`}
+                          className={`relative rounded-full p-0.5 transition-all duration-300 ${
+                            interviewData.agentName === agent.name
+                              ? "scale-110"
+                              : ""
+                          }`}
                           style={{
                             background:
                               interviewData.agentName === agent.name
@@ -507,10 +575,11 @@ const CreateInterview = () => {
                           <img
                             src={agent.image}
                             alt={agent.name}
-                            className={`w-11 h-11 rounded-full object-cover border-2 ${interviewData.agentName === agent.name
-                              ? "border-zinc-950"
-                              : "border-zinc-800"
-                              }`}
+                            className={`w-11 h-11 rounded-full object-cover border-2 ${
+                              interviewData.agentName === agent.name
+                                ? "border-zinc-950"
+                                : "border-zinc-800"
+                            }`}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -528,10 +597,11 @@ const CreateInterview = () => {
                             </p>
                             <button
                               onClick={(e) => playVoiceSample(agent, e)}
-                              className={`p-2 rounded-xl transition-all ${interviewData.agentName === agent.name
-                                ? "bg-white/10 text-white hover:bg-white/20"
-                                : "bg-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800"
-                                }`}
+                              className={`p-2 rounded-xl transition-all ${
+                                interviewData.agentName === agent.name
+                                  ? "bg-white/10 text-white hover:bg-white/20"
+                                  : "bg-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800"
+                              }`}
                               title="Play sample"
                             >
                               <FiVolume2 size={14} />
@@ -556,13 +626,22 @@ const CreateInterview = () => {
                 <div className="space-y-3">
                   {/* Technical */}
                   <button
-                    onClick={() => setInterviewData((p) => ({ ...p, interviewType: "technical" }))}
+                    onClick={() =>
+                      setInterviewData((p) => ({
+                        ...p,
+                        interviewType: "technical",
+                      }))
+                    }
                     className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "technical" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
                   >
-                    <div className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "technical" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`} />
+                    <div
+                      className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "technical" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
+                    />
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "technical" ? "text-white" : "group-hover:text-zinc-200"}`}>
+                        <span
+                          className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "technical" ? "text-white" : "group-hover:text-zinc-200"}`}
+                        >
                           Technical
                         </span>
                         <span className="text-[9px] px-2 py-0.5 rounded bg-[#bef264]/20 text-[#bef264] font-black uppercase tracking-widest">
@@ -577,13 +656,22 @@ const CreateInterview = () => {
 
                   {/* Behavioral */}
                   <button
-                    onClick={() => setInterviewData((p) => ({ ...p, interviewType: "behavioral" }))}
+                    onClick={() =>
+                      setInterviewData((p) => ({
+                        ...p,
+                        interviewType: "behavioral",
+                      }))
+                    }
                     className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
                   >
-                    <div className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`} />
+                    <div
+                      className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
+                    />
                     <div className="flex-1 text-left">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <span className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "behavioral" ? "text-white" : "group-hover:text-zinc-200"}`}>
+                        <span
+                          className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "behavioral" ? "text-white" : "group-hover:text-zinc-200"}`}
+                        >
                           Behavioral
                         </span>
                         <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-black uppercase tracking-widest">
@@ -610,10 +698,11 @@ const CreateInterview = () => {
                     <button
                       key={mins}
                       onClick={() => setDuration(mins)}
-                      className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all ${duration === mins
-                        ? "bg-[#bef264] text-black shadow-lg"
-                        : "text-zinc-500 hover:text-zinc-300"
-                        }`}
+                      className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                        duration === mins
+                          ? "bg-[#bef264] text-black shadow-lg"
+                          : "text-zinc-500 hover:text-zinc-300"
+                      }`}
                     >
                       {mins} Min
                     </button>
@@ -625,22 +714,30 @@ const CreateInterview = () => {
                 <button
                   onClick={startInterview}
                   disabled={loading}
-                  className={`w-full px-10 ${subscription && subscription.tier !== 'Infinite Elite' && subscription.credits <= 0 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' : 'bg-[#bef264] hover:bg-[#bef264]/90 text-black'} cursor-pointer font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/10 active:scale-95 group`}
+                  className={`w-full px-10 ${subscription && subscription.tier !== "Infinite Elite" && subscription.credits <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} cursor-pointer font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95 group`}
                 >
                   {loading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                       Starting Interview...
                     </>
-                  ) : subscription && subscription.tier !== 'Infinite Elite' && subscription.credits < 10 ? (
+                  ) : subscription &&
+                    subscription.tier !== "Infinite Elite" &&
+                    subscription.credits < 10 ? (
                     <>
                       Get Credits
-                      <FiCreditCard size={20} className="group-hover:translate-x-1 transition-transform" />
+                      <FiCreditCard
+                        size={20}
+                        className="group-hover:translate-x-1 transition-transform"
+                      />
                     </>
                   ) : (
                     <>
                       Start Session
-                      <FiArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                      <FiArrowRight
+                        size={20}
+                        className="group-hover:translate-x-1 transition-transform"
+                      />
                     </>
                   )}
                 </button>
@@ -648,7 +745,6 @@ const CreateInterview = () => {
             </div>
           </div>
         </div>
-
       </div>
     </>
   );
