@@ -31,6 +31,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import axios from "axios";
 import CodingSpace from "./components/CodingSpace";
 import VoiceTest from "./pages/VoiceTest";
+import HelpPage from "./pages/Help";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -118,8 +119,8 @@ function App() {
 
   return (
     <InterviewProvider>
-      <Toaster 
-        position="top-center" 
+      <Toaster
+        position="top-center"
         toastOptions={{
           style: {
             background: '#121214',
@@ -219,7 +220,7 @@ function App() {
             path="/session"
             element={<InterviewSession />}
           />
-        
+
           <Route
             path="/session/:sessionId"
             element={<InterviewSession />}
@@ -255,6 +256,10 @@ function App() {
 
           <Route path="/referrals" element={<InterviewLayout />}>
             <Route index element={<Referrals />} />
+          </Route>
+
+          <Route path="/help" element={<InterviewLayout />}>
+            <Route index element={<HelpPage />} />
           </Route>
 
           {/* Standalone GD Session (No Sidebar) */}

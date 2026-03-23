@@ -81,7 +81,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const bottomItems = [
     { name: "Feedback", icon: <IoChatboxEllipses />, path: "#" },
-    { name: "Help", icon: <MdLiveHelp />, path: "#" },
+    { name: "Help", icon: <MdLiveHelp />, path: "/help" },
   ];
 
   return (

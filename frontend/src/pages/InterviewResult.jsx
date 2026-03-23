@@ -17,6 +17,8 @@ import { useInterview } from "../context/InterviewContext";
 import { useAuth } from "@clerk/clerk-react";
 import Lottie from "lottie-react";
 import loadingAnimation from "../assets/lottie/Digital marketing social media and data analysis.json";
+import ShareReportModal from "../components/share/ShareReportModal";
+import ShareReportButton from "../components/share/ShareReportButton";
 
 const SCORE_LABELS = {
   correctness: "Correctness",
@@ -72,6 +74,7 @@ const InterviewResult = () => {
   const [metadata, setMetadata] = useState(null);
   const [status, setStatus] = useState(null);
   const [pollCount, setPollCount] = useState(0);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     let intervalId;
@@ -229,16 +232,19 @@ const InterviewResult = () => {
               </p>
             )}
           </div>
-          <button
-            onClick={() => {
-              resetInterview();
-              navigate("/interview/setup");
-            }}
-            className="flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[#bef264] hover:opacity-90 text-black font-black text-sm transition-all shadow-xl shadow-[#bef264]/10 active:scale-95"
-          >
-            Practice Again
-            <FiArrowRight size={18} />
-          </button>
+          <div className="flex items-center gap-3 flex-wrap justify-center md:justify-end">
+            <ShareReportButton onClick={() => setShowShare(true)} />
+            <button
+              onClick={() => {
+                resetInterview();
+                navigate("/interview/setup");
+              }}
+              className="flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[#bef264] hover:opacity-90 text-black font-black text-sm transition-all shadow-xl shadow-[#bef264]/10 active:scale-95"
+            >
+              Practice Again
+              <FiArrowRight size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Overall Score Hero */}
@@ -506,6 +512,18 @@ const InterviewResult = () => {
         </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareReportModal
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        type="interview"
+        score={overallScore}
+        role={metadata?.role}
+        scoreBreakdown={overall}
+        sessionId={sessionId}
+        date={metadata?.createdAt}
+      />
     </>
   );
 };

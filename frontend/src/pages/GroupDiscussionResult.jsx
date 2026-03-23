@@ -17,6 +17,8 @@ import {
 import Lottie from "lottie-react";
 import loadingAnimation from "../assets/lottie/Digital marketing social media and data analysis.json";
 import { AppContext } from "../context/AppContext";
+import ShareReportModal from "../components/share/ShareReportModal";
+import ShareReportButton from "../components/share/ShareReportButton";
 
 const SCORE_LABELS = {
   contributionScore: "Contribution",
@@ -51,6 +53,7 @@ const GroupDiscussionResult = () => {
   const [session, setSession] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pollCount, setPollCount] = useState(0);
+  const [showShare, setShowShare] = useState(false);
 
   // Poll for report completion
   useEffect(() => {
@@ -178,13 +181,16 @@ const GroupDiscussionResult = () => {
               </p>
             )}
           </div>
-          <button
-            onClick={() => navigate("/gd/setup")}
-            className="flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[#bef264] hover:bg-[#bef264]-hover text-black font-black text-sm transition-all shadow-xl shadow-[#bef264]/10 active:scale-95"
-          >
-            Practice Again
-            <FiArrowRight size={18} />
-          </button>
+          <div className="flex items-center gap-3 flex-wrap justify-center md:justify-end">
+            <ShareReportButton onClick={() => setShowShare(true)} />
+            <button
+              onClick={() => navigate("/gd/setup")}
+              className="flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[#bef264] hover:bg-[#bef264]-hover text-black font-black text-sm transition-all shadow-xl shadow-[#bef264]/10 active:scale-95"
+            >
+              Practice Again
+              <FiArrowRight size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Overall Score Hero */}
@@ -439,6 +445,20 @@ const GroupDiscussionResult = () => {
         </div>
       </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareReportModal
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        type="gd"
+        score={overallScore}
+        topic={session?.topic}
+        scoreBreakdown={Object.fromEntries(
+          Object.keys(SCORE_LABELS).map((k) => [k, report[k]])
+        )}
+        sessionId={sessionId}
+        date={session?.createdAt}
+      />
     </>
   );
 };
