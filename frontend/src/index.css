@@ -46,6 +46,7 @@ body {
   color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  scrollbar-gutter: stable;
 }
 
 #root {
@@ -216,20 +217,41 @@ body {
   animation: float-delayed 6s linear infinite;
 }
 
-@keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-.animate-scale-in {
-  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+/* 💫 Premium Modal Animations */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-@keyframes fadeInSimple {
+@keyframes modalOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.9) translateY(20px); }
+}
+
+@keyframes overlayIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.animate-fade-in {
-  animation: fadeInSimple 0.4s ease-out forwards;
+
+@keyframes overlayOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-modal-out {
+  animation: modalOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-overlay-in {
+  animation: overlayIn 0.4s ease-out forwards;
+}
+
+.animate-overlay-out {
+  animation: overlayOut 0.3s ease-in forwards;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

@@ -18,7 +18,7 @@ const Reports = () => {
       </Helmet>
       <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20">
         <div className="max-w-6xl mx-auto px-2 sm:px-6 w-full mt-4 sm:mt-8">
-          
+
           {/* Page Header */}
           <div className="flex  items-start sm:items-center justify-between mb-6 gap-4">
             <h2 className="text-lg sm:text-2xl ml-2 md:ml-0 font-bold dark:text-white text-black">
@@ -31,7 +31,7 @@ const Reports = () => {
               {activeTab === "interviews" ? (
                 <><HiSparkles size={16} /> Create <span className="hidden md:block">Interview</span></>
               ) : (
-                  <><FaUsers size={16} />Create <span className="hidden md:block">GD</span></>
+                <><FaUsers size={16} />Create <span className="hidden md:block">GD</span></>
               )}
             </button>
           </div>
@@ -40,22 +40,20 @@ const Reports = () => {
           <div className="flex items-center border-b dark:border-white/10 border-black/10 mb-6 gap-4 sm:gap-8 px-2 overflow-x-auto no-scrollbar scroll-smooth">
             <button
               onClick={() => setActiveTab("interviews")}
-              className={`flex items-center gap-2 pb-3 border-b-2 font-bold transition-all relative top-[1px] whitespace-nowrap ${
-                activeTab === "interviews"
+              className={`flex items-center gap-2 pb-3 border-b-2 font-bold transition-all relative top-[1px] whitespace-nowrap ${activeTab === "interviews"
                   ? "border-[#bef264] text-[#bef264]"
                   : "border-transparent text-zinc-500 hover:text-zinc-300 dark:hover:text-zinc-300 hover:text-gray-700"
-              }`}
+                }`}
             >
               <HiSparkles size={16} />
               Interviews
             </button>
             <button
               onClick={() => setActiveTab("gds")}
-              className={`flex items-center gap-2 pb-3 border-b-2 font-bold transition-all relative top-[1px] whitespace-nowrap ${
-                activeTab === "gds"
+              className={`flex items-center gap-2 pb-3 border-b-2 font-bold transition-all relative top-[1px] whitespace-nowrap ${activeTab === "gds"
                   ? "border-[#bef264] text-[#bef264]"
                   : "border-transparent text-zinc-500 hover:text-zinc-300 dark:hover:text-zinc-300 hover:text-gray-700"
-              }`}
+                }`}
             >
               <FaUsers size={16} />
               GDs

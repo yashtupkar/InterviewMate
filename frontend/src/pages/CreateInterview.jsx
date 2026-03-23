@@ -529,8 +529,8 @@ const CreateInterview = () => {
                             <button
                               onClick={(e) => playVoiceSample(agent, e)}
                               className={`p-2 rounded-xl transition-all ${interviewData.agentName === agent.name
-                                  ? "bg-white/10 text-white hover:bg-white/20"
-                                  : "bg-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800"
+                                ? "bg-white/10 text-white hover:bg-white/20"
+                                : "bg-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800"
                                 }`}
                               title="Play sample"
                             >
@@ -611,8 +611,8 @@ const CreateInterview = () => {
                       key={mins}
                       onClick={() => setDuration(mins)}
                       className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all ${duration === mins
-                          ? "bg-[#bef264] text-black shadow-lg"
-                          : "text-zinc-500 hover:text-zinc-300"
+                        ? "bg-[#bef264] text-black shadow-lg"
+                        : "text-zinc-500 hover:text-zinc-300"
                         }`}
                     >
                       {mins} Min

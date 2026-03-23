@@ -25,6 +25,7 @@ import { HiSparkles } from "react-icons/hi2";
 import { FaUsers } from "react-icons/fa";
 import { BsFileEarmarkTextFill, BsFileEarmarkPersonFill } from "react-icons/bs";
 import { IoChatboxEllipses } from "react-icons/io5";
+import FeedbackPopup from "../modals/FeedbackPopup";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -32,6 +33,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { getToken } = useAuth();
   const { openUserProfile, signOut } = useClerk();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const menuRef = React.useRef(null);
 
@@ -151,15 +153,26 @@ const Sidebar = ({ isOpen, onClose }) => {
       <div className="px-4 py-4 border-t border-white/5 space-y-3">
         <div className="space-y-0.5">
           {bottomItems.map((item) => (
-            <Link
-              key={item.name}
-              to={item.path}
-              onClick={onClose}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors"
-            >
-              <span className="text-lg text-zinc-500">{item.icon}</span>
-              {item.name}
-            </Link>
+            item.name === "Feedback" ? (
+              <button
+                key={item.name}
+                onClick={() => { setShowFeedback(true); onClose && onClose(); }}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors text-left"
+              >
+                <span className="text-lg text-zinc-500">{item.icon}</span>
+                {item.name}
+              </button>
+            ) : (
+              <Link
+                key={item.name}
+                to={item.path}
+                onClick={onClose}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors"
+              >
+                <span className="text-lg text-zinc-500">{item.icon}</span>
+                {item.name}
+              </Link>
+            )
           ))}
         </div>
 
@@ -268,6 +281,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
 
       </div>
+      <FeedbackPopup isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
     </aside>
   );
 };
