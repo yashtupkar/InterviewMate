@@ -70,6 +70,7 @@ const Hero = ({ backendStatus }) => {
           src="/assets/homePageAssets/heroImg.png"
           alt="Platform Preview"
           className="w-full h-full object-cover rounded-2xl "
+          loading="lazy"
         />
       </div>
    

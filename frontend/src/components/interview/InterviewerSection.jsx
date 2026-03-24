@@ -15,15 +15,17 @@ const InterviewerSection = ({
   agentVolumeCircleRef,
   toggleVideoFocus,
   handleGenerateReport,
-  handleExitSession
+  handleExitSession,
 }) => {
   return (
-    <div className={`relative aspect-video bg-zinc-900/40 rounded-[28px] overflow-hidden border border-white/5 transition-all duration-700 ${activeCodingTask ? 'scale-95 blur-xl' : 'scale-100 blur-0 shadow-[0_0_60px_rgba(24,24,27,0.7)]'}`}>
+    <div
+      className={`relative aspect-video bg-zinc-900/40 rounded-[28px] overflow-hidden border border-white/5 transition-all duration-700 ${activeCodingTask ? "scale-95 blur-xl" : "scale-100 blur-0 shadow-[0_0_50px_rgba(0,0,0,0.3)]"}`}
+    >
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
         {!activeCodingTask && !hasCallEnded && (
-          <div className="absolute inset-0 bg-primary/5 blur-[90px] animate-pulse-slow pointer-events-none" />
+          <div className="absolute inset-0 bg-primary/5 blur-[100px] animate-pulse-slow pointer-events-none" />
         )}
-        
+
         {hasCallEnded && !isProcessing && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-40">
             <div className="text-center w-full max-w-sm px-6">
@@ -45,7 +47,7 @@ const InterviewerSection = ({
                   onClick={handleExitSession}
                   className="flex-1 bg-zinc-950/80 hover:bg-zinc-900 text-white font-bold text-xs py-3 rounded-2xl border border-white/10 transition-all active:scale-[0.98]"
                 >
-                  Exit Session
+                  Exit
                 </button>
               </div>
             </div>
@@ -53,81 +55,116 @@ const InterviewerSection = ({
         )}
 
         {/* Interviewer View / Speaker Indicator */}
-        <div className={`relative w-full h-full flex items-center justify-center transition-all duration-700 ${activeCodingTask ? 'scale-75' : 'scale-100'}`}>
+        <div
+          className={`relative w-full h-full flex items-center justify-center transition-all duration-700 ${activeCodingTask ? "scale-75" : "scale-100"}`}
+        >
           {!isUserFocus && (
             <div className="relative flex items-center justify-center">
+              {/* Pulsing circles behind the avatar */}
+              {isAgentSpeaking && (
+                <>
+                  <div className="absolute w-40 h-40 rounded-full bg-primary/20 animate-ping opacity-20" />
+                  <div className="absolute w-32 h-32 rounded-full bg-primary/30 animate-pulse opacity-30" />
+                </>
+              )}
+
               <div
                 ref={agentVolumeCircleRef}
-                className={`absolute inset-0 rounded-full bg-primary/20 transition-transform duration-75 ease-out pointer-events-none ${isAgentSpeaking ? "opacity-100" : "opacity-0"}`}
-                style={{ transform: "scale(1)" }}
+                className={`absolute inset-0 rounded-full bg-primary/10 transition-transform duration-75 ease-out pointer-events-none ${isAgentSpeaking ? "opacity-100" : "opacity-0"}`}
+                style={{ transform: "scale(1.15)" }}
               />
+
               <div
-                className={`relative w-28 h-28 md:w-32 md:h-32 rounded-full bg-zinc-900/80 border ${isAgentSpeaking ? "border-primary shadow-[0_0_30px_rgba(190,242,100,0.6)]" : "border-white/10"} shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden z-10 transition-all duration-300`}
+                className={`relative w-28 h-28 md:w-32 md:h-32 rounded-full p-1 transition-all duration-500 ${isAgentSpeaking ? "bg-gradient-to-tr from-primary to-blue-500 shadow-[0_0_30px_rgba(190,242,100,0.3)]" : "bg-zinc-800/50 border border-white/10"}`}
               >
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/20 border border-white/10 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
+                <div className="w-full h-full rounded-full bg-zinc-900 overflow-hidden relative">
                   <img
                     src={getAgentImage(agentName)}
                     alt={agentName}
-                    className={`w-full h-full object-cover transition-transform duration-500 ${isAgentSpeaking ? 'scale-110' : 'scale-100'}`}
+                    className={`w-full h-full object-cover transition-transform duration-700 ${isAgentSpeaking ? "scale-110" : "scale-100"}`}
                   />
+                  {isAgentSpeaking && (
+                    <div className="absolute inset-0 bg-primary/5 animate-pulse" />
+                  )}
                 </div>
               </div>
             </div>
           )}
           {isUserFocus && isVideoOn && (
-            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover rounded-[28px]" />
+            <div className="w-full h-full p-2">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover rounded-2xl shadow-2xl border border-white/5"
+              />
+            </div>
           )}
         </div>
 
-        <div className="absolute top-6 left-6 z-20 flex items-center gap-2">
-          <div className="px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 text-[10px] font-bold text-white uppercase tracking-wider">
-            {isAgentSpeaking ? `${agentName} is speaking...` : isAiThinking ? "AI is thinking..." : "Interviewer"}
+        <div className="absolute top-4 left-4 z-20">
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 shadow-xl transition-all duration-300 ${isAgentSpeaking ? "bg-primary/10 border-primary/20" : "bg-black/40"}`}
+          >
+            {isAgentSpeaking && (
+              <div className="flex gap-0.5 items-end h-2.5">
+                <div className="w-0.5 h-full bg-primary animate-[music-bar_0.8s_ease-in-out_infinite]" />
+                <div className="w-0.5 h-2/3 bg-primary animate-[music-bar_1s_ease-in-out_infinite]" />
+                <div className="w-0.5 h-full bg-primary animate-[music-bar_1.2s_ease-in-out_infinite]" />
+              </div>
+            )}
+            <span
+              className={`text-[9px] font-bold uppercase tracking-[0.1em] ${isAgentSpeaking ? "text-primary" : "text-white"}`}
+            >
+              {isAgentSpeaking
+                ? `${agentName} Speaking`
+                : isAiThinking
+                  ? "Thinking..."
+                  : agentName}
+            </span>
           </div>
         </div>
       </div>
 
+      {/* Picture-in-Picture Mini View */}
       <button
         onClick={toggleVideoFocus}
-        className="absolute bottom-4 z-20 right-4 aspect-[16/10] bg-black rounded-2xl border border-white/10 overflow-hidden shadow-2xl transition-transform hover:scale-105 w-52 md:w-50"
+        className="absolute bottom-4 right-4 z-30 group"
       >
-        {isUserFocus ? (
-          <div className="w-full h-full flex items-center justify-center bg-zinc-950/50">
-            <div className="relative flex items-center justify-center">
-              <div
-                ref={agentVolumeCircleRef}
-                className={`absolute inset-0 rounded-full bg-primary/20 transition-transform duration-75 ease-out pointer-events-none ${isAgentSpeaking ? "opacity-100" : "opacity-0"}`}
-                style={{ transform: "scale(1)" }}
-              />
-              <div
-                className={`relative w-16 h-16 rounded-full border-2 ${isAgentSpeaking ? 'border-primary shadow-[0_0_15px_rgba(190,242,100,0.5)]' : 'border-white/10'} bg-zinc-900/80 overflow-hidden transition-all duration-300 z-10`}
-              >
-                <div className="w-14 h-14 rounded-full bg-primary/20 border border-white/10 flex items-center justify-center overflow-hidden">
-                  <img
-                    src={getAgentImage(agentName)}
-                    alt={agentName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-blue-500/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+        <div className="relative aspect-video w-40 md:w-48 bg-zinc-900 rounded-xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-300 group-hover:scale-[1.02] active:scale-95">
+          {isUserFocus ? (
+            <div className="w-full h-full flex items-center justify-center bg-zinc-950/50">
+              <div className="relative w-12 h-12 rounded-full p-0.5 bg-zinc-800 border border-white/10 overflow-hidden">
+                <img
+                  src={getAgentImage(agentName)}
+                  alt={agentName}
+                  className="w-full h-full object-cover"
+                />
               </div>
             </div>
+          ) : isVideoOn ? (
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover mirror"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-600">
+              <FiUser className="text-2xl" />
+            </div>
+          )}
+          <div className="absolute bottom-1.5 left-2 flex items-center gap-1">
+            <div
+              className={`w-1 h-1 rounded-full ${isVideoOn ? "bg-emerald-500" : "bg-zinc-600"}`}
+            />
+            <span className="text-[8px] font-bold text-white uppercase tracking-wider">
+              {isUserFocus ? agentName : "You"}
+            </span>
           </div>
-        ) : isVideoOn ? (
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover mirror"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-950/80 text-zinc-400">
-            <FiUser className="text-4xl text-zinc-600" />
-          </div>
-        )}
-        <div className="absolute top-2 left-2 rounded-full ml-2">
-          <span className="text-[9px] font-semibold text-white tracking-tighter">
-            {isUserFocus ? agentName : "You"}
-          </span>
         </div>
       </button>
     </div>

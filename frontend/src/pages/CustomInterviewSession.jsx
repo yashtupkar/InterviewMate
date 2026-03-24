@@ -49,6 +49,7 @@ const CustomInterviewSession = () => {
     handleCodingSubmit,
     formatDuration,
     resetInterview,
+    handleSaveAndExit,
   } = actions;
 
   useEffect(() => {
@@ -78,10 +79,16 @@ const CustomInterviewSession = () => {
     agentImages[name] || "/assets/interviewers/male1.png";
 
   return (
-    <div className="min-h-screen bg-[#09090b] dark:text-zinc-100 text-gray-900 font-sans overflow-hidden">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans overflow-hidden relative">
+      {/* ── Mesh Background Effects ───────────────── */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse-slow delay-700" />
+      </div>
+
       {/* ── Full-Screen CodingSpace (after Attempt clicked) ───────────────── */}
       {activeCodingTask && (
-        <div className="fixed inset-0 z-[120] flex flex-col animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[120] flex flex-col animate-in fade-in zoom-in-95 duration-300">
           <CodingSpace
             task={activeCodingTask}
             disableCopyPaste={false}
@@ -90,7 +97,7 @@ const CustomInterviewSession = () => {
         </div>
       )}
 
-      <div className="h-full flex flex-col min-h-[90vh]">
+      <div className="h-full flex flex-col min-h-screen relative z-10">
         <InterviewHeader
           displayInterviewData={displayInterviewData}
           timeLeft={timeLeft}
@@ -101,29 +108,29 @@ const CustomInterviewSession = () => {
           formatDuration={formatDuration}
         />
 
-        <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
-          <div className="flex flex-col gap-6 min-w-0">
-            <InterviewerSection
-              activeCodingTask={activeCodingTask}
-              hasCallEnded={hasCallEnded}
-              isProcessing={isProcessing}
-              isAgentSpeaking={isAgentSpeaking}
-              isAiThinking={isAiThinking}
-              isUserFocus={isUserFocus}
-              isVideoOn={isVideoOn}
-              agentName={agentName}
-              getAgentImage={getAgentImage}
-              localVideoRef={localVideoRef}
-              agentVolumeCircleRef={agentVolumeCircleRef}
-              toggleVideoFocus={toggleVideoFocus}
-              handleGenerateReport={handleGenerateReport}
-              handleExitSession={() => {
-                resetInterview();
-                window.location.href = "/dashboard/setup";
-              }}
-            />
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
+          <div className="flex flex-col gap-4 min-w-0">
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/10 to-blue-500/10 rounded-[28px] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+              <InterviewerSection
+                activeCodingTask={activeCodingTask}
+                hasCallEnded={hasCallEnded}
+                isProcessing={isProcessing}
+                isAgentSpeaking={isAgentSpeaking}
+                isAiThinking={isAiThinking}
+                isUserFocus={isUserFocus}
+                isVideoOn={isVideoOn}
+                agentName={agentName}
+                getAgentImage={getAgentImage}
+                localVideoRef={localVideoRef}
+                agentVolumeCircleRef={agentVolumeCircleRef}
+                toggleVideoFocus={toggleVideoFocus}
+                handleGenerateReport={handleGenerateReport}
+                handleExitSession={handleSaveAndExit}
+              />
+            </div>
 
-            <div className="relative">
+            <div className="relative h-14">
               <ControlBar
                 isUserSpeaking={isUserSpeaking}
                 isAgentSpeaking={isAgentSpeaking}
@@ -175,7 +182,7 @@ const CustomInterviewSession = () => {
             </div>
           </div>
 
-          <div className="flex flex-col min-w-0 gap-4">
+          <aside className="flex flex-col min-w-0 h-full">
             <TranscriptView
               transcript={transcript}
               user={user}
@@ -184,8 +191,8 @@ const CustomInterviewSession = () => {
               connectionStatus={connectionStatus}
               transcriptEndRef={transcriptEndRef}
             />
-          </div>
-        </div>
+          </aside>
+        </main>
       </div>
     </div>
   );

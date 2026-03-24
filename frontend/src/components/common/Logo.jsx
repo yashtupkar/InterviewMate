@@ -8,6 +8,7 @@ const Logo = ({ size = 32, className = "" }) => {
       width={size} 
       height={size} 
       className={`object-contain ${className}`}
+      loading="lazy"
     />
   );
 };

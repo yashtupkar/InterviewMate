@@ -517,6 +517,44 @@ export const useCustomInterview = () => {
         })();
     }, [getToken, contextTranscript, sessionId, backend_URL, setCallStatus, interviewDuration]);
 
+    const handleSaveAndExit = useCallback(() => {
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.onend = null;
+                recognitionRef.current.stop();
+            } catch (e) { }
+        }
+        window.speechSynthesis?.cancel();
+
+        const loadingToast = toast.loading("Saving interview progress...");
+
+        (async () => {
+            try {
+                const token = await getToken();
+                if (contextTranscript.length > 0) {
+                    await axios.post(`${backend_URL}/api/custom-interview/save-transcript`,
+                        { 
+                            sessionId, 
+                            transcript: contextTranscript,
+                            actualDuration: interviewDuration
+                        },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                }
+                toast.dismiss(loadingToast);
+                toast.success("Interview progress saved!");
+            } catch (err) {
+                console.error("Failed to save transcript on exit:", err);
+                toast.dismiss(loadingToast);
+                toast.error("An error occurred while saving, but exiting anyway.");
+            } finally {
+                resetInterview();
+                navigate("/dashboard/reports");
+            }
+        })();
+    }, [getToken, contextTranscript, sessionId, backend_URL, interviewDuration, resetInterview, navigate]);
+
     const handleGenerateReport = async (forcedTranscript = null) => {
         if (isProcessing) return;
         if (!sessionId) { toast.error("Session not found."); return; }
@@ -707,7 +745,7 @@ export const useCustomInterview = () => {
         actions: {
             toggleMute, toggleVideo, toggleVideoFocus, handleEndCall, handleGenerateReport,
             handleAttemptChallenge, handleSkipChallenge, handleCodingSubmit, resetInterview,
-            formatDuration
+            formatDuration, handleSaveAndExit
         }
     };
 };

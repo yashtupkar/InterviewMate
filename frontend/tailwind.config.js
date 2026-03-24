@@ -15,7 +15,23 @@ export default {
         background: '#09090b',
         surface: '#121214',
         'surface-alt': '#18181b',
-      }
+      },
+      animation: {
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shimmer': 'shimmer 2s linear infinite',
+        'progress': 'progress 1s ease-in-out infinite',
+        'music-bar': 'music-bar 1s ease-in-out infinite',
+      },
+      keyframes: {
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        'music-bar': {
+          '0%, 100%': { height: '10%' },
+          '50%': { height: '100%' },
+        },
+      },
     },
   },
   plugins: [],
