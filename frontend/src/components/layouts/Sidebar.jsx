@@ -16,7 +16,9 @@ import {
   FiCreditCard,
   FiStar,
   FiLinkedin,
-  FiGift
+  FiChevronLeft,
+  FiChevronRight,
+  FiChevronDown
 } from "react-icons/fi";
 
 import Logo from "../common/Logo";
@@ -26,8 +28,9 @@ import { FaUsers } from "react-icons/fa";
 import { BsFileEarmarkTextFill, BsFileEarmarkPersonFill } from "react-icons/bs";
 import { IoChatboxEllipses } from "react-icons/io5";
 import FeedbackPopup from "../modals/FeedbackPopup";
+import { TbBriefcaseFilled } from "react-icons/tb";
 
-const Sidebar = ({ isOpen, onClose }) => {
+const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
   const location = useLocation();
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -35,6 +38,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [subscription, setSubscription] = useState(null);
+  const [openDropdowns, setOpenDropdowns] = useState({});
   const menuRef = React.useRef(null);
 
   useEffect(() => {
@@ -67,13 +71,19 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: "Mock Interviews", icon: <HiSparkles />, path: "/dashboard/setup", active: location.pathname === "/dashboard/setup" },
     { name: "GD Simulator", icon: <FaUsers />, path: "/gd/setup", active: location.pathname === "/gd/setup" },
     { name: "Reports", icon: <BsFileEarmarkTextFill />, path: "/dashboard/reports", active: location.pathname.startsWith("/dashboard/reports") },
-
+    { 
+      name: "Resume Tools", 
+      icon: <TbBriefcaseFilled />, 
+      active: location.pathname === "/ats-scorer" || location.pathname === "/resume-builder", 
+      subItems: [
+        { name: "ATS Scanner", path: "/ats-scorer", active: location.pathname === "/ats-scorer", badge: "New" },
+        { name: "Resume Builder", path: "#", active: location.pathname === "/resume-builder", badge: "Coming.." }
+      ]
+    },
   ];
 
   const exposureItems = [
-
     // { name: "Jobs", icon: <FiBriefcase />, path: "#", badge: "Coming soon" },
-    { name: "Resume builder", icon: <BsFileEarmarkPersonFill />, path: "#", badge: "Coming.." },
     { name: "LinkedIn AI", icon: <FiLinkedin />, path: "/dashboard/linkedin", active: location.pathname === "/dashboard/linkedin", badge: "Working On" },
 
     // { name: "Leaderboard", icon: <FiAward />, path: "#", badge: "Coming So.." },
@@ -85,14 +95,16 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen w-64 bg-black border-r border-white/20 flex flex-col z-[50] transition-transform duration-300 ease-in-out md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+    <aside className={`fixed left-0 top-0 h-screen bg-black border-r border-white/20 flex flex-col z-[50] transition-all duration-300 ease-in-out md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"} ${isCollapsed ? "w-18 " : "w-64"}`}>
       {/* Logo */}
-      <div className="px-6 py-4 flex items-center justify-between">
+      <div className={`px-4 py-4 flex items-center h-16 relative ${isCollapsed ? "justify-center" : "justify-between"}`}>
         <div className="flex items-center gap-2">
-          <Logo size={32} />
-          <span className="text-white text-2xl cursor-pointer font-semibold tracking-tight">
-            PlaceMate<span className="text-primary">AI</span>
-          </span>
+          {<Logo size={isCollapsed ? 32 : 32} />}
+          {!isCollapsed && (
+            <span className="text-white text-xl cursor-pointer font-semibold tracking-tight">
+              PlaceMate<span className="text-primary">AI</span>
+            </span>
+          )}
         </div>
         <button 
           onClick={onClose}
@@ -102,46 +114,130 @@ const Sidebar = ({ isOpen, onClose }) => {
         </button>
       </div>
 
+      {/* Collapse Toggle Button (Desktop only) */}
+      <button 
+        onClick={toggleCollapse}
+        className="hidden md:flex absolute -right-3 top-[3rem] bg-[#bef264] text-black hover:text-black border border-white/20 hover:border-white/40 items-center justify-center rounded-full w-6 h-6 transition-colors z-[51] shadow-md"
+      >
+        {isCollapsed ? <FiChevronRight size={14} /> : <FiChevronLeft size={14} />}
+      </button>
+
       {/* Navigation */}
-      <div className="flex-1 px-4 py-4 space-y-8 custom-scrollbar overflow-y-auto">
+      <div className={`flex-1 ${isCollapsed ? "px-2 overflow-x-hidden" : "px-4"} py-4 space-y-8 custom-scrollbar overflow-y-auto`}>
         {/* Main Section */}
         <div>
-          <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-2">Main</h3>
+          {!isCollapsed && <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-2">Main</h3>}
           <div className="space-y-1">
             {menuItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                onClick={onClose}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${item.active
-                    ? "bg-[#bef264]/10 text-[#bef264]"
-                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
-                  }`}
-              >
-                <span className={`text-lg ${item.active ? "text-[#bef264]" : "text-zinc-500"}`}>{item.icon}</span>
-                {item.name}
-              </Link>
+              item.subItems ? (
+                <div key={item.name} className="flex flex-col space-y-1">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (isCollapsed) {
+                        toggleCollapse();
+                        setOpenDropdowns(prev => ({ ...prev, [item.name]: true }));
+                      } else {
+                        setOpenDropdowns((prev) => ({
+                          ...prev,
+                          [item.name]: !prev[item.name],
+                        }));
+                      }
+                    }}
+                    title={isCollapsed ? item.name : ""}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${
+                      item.active || openDropdowns[item.name]
+                        ? "bg-[#bef264]/10 text-[#bef264]"
+                        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+                    }`}
+                  >
+                    <div className={`flex items-center ${isCollapsed ? "justify-center w-full" : "gap-2"}`}>
+                      <span className={`text-lg shrink-0 ${item.active || openDropdowns[item.name] ? "text-[#bef264]" : "text-zinc-500"}`}>
+                        {item.icon}
+                      </span>
+                      {!isCollapsed && <span>{item.name}</span>}
+                    </div>
+                    {!isCollapsed && (
+                      <FiChevronDown
+                        className={`transition-transform duration-200 ${openDropdowns[item.name] ? "rotate-180" : ""}`}
+                      />
+                    )}
+                    {isCollapsed && (
+                      <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
+                        {item.name}
+                      </div>
+                    )}
+                  </button>
+                  {!isCollapsed && openDropdowns[item.name] && (
+                    <div className="mt-1 ml-4 pl-3 border-l border-white/10 space-y-1">
+                      {item.subItems.map((subItem) => (
+                        <Link
+                          key={subItem.name}
+                          to={subItem.path}
+                          onClick={onClose}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            subItem.active
+                              ? "text-[#bef264] bg-[#bef264]/5"
+                              : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                          }`}
+                        >
+                          <span className="truncate">{subItem.name}</span>
+                          {subItem.badge && (
+                            <span className="text-[9px] bg-[#bef264]/10 text-[#bef264] px-1.5 py-0.5 rounded border border-[#bef264]/20 whitespace-nowrap shrink-0 ml-2">
+                              {subItem.badge}
+                            </span>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  onClick={onClose}
+                  title={isCollapsed ? item.name : ""}
+                  className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"} px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${item.active
+                      ? "bg-[#bef264]/10 text-[#bef264]"
+                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+                    }`}
+                >
+                  <span className={`text-lg shrink-0 ${item.active ? "text-[#bef264]" : "text-zinc-500"}`}>{item.icon}</span>
+                  {!isCollapsed && <span>{item.name}</span>}
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
+                      {item.name}
+                    </div>
+                  )}
+                </Link>
+              )
             ))}
           </div>
         </div>
-
         {/* Exposure Section */}
         <div>
-          <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-2">Exposure</h3>
+          {!isCollapsed && <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-2">Exposure</h3>}
           <div className="space-y-1">
             {exposureItems.map((item) => (
               <div
                 key={item.name}
-                className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 cursor-not-allowed group"
+                title={isCollapsed ? item.name : ""}
+                className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 cursor-not-allowed group relative`}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg text-zinc-600">{item.icon}</span>
-                  <span>{item.name}</span>
+                <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}>
+                  <span className="text-lg shrink-0 text-zinc-600">{item.icon}</span>
+                  {!isCollapsed && <span>{item.name}</span>}
                 </div>
-                {item.badge && (
-                  <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-white/5">
+                {!isCollapsed && item.badge && (
+                  <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-white/5 whitespace-nowrap">
                     {item.badge}
                   </span>
+                )}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
+                    {item.name} {item.badge ? `(${item.badge})` : ""}
+                  </div>
                 )}
               </div>
             ))}
@@ -150,34 +246,46 @@ const Sidebar = ({ isOpen, onClose }) => {
       </div>
 
       {/* Bottom Section */}
-      <div className="px-4 py-4 border-t border-white/5 space-y-3">
+      <div className={`${isCollapsed ? "px-2" : "px-4"} py-4 border-t border-white/5 space-y-3`}>
         <div className="space-y-0.5">
           {bottomItems.map((item) => (
             item.name === "Feedback" ? (
               <button
                 key={item.name}
                 onClick={() => { setShowFeedback(true); onClose && onClose(); }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors text-left"
+                title={isCollapsed ? item.name : ""}
+                className={`w-full flex items-center ${isCollapsed ? "justify-center" : "gap-2 text-left"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors relative group`}
               >
-                <span className="text-lg text-zinc-500">{item.icon}</span>
-                {item.name}
+                <span className="text-lg shrink-0 text-zinc-500">{item.icon}</span>
+                {!isCollapsed && <span>{item.name}</span>}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
+                    {item.name}
+                  </div>
+                )}
               </button>
             ) : (
               <Link
                 key={item.name}
                 to={item.path}
                 onClick={onClose}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors"
+                title={isCollapsed ? item.name : ""}
+                className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors relative group`}
               >
-                <span className="text-lg text-zinc-500">{item.icon}</span>
-                {item.name}
+                <span className="text-lg shrink-0 text-zinc-500">{item.icon}</span>
+                {!isCollapsed && <span>{item.name}</span>}
+                {isCollapsed && (
+                  <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
+                    {item.name}
+                  </div>
+                )}
               </Link>
             )
           ))}
         </div>
 
         {/* Compact Subscriptions Card - Circular Redesign */}
-        {subscription && (
+        {subscription && !isCollapsed && (
           <div className="bg-[#bef264] rounded-2xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 hover:scale-[1.02]">
             <div className="flex items-center justify-between px-0.5">
               <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] leading-none opacity-80">
@@ -210,9 +318,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* User Profile */}
         <div className="relative mt-auto border-t border-white/5 pt-4" ref={menuRef}>
           {isProfileOpen && (
-            <div className="absolute bottom-16 left-0 right-0 mb-2 bg-zinc-800 border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50">
+            <div className={`absolute bottom-16 ${isCollapsed ? "left-14 w-48" : "left-0 right-0"} mb-2 bg-zinc-800 border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50`}>
               <button
-
                 className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-zinc-800/50 transition-all duration-200 group border border-transparent hover:border-white/5"
               >
                 <div className="relative">
@@ -231,7 +338,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 onClick={() => { openUserProfile(); setIsProfileOpen(false); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
               >
-                <FiUsers className="text-zinc-500" />
+                <FiUsers className="text-zinc-500 shrink-0" />
                 Manage Profile
               </button>
               <Link
@@ -239,7 +346,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 onClick={() => { setIsProfileOpen(false); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
               >
-                <FiCreditCard className="text-zinc-500" />
+                <FiCreditCard className="text-zinc-500 shrink-0" />
                 Plans & Billing
               </Link>
               <Link
@@ -247,14 +354,14 @@ const Sidebar = ({ isOpen, onClose }) => {
                 onClick={() => { setIsProfileOpen(false); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-white/5"
               >
-                <FiGift className="text-zinc-500" />
+                <FiGift className="text-zinc-500 shrink-0" />
                 Referrals
               </Link>
               <button
                 onClick={() => { signOut(); onClose && onClose(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
               >
-                <FiLogOut />
+                <FiLogOut className="shrink-0" />
                 Sign Out
               </button>
             </div>
@@ -262,7 +369,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl bg-zinc-800/70 transition-all duration-200 group border border-transparent hover:border-white/5"
+            className={`w-full flex items-center ${isCollapsed ? "justify-center px-0 bg-transparent" : "gap-3 px-2 bg-zinc-800/70"} py-2 rounded-xl transition-all duration-200 group border border-transparent hover:border-white/5`}
           >
             <div className="relative">
               <img
@@ -272,10 +379,12 @@ const Sidebar = ({ isOpen, onClose }) => {
               />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-black rounded-full"></div>
             </div>
-            <div className="flex-1 min-w-0 text-left">
-              <h4 className="text-white text-[11px] font-bold truncate">{user?.fullName}</h4>
-              <p className="text-zinc-500 text-[10px] truncate">{user?.primaryEmailAddress?.emailAddress}</p>
-            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0 text-left">
+                <h4 className="text-white text-[11px] font-bold truncate">{user?.fullName}</h4>
+                <p className="text-zinc-500 text-[10px] truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+              </div>
+            )}
           </button>
         </div>
 

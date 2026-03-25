@@ -34,7 +34,6 @@ const Homepage = ({ backendStatus }) => {
         <Hero backendStatus={backendStatus} />
         <Steps />
         <Features />
-        <Roles />
         <PricingSection />
         <Testimonials />
         <FAQ />

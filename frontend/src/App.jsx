@@ -32,6 +32,7 @@ import axios from "axios";
 import CodingSpace from "./components/CodingSpace";
 import VoiceTest from "./pages/VoiceTest";
 import HelpPage from "./pages/Help";
+import AtsScorer from "./pages/AtsScorer";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -260,6 +261,10 @@ function App() {
 
           <Route path="/help" element={<InterviewLayout />}>
             <Route index element={<HelpPage />} />
+          </Route>
+
+          <Route path="/ats-scorer" element={<InterviewLayout />}>
+            <Route index element={<AtsScorer />} />
           </Route>
 
           {/* Standalone GD Session (No Sidebar) */}

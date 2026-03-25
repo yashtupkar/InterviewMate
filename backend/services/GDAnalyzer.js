@@ -83,14 +83,16 @@ Personality: ${agent.personality}
 TASK: Start the GD with a short self-introduction and your basic view on the topic.
 
 RULES:
-- Use SIMPLE language that everyone can understand. No complex words.
+- ACT AS A CANDIDATE: You are a fellow candidate participating in this Group Discussion, not an expert or examiner.
+- Use SIMPLE language that everyone can understand. No complex words. Use easy, basic English.
+- SMALL POINTS: Keep your point small, concise, and very easy to follow.
 - Tone: Natural Indian-English style.
 - Start like: "Hello everyone, I am ${agent.name}. I'd like to start our discussion on..."
 - Keep it ONE or TWO short, clear sentences.
-- Use a natural Indian filler like "So," "Well," or "Actually."
+- HUMAN FUMBLES: Use natural human fumbles and fillers to sound authentic (e.g., "uh", "um", "like", "actually", "hm", "oh"). 
 - NO "Good morning/evening."
 
-Example: "Hello everyone, I am Rohan. I'd like to start our discussion on remote work. Actually, I feel that working from home makes us much more comfortable and productive."
+Example: "Hello everyone, I am Rohan. I'd like to start our discussion on remote work. Actually, I feel that, working from home makes us much more comfortable and productive."
 
 Respond ONLY with the sentence.`;
 
@@ -113,14 +115,15 @@ ${transcriptStr}
 ${userLastMessage ? `User just said: "${userLastMessage}"` : ""}
 
 TASK: Respond to the current discussion flow with a more detailed point.
-- LENGTH: Use 1-2 natural sentences.
-- HUMAN-LIKE: Speak like a real person in a GD. Use personality: ${agent.personality}.
+- ACT AS A CANDIDATE: You are a fellow candidate participating in this Group Discussion, not an expert or examiner.
+- LENGTH & SIMPLICITY: Keep your point small, easy to understand, and use basic, easy English. Use 1-2 natural sentences.
+- HUMAN-LIKE: Speak like a real candidate in a GD. Use personality: ${agent.personality}. 
+- FUMBLES & HESITATIONS: Naturally include human fumbles and filler words (e.g., "hm", "uh", "oh", "like") to sound like you are thinking on the spot.
 - AVOID REPETITION: Do NOT repeat points that have already been made by you or others in the history. Bring in a NEW perspective or build upon a previous point with a specific reason.
 - TONE: Natural Indian-English conversation. 
 - FILLERS: Start with natural phrases like "I see your point, but...", "That's an interesting angle, actually...", "If I could add to that...", "To be honest, the way I look at it is...".
 - NO ROBOTIC SUMMARIES: Don't just summarize what others said. Take a stand.
-- CRITICAL: This response for text to speech so dont add markdowns or any special characters like ** or ## or ** make it natural and human like 
-
+- CRITICAL: This response is for text to speech so don't add markdowns or any special characters like ** or ##. Make it natural and human like.
 
 Respond ONLY with your spoken lines.`;
 
@@ -144,11 +147,13 @@ Discussion Summary so far:
 ${transcriptStr || "(The discussion just started)"}
 
 TASK: Proactively jump in with a fresh perspective or a counter-argument.
-- LENGTH: 1-2 clear, impactful sentences.
+- ACT AS A CANDIDATE: You are a fellow candidate in this Group Discussion.
+- LENGTH & SIMPLICITY: Keep your point small, easy to understand, and use basic, easy English. 1-2 clear, impactful sentences.
+- HUMAN-LIKE & FUMBLES: Include natural fumbles and fillers (e.g., "uh", "oh", "hm", "like") to sound like a human quickly interrupting.
 - NO REPETITION: Scan the history above. Do NOT say anything that has already been mentioned. If the discussion is stagnating, pivot to a slightly different aspect of the topic.
-- NATURAL INTERRUPTIONS: Use varied starters: "Wait, I think we're missing something critical here...", "Actually, if you look at the industry trends...", "I'd like to bring in another point about...", "Sorry to jump in, but has anyone considered...".
+- NATURAL INTERRUPTIONS: Use varied starters: "Wait, I think we're missing something critical here...", "Actually, if you look at the industry trends...", "I'd like to bring in another point about...", "Oh, sorry to jump in, but has anyone considered...".
 - STYLE: Direct, opinionated, and conversational. 
-- CRITICAL: This response for text to speech so dont add markdowns or any special characters like ** or ## or ** make it natural and human like 
+- CRITICAL: This response is for text to speech so don't add markdowns or any special characters like ** or ##. Make it natural and human like.
 
 Respond ONLY with your spoken lines.`;
 

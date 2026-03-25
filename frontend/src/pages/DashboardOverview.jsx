@@ -99,11 +99,11 @@ const DashboardOverview = () => {
   const avgScore =
     totalSessions > 0
       ? Math.round(
-          [...completedInterviews, ...completedGDs].reduce(
-            (acc, curr) => acc + (curr.report?.overallScore || 0),
-            0,
-          ) / ([...completedInterviews, ...completedGDs].length || 1),
-        )
+        [...completedInterviews, ...completedGDs].reduce(
+          (acc, curr) => acc + (curr.report?.overallScore || 0),
+          0,
+        ) / ([...completedInterviews, ...completedGDs].length || 1),
+      )
       : 0;
 
   const skillMatrix = React.useMemo(() => {
@@ -316,38 +316,36 @@ const DashboardOverview = () => {
         </section>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
             <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FaClock size={24} />
             </div>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">
+            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
               Total Prep Time
             </p>
-            <h3 className="text-4xl font-black text-white">
+            <h3 className="text-2xl font-black text-white">
               {formatPrepTime(totalPrepTime)}
             </h3>
-            <div className="mt-6 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-2">
               <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
                 <FiActivity size={12} /> {totalSessions} Sessions
               </span>
-              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">
-                Aggregate
-              </span>
+           
             </div>
           </div>
 
-          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
             <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FaCheckCircle size={24} />
             </div>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">
+            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
               Mocks Completed
             </p>
-            <h3 className="text-4xl font-black text-white">
+            <h3 className="text-2xl font-black text-white">
               {completedInterviews.length}
             </h3>
-            <div className="mt-6 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-2">
               <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
                 <FiCheck size={12} />{" "}
                 {
@@ -358,21 +356,19 @@ const DashboardOverview = () => {
                 }{" "}
                 today
               </span>
-              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">
-                Goal: 20
-              </span>
+            
             </div>
           </div>
 
-          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
             <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FaUsers size={24} />
             </div>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">
+            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
               GD Sessions
             </p>
-            <h3 className="text-4xl font-black text-white">{gds.length}</h3>
-            <div className="mt-6 flex items-center gap-2">
+            <h3 className="text-2xl font-black text-white">{gds.length}</h3>
+            <div className="mt-3 flex items-center gap-2">
               <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
                 <FiCheck size={12} />{" "}
                 {
@@ -383,24 +379,22 @@ const DashboardOverview = () => {
                 }{" "}
                 today
               </span>
-              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">
-                Keep practicing
-              </span>
+             
             </div>
           </div>
 
-          <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
             <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FiTarget size={24} />
             </div>
-            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">
+            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
               Avg Session Score
             </p>
-            <h3 className="text-4xl font-black text-white">
+            <h3 className="text-2xl font-black text-white">
               {avgScore > 0 ? avgScore : 0}
               <span className="text-lg text-zinc-500">%</span>
             </h3>
-            <div className="mt-6 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-2">
               <span
                 className={`text-xs font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${avgScore > 70 ? "bg-emerald-500/10 text-emerald-400" : "bg-[#bef264]/10 text-[#bef264]"}`}
               >
@@ -411,9 +405,7 @@ const DashboardOverview = () => {
                     ? "Steady"
                     : "Improving"}
               </span>
-              <span className="text-zinc-600 text-xs font-bold uppercase tracking-widest">
-                Global Rank
-              </span>
+           
             </div>
           </div>
         </div>
@@ -613,8 +605,8 @@ const DashboardOverview = () => {
                   <p className="text-sm font-black text-[#bef264]">
                     {avgScore > 0
                       ? skillMatrix.reduce((a, b) =>
-                          a.Interview + a.GD > b.Interview + b.GD ? a : b,
-                        ).subject
+                        a.Interview + a.GD > b.Interview + b.GD ? a : b,
+                      ).subject
                       : "Pending"}
                   </p>
                 </div>
@@ -722,12 +714,12 @@ const DashboardOverview = () => {
                             new Date(session.createdAt),
                           ) < 12
                             ? formatDistanceToNow(new Date(session.createdAt), {
-                                addSuffix: true,
-                              })
+                              addSuffix: true,
+                            })
                             : format(
-                                new Date(session.createdAt),
-                                "MMM d, yyyy",
-                              )}
+                              new Date(session.createdAt),
+                              "MMM d, yyyy",
+                            )}
                         </td>
                         <td className="px-5 py-3">
                           <span className="text-base font-black text-white group-hover:text-[#bef264] transition-colors">

@@ -7,6 +7,7 @@ import Logo from "../components/common/Logo";
 
 const InterviewLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-zinc-900">
@@ -34,9 +35,14 @@ const InterviewLayout = () => {
         />
       )}
 
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        onClose={() => setIsSidebarOpen(false)} 
+        isCollapsed={isDesktopCollapsed}
+        toggleCollapse={() => setIsDesktopCollapsed(!isDesktopCollapsed)}
+      />
       
-      <main className="flex-1 md:ml-64 min-h-screen w-full mt-16 md:mt-0 pb-16 md:pb-0">
+      <main className={`flex-1 min-h-screen w-full mt-16 md:mt-0 pb-16 md:pb-0 transition-all duration-300 ease-in-out ${isDesktopCollapsed ? "md:ml-20" : "md:ml-64"}`}>
         <Outlet />
       </main>
     </div>

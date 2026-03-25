@@ -12,6 +12,7 @@ const referralRoutes = require('./routes/referralRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const codingRoutes = require('./routes/codingRoutes');
 const customInterviewRoutes = require('./routes/customInterviewRoutes');
+const atsRoutes = require('./routes/ats.route');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/coding', codingRoutes);
 app.use('/api/custom-interview', customInterviewRoutes);
+app.use('/api/ats', atsRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
