@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { BrowserRouter } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
+import { ResumeProvider } from "./context/ResumeContext";
 import "./index.css";
 import { dark } from "@clerk/themes";
 import App from "./App.jsx";
@@ -34,7 +35,9 @@ createRoot(document.getElementById("root")).render(
               }
             }}
           >
-            <App />
+            <ResumeProvider>
+              <App />
+            </ResumeProvider>
           </ClerkProvider>
         </AppProvider>
       </BrowserRouter>

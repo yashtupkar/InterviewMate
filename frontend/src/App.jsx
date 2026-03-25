@@ -33,6 +33,7 @@ import CodingSpace from "./components/CodingSpace";
 import VoiceTest from "./pages/VoiceTest";
 import HelpPage from "./pages/Help";
 import AtsScorer from "./pages/AtsScorer";
+import ResumeBuilder from "./pages/ResumeBuilder";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -265,6 +266,10 @@ function App() {
 
           <Route path="/ats-scorer" element={<InterviewLayout />}>
             <Route index element={<AtsScorer />} />
+          </Route>
+
+          <Route path="/resume-builder" element={<InterviewLayout />}>
+            <Route index element={<ResumeBuilder />} />
           </Route>
 
           {/* Standalone GD Session (No Sidebar) */}

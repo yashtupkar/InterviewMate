@@ -77,7 +77,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
       active: location.pathname === "/ats-scorer" || location.pathname === "/resume-builder", 
       subItems: [
         { name: "ATS Scanner", path: "/ats-scorer", active: location.pathname === "/ats-scorer", badge: "New" },
-        { name: "Resume Builder", path: "#", active: location.pathname === "/resume-builder", badge: "Coming.." }
+        { name: "Resume Builder", path: "/resume-builder", active: location.pathname === "/resume-builder", badge: "New" }
       ]
     },
   ];
