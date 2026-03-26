@@ -183,7 +183,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                         >
                           <span className="truncate">{subItem.name}</span>
                           {subItem.badge && (
-                            <span className="text-[9px] bg-[#bef264]/10 text-[#bef264] px-1.5 py-0.5 rounded border border-[#bef264]/20 whitespace-nowrap shrink-0 ml-2">
+                            <span className="text-[9px]  bg-[#bef264] px-3 py-0.2 rounded text-black whitespace-nowrap shrink-0 ml-2">
                               {subItem.badge}
                             </span>
                           )}

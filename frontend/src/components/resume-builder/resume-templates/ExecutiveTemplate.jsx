@@ -7,6 +7,11 @@ import {
   Github,
   Link as LinkIcon,
 } from "lucide-react";
+import {
+  formatResumeDate,
+  formatDescriptionList,
+  getFontFamily,
+} from "../../../utils/resumeHelpers";
 
 const ExecutiveTemplate = ({ data }) => {
   const {
@@ -17,7 +22,46 @@ const ExecutiveTemplate = ({ data }) => {
     projects,
     achievements,
     certifications,
+    customizations: c,
   } = data;
+
+  const theme = {
+    accent: c?.colors?.accent || "#0c4a6e",
+    text: c?.colors?.text || "#18181b",
+    background: c?.colors?.background || "#ffffff",
+    border: c?.colors?.border?.color || "#e4e4e7",
+    fontBody: c?.fonts?.body || "Inter",
+    fontHeading: c?.fonts?.headings || "Inter",
+    fontSize: c?.layout?.spacing?.fontSize || "10pt",
+    lineHeight: c?.layout?.spacing?.lineHeight || 1.15,
+    margin: c?.layout?.spacing?.margin || {
+      left: "20mm",
+      right: "20mm",
+      top: "20mm",
+      bottom: "20mm",
+    },
+    dateFormat: c?.dateFormat || "DD/MM/YYYY",
+    language: c?.language || "English (UK)",
+    listStyle: c?.entryLayout?.listStyle || "bullet",
+    applyTo: c?.colors?.applyTo || {
+      name: true,
+      jobTitle: true,
+      headings: true,
+      headingsLine: true,
+    },
+  };
+
+  const fonts = {
+    body: getFontFamily(theme.fontBody),
+    heading: getFontFamily(theme.fontHeading),
+  };
+
+  const getColor = (key, fallback = theme.text) => {
+    return (theme.applyTo || {})[key] ? theme.accent : fallback;
+  };
+
+  const formatDate = (dateStr) =>
+    formatResumeDate(dateStr, theme.dateFormat, theme.language);
 
   const getLinkIcon = (label, url) => {
     const text = (label + url).toLowerCase();
@@ -27,16 +71,60 @@ const ExecutiveTemplate = ({ data }) => {
   };
 
   return (
-    <div className="p-8 font-sans bg-white leading-tight text-zinc-800 w-full h-full flex flex-col">
+    <div
+      style={{
+        padding: `${theme.margin.top} ${theme.margin.right} ${theme.margin.bottom} ${theme.margin.left}`,
+        backgroundColor: theme.background,
+        color: theme.text,
+        fontFamily: fonts.body,
+        fontSize: theme.fontSize,
+        lineHeight: theme.lineHeight,
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       {/* Premium Header */}
-      <header className="mb-6 border-b-4 border-sky-900 pb-4 flex justify-between items-end gap-4">
-        <div className="flex-1">
-          <h1 className="text-4xl font-extrabold text-sky-950 mb-1 uppercase tracking-tight">
+      <header
+        style={{
+          marginBottom: "1.5rem",
+          borderBottom: `4px solid ${theme.applyTo.headingsLine ? theme.accent : "#0c4a6e"}`,
+          paddingBottom: "1rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "end",
+          gap: "1rem",
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <h1
+            style={{
+              fontSize: "2.25rem",
+              fontWeight: 800,
+              color: getColor("name", "#082f49"),
+              marginBottom: "4px",
+              textTransform: "uppercase",
+              letterSpacing: "-0.025em",
+              fontFamily: fonts.heading,
+            }}
+          >
             {personalInfo.fullName ||
               `${personalInfo.firstName || ""} ${personalInfo.lastName || ""}`.trim() ||
               "Your Name"}
           </h1>
-          <p className="text-xl text-sky-700 font-semibold mb-3 tracking-wide italic">
+          <p
+            style={{
+              fontSize: "1.25rem",
+              color: getColor("jobTitle", "#0369a1"),
+              fontWeight: 600,
+              marginBottom: "0.75rem",
+              letterSpacing: "0.025em",
+              fontStyle: "italic",
+              fontFamily: fonts.heading,
+            }}
+          >
             {personalInfo.jobTitle || "Job Title"}
           </p>
 
@@ -81,7 +169,7 @@ const ExecutiveTemplate = ({ data }) => {
           <div className="w-24 h-24 rounded-full overflow-hidden shadow-xl border-4 border-sky-50 shrink-0">
             <img
               src={personalInfo.photoUrl}
-              alt="Profile"
+              alt={`${personalInfo.fullName || "Profile"} photo`}
               className="w-full h-full object-cover"
             />
           </div>
@@ -95,10 +183,30 @@ const ExecutiveTemplate = ({ data }) => {
           {/* Summary */}
           {personalInfo.objective && (
             <section>
-              <h2 className="text-lg font-extrabold text-sky-950 border-b-2 border-sky-100 pb-1 mb-2 uppercase tracking-widest">
+              <h2
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 800,
+                  color: getColor("headings", "#082f49"),
+                  borderBottom: `2px solid ${theme.applyTo.headingsLine ? `${theme.accent}20` : "#e0f2fe"}`,
+                  paddingBottom: "4px",
+                  marginBottom: "8px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  fontFamily: fonts.heading,
+                }}
+              >
                 Executive Profile
               </h2>
-              <p className="text-xs text-zinc-700 text-justify leading-normal">
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#374151",
+                  textAlign: "justify",
+                  lineHeight: 1.5,
+                  fontFamily: fonts.body,
+                }}
+              >
                 {personalInfo.objective}
               </p>
             </section>
@@ -107,32 +215,95 @@ const ExecutiveTemplate = ({ data }) => {
           {/* Experience */}
           {experience?.some((exp) => exp.visible !== false) && (
             <section>
-              <h2 className="text-lg font-extrabold text-sky-950 border-b-2 border-sky-100 pb-1 mb-3 uppercase tracking-widest">
+              <h2
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 800,
+                  color: getColor("headings", "#082f49"),
+                  borderBottom: `2px solid ${theme.applyTo.headingsLine ? `${theme.accent}20` : "#e0f2fe"}`,
+                  paddingBottom: "4px",
+                  marginBottom: "12px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  fontFamily: fonts.heading,
+                }}
+              >
                 Professional Background
               </h2>
-              <div className="space-y-4">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
                 {experience.map(
                   (exp, i) =>
                     exp.visible !== false && (
                       <div key={i} className="relative">
-                        <div className="flex justify-between items-start mb-1">
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "start",
+                            marginBottom: "4px",
+                          }}
+                        >
                           <div>
-                            <h3 className="font-bold text-sky-900 uppercase text-sm">
+                            <h3
+                              style={{
+                                fontWeight: "bold",
+                                color: theme.accent,
+                                textTransform: "uppercase",
+                                fontSize: "0.875rem",
+                                fontFamily: fonts.heading,
+                              }}
+                            >
                               {exp.title || "(Job Title)"}
                             </h3>
-                            <p className="text-xs font-bold text-zinc-600">
+                            <p
+                              style={{
+                                fontSize: "0.75rem",
+                                fontWeight: "bold",
+                                color: "#4b5563",
+                                fontFamily: fonts.body,
+                              }}
+                            >
                               {exp.company || "Company Name"}{" "}
                               {exp.location && `| ${exp.location}`}
                             </p>
                           </div>
-                          <span className="text-[10px] font-bold text-sky-800 uppercase italic">
-                            {exp.startDate || "Start"} -{" "}
-                            {exp.current ? "Present" : exp.endDate || "End"}
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: "bold",
+                              color: "#0c4a6e",
+                              textTransform: "uppercase",
+                              fontStyle: "italic",
+                              fontFamily: fonts.body,
+                            }}
+                          >
+                            {formatDate(exp.startDate)} -{" "}
+                            {exp.current ? "Present" : formatDate(exp.endDate)}
                           </span>
                         </div>
                         {exp.description && (
-                          <p className="text-xs text-zinc-700 whitespace-pre-wrap mt-1.5 leading-snug border-l-2 border-sky-50 pl-3">
-                            {exp.description}
+                          <p
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "#374151",
+                              whiteSpace: "pre-wrap",
+                              marginTop: "6px",
+                              lineHeight: 1.4,
+                              borderLeft: `2px solid ${theme.accent}20`,
+                              paddingLeft: "0.75rem",
+                              fontFamily: fonts.body,
+                            }}
+                          >
+                            {formatDescriptionList(
+                              exp.description,
+                              theme.listStyle,
+                            )}
                           </p>
                         )}
                       </div>
@@ -145,16 +316,49 @@ const ExecutiveTemplate = ({ data }) => {
           {/* Projects */}
           {projects?.some((proj) => proj.visible !== false) && (
             <section>
-              <h2 className="text-lg font-extrabold text-sky-950 border-b-2 border-sky-100 pb-1 mb-3 uppercase tracking-widest">
+              <h2
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 800,
+                  color: getColor("headings", "#082f49"),
+                  borderBottom: `2px solid ${theme.applyTo.headingsLine ? `${theme.accent}20` : "#e0f2fe"}`,
+                  paddingBottom: "4px",
+                  marginBottom: "12px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  fontFamily: fonts.heading,
+                }}
+              >
                 Key Projects
               </h2>
-              <div className="space-y-4">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
                 {projects.map(
                   (proj, i) =>
                     proj.visible !== false && (
                       <div key={i} className="relative">
-                        <div className="flex justify-between items-baseline mb-1">
-                          <h3 className="font-bold text-sky-900 uppercase text-sm">
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "baseline",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          <h3
+                            style={{
+                              fontWeight: "bold",
+                              color: theme.accent,
+                              textTransform: "uppercase",
+                              fontSize: "0.875rem",
+                              fontFamily: fonts.heading,
+                            }}
+                          >
                             {proj.title || "Project Title"}
                           </h3>
                           {proj.link && (
@@ -162,15 +366,35 @@ const ExecutiveTemplate = ({ data }) => {
                               href={proj.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-bold text-sky-700 hover:underline italic"
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                color: "#0369a1",
+                                textDecoration: "none",
+                                fontStyle: "italic",
+                                fontFamily: fonts.body,
+                              }}
                             >
                               Case Study ↗
                             </a>
                           )}
                         </div>
                         {proj.description && (
-                          <p className="text-xs text-zinc-700 whitespace-pre-wrap leading-snug border-l-2 border-sky-50 pl-3">
-                            {proj.description}
+                          <p
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "#374151",
+                              whiteSpace: "pre-wrap",
+                              lineHeight: 1.4,
+                              borderLeft: `2px solid ${theme.accent}20`,
+                              paddingLeft: "0.75rem",
+                              fontFamily: fonts.body,
+                            }}
+                          >
+                            {formatDescriptionList(
+                              proj.description,
+                              theme.listStyle,
+                            )}
                           </p>
                         )}
                       </div>
@@ -189,15 +413,47 @@ const ExecutiveTemplate = ({ data }) => {
               <h2 className="text-lg font-extrabold text-sky-950 border-b-2 border-sky-100 pb-1 mb-3 uppercase tracking-widest">
                 Core Assets
               </h2>
-              <div className="space-y-3">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.75rem",
+                }}
+              >
                 {skills.map(
                   (skill, index) =>
                     skill.visible !== false && (
-                      <div key={index} className="bg-sky-50/30 p-2 rounded-lg border-l-4 border-sky-900">
-                        <h3 className="text-[9px] font-black text-sky-900 uppercase tracking-wider mb-1">
+                      <div
+                        key={index}
+                        style={{
+                          backgroundColor: `${theme.accent}05`,
+                          padding: "0.5rem",
+                          borderRadius: "0.5rem",
+                          borderLeft: `4px solid ${theme.accent}`,
+                        }}
+                      >
+                        <h3
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 900,
+                            color: theme.accent,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.1em",
+                            marginBottom: "2px",
+                            fontFamily: fonts.heading,
+                          }}
+                        >
                           {skill.category}
                         </h3>
-                        <p className="text-xs font-bold text-zinc-800 leading-tight">
+                        <p
+                          style={{
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                            color: "#18181b",
+                            lineHeight: 1.25,
+                            fontFamily: fonts.body,
+                          }}
+                        >
                           {skill.subSkills}
                         </p>
                       </div>
@@ -213,23 +469,65 @@ const ExecutiveTemplate = ({ data }) => {
               <h2 className="text-lg font-extrabold text-sky-950 border-b-2 border-sky-100 pb-1 mb-3 uppercase tracking-widest">
                 Education
               </h2>
-              <div className="space-y-4">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
+                }}
+              >
                 {education.map(
                   (edu, i) =>
                     edu.visible !== false && (
-                      <div key={i} className="bg-zinc-50/50 p-2 rounded-lg">
-                        <h3 className="font-bold text-sky-900 text-xs uppercase mb-1">
+                      <div
+                        key={i}
+                        style={{
+                          backgroundColor: "#fafafa",
+                          padding: "0.5rem",
+                          borderRadius: "0.5rem",
+                        }}
+                      >
+                        <h3
+                          style={{
+                            fontWeight: "bold",
+                            color: theme.accent,
+                            fontSize: "0.75rem",
+                            textTransform: "uppercase",
+                            marginBottom: "4px",
+                            fontFamily: fonts.heading,
+                          }}
+                        >
                           {edu.degree || "Degree"}
                         </h3>
-                        <p className="text-xs font-bold text-zinc-600 leading-tight">
+                        <p
+                          style={{
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                            color: "#4b5563",
+                            lineHeight: 1.25,
+                            fontFamily: fonts.body,
+                          }}
+                        >
                           {edu.institution || "Institution"}
                         </p>
-                        <div className="flex justify-between text-[10px] font-bold text-sky-800 mt-1 uppercase italic">
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            color: "#0c4a6e",
+                            marginTop: "4px",
+                            textTransform: "uppercase",
+                            fontStyle: "italic",
+                            fontFamily: fonts.body,
+                          }}
+                        >
                           <span>
                             {edu.startDate || "Start"} - {edu.endDate || "End"}
                           </span>
                           {edu.gpa && (
-                            <span className="text-sky-900/70">
+                            <span style={{ color: `${theme.accent}b3` }}>
                               GPA: {edu.gpa}
                             </span>
                           )}
@@ -247,18 +545,57 @@ const ExecutiveTemplate = ({ data }) => {
               <h2 className="text-lg font-extrabold text-sky-950 border-b-2 border-sky-100 pb-1 mb-3 uppercase tracking-widest">
                 Certifications
               </h2>
-              <div className="space-y-2">
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                }}
+              >
                 {certifications.map(
                   (cert, i) =>
                     cert.visible !== false && (
-                      <div key={i} className="flex flex-col gap-0.5 border-b border-sky-50 pb-2 last:border-0">
-                        <h3 className="font-bold text-sky-900 text-xs uppercase leading-tight">
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                          paddingBottom: "0.5rem",
+                          borderBottom: `1px solid ${theme.border}`,
+                        }}
+                      >
+                        <h3
+                          style={{
+                            fontWeight: "bold",
+                            color: theme.accent,
+                            fontSize: "0.75rem",
+                            textTransform: "uppercase",
+                            lineHeight: 1.25,
+                            fontFamily: fonts.heading,
+                          }}
+                        >
                           {cert.name}
                         </h3>
-                        <p className="text-[10px] font-bold text-sky-700/80">
+                        <p
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            color: "#4b5563",
+                            fontFamily: fonts.body,
+                          }}
+                        >
                           {cert.issuer}
                         </p>
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase">
+                        <p
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: "bold",
+                            color: "#a1a1aa",
+                            textTransform: "uppercase",
+                            fontFamily: fonts.body,
+                          }}
+                        >
                           {cert.date}
                         </p>
                       </div>

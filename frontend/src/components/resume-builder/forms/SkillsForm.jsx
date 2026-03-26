@@ -73,9 +73,7 @@ const SkillsForm = () => {
             Edit Entry
           </h2>
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors">
-              <Brain className="w-4 h-4 text-purple-400" /> Get Tips
-            </button>
+           
             <div className="flex items-center gap-2">
               <button
                 onClick={() => toggleVisibility(editingIndex)}
@@ -121,28 +119,6 @@ const SkillsForm = () => {
               Information / Sub-skills
             </label>
             <div className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden">
-              <div className="flex items-center gap-1 p-2 border-b border-zinc-800 bg-zinc-900/50">
-                <button className="p-1 px-2 font-black text-white hover:bg-zinc-800 rounded transition-colors">
-                  B
-                </button>
-                <button className="p-1 px-2 italic text-white hover:bg-zinc-800 rounded transition-colors">
-                  I
-                </button>
-                <button className="p-1 px-2 underline text-white hover:bg-zinc-800 rounded transition-colors">
-                  U
-                </button>
-                <div className="w-px h-4 bg-zinc-800 mx-1" />
-                <button className="p-1 px-2 text-white hover:bg-zinc-800 rounded transition-colors">
-                  ≡
-                </button>
-                <button className="p-1 px-2 text-white hover:bg-zinc-800 rounded transition-colors">
-                  🔗
-                </button>
-                <div className="w-px h-4 bg-zinc-800 mx-1" />
-                <button className="p-2 bg-pink-500 rounded text-white shadow-lg shadow-pink-500/20">
-                  ≡
-                </button>
-              </div>
               <textarea
                 value={editEntry.subSkills}
                 onChange={(e) =>
@@ -282,13 +258,8 @@ const SkillsForm = () => {
           <Plus className="w-5 h-5" />
           Add Entry
         </button>
-        <button className="flex-[1.5] py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-indigo-500/20 transition-all active:scale-[0.98] shadow-sm">
-          <Brain className="w-5 h-5" />
-          AI Skill Suggestions
-        </button>
-        <button className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-red-500 transition-all active:scale-[0.98] shadow-sm">
-          <Trash2 className="w-5 h-5" />
-        </button>
+   
+  
       </div>
     </div>
   );

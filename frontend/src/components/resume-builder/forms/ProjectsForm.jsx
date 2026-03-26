@@ -29,6 +29,10 @@ const ProjectsForm = () => {
     const newEntry = {
       title: "",
       link: "",
+      githubUrl: "",
+      startDate: "",
+      endDate: "",
+      current: false,
       description: "",
       visible: true,
     };
@@ -112,7 +116,7 @@ const ProjectsForm = () => {
             </div>
             <div>
               <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                Project Link (Optional)
+                Live Link (Portfolio/Demo)
               </label>
               <input
                 type="url"
@@ -121,9 +125,69 @@ const ProjectsForm = () => {
                   setEditEntry({ ...editEntry, link: e.target.value })
                 }
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm"
-                placeholder="e.g. https://github.com/..."
+                placeholder="https://my-demo.com"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+                GitHub Source Code (Optional)
+              </label>
+              <input
+                type="url"
+                value={editEntry.githubUrl || ""}
+                onChange={(e) =>
+                  setEditEntry({ ...editEntry, githubUrl: e.target.value })
+                }
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm"
+                placeholder="https://github.com/..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+                <div>
+                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+                        Start Date
+                    </label>
+                    <input
+                        type="month"
+                        value={editEntry.startDate || ""}
+                        onChange={(e) => setEditEntry({ ...editEntry, startDate: e.target.value })}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+                        End Date
+                    </label>
+                    <input
+                        type="month"
+                        value={editEntry.endDate || ""}
+                        disabled={editEntry.current}
+                        onChange={(e) => setEditEntry({ ...editEntry, endDate: e.target.value })}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm disabled:opacity-50"
+                    />
+                </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 py-1">
+            <input
+              type="checkbox"
+              id="current-project"
+              checked={editEntry.current || false}
+              onChange={(e) =>
+                setEditEntry({ ...editEntry, current: e.target.checked })
+              }
+              className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-pink-500 focus:ring-pink-500/20"
+            />
+            <label
+              htmlFor="current-project"
+              className="text-sm text-zinc-400 cursor-pointer select-none"
+            >
+              Ongoing Project
+            </label>
           </div>
 
           <div>
@@ -215,11 +279,11 @@ const ProjectsForm = () => {
                 <span className="block font-bold text-white tracking-tight group-hover:text-pink-400 transition-colors">
                   {proj.title || "(No Project Title)"}
                 </span>
-                {proj.link && (
-                  <span className="text-[10px] text-zinc-500 font-mono truncate max-w-[200px] block">
-                    {proj.link}
-                  </span>
-                )}
+                <span className="text-[10px] text-zinc-500 font-medium block">
+                  {proj.startDate && `${proj.startDate} - ${proj.current ? "Present" : proj.endDate || "End"}`}
+                  {proj.link && ` • Link`}
+                  {proj.githubUrl && ` • Code`}
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

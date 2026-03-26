@@ -242,13 +242,13 @@ const PricingSection = ({
                     </span>
                     </div>
                 )}
-                {isCurrentPlan(plan) && (
+                {/* {isCurrentPlan(plan) && (
                     <div className="absolute top-4 left-4">
                     <span className="bg-zinc-700 text-zinc-300 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                         Current
                     </span>
                     </div>
-                )}
+                )} */}
 
                 <div className="mb-6">
                     <h4 className="text-lg font-bold text-white mb-1">{plan.name}</h4>

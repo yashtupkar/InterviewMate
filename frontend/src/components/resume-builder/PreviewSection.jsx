@@ -6,10 +6,16 @@ import ExecutiveTemplate from "./resume-templates/ExecutiveTemplate";
 import TechTemplate from "./resume-templates/TechTemplate";
 import CorporateTemplate from "./resume-templates/CorporateTemplate";
 import ClassicTemplate from "./resume-templates/ClassicTemplate";
+import ElegantTemplate from "./resume-templates/ElegantTemplate";
 import { useResume } from "../../context/ResumeContext";
 
 const PreviewSection = forwardRef(({ template }, ref) => {
   const { resumeData } = useResume();
+  const c = resumeData.customizations || {};
+  const isLetter = c.pageFormat === "Letter";
+  const size = isLetter
+    ? { width: "215.9mm", height: "279.4mm", name: "Letter" }
+    : { width: "210mm", height: "297mm", name: "A4" };
 
   // Mapping template keys to their components
   const templates = {
@@ -20,16 +26,19 @@ const PreviewSection = forwardRef(({ template }, ref) => {
     tech: TechTemplate,
     corporate: CorporateTemplate,
     classic: ClassicTemplate,
+    elegant: ElegantTemplate,
   };
 
   const SelectedTemplate = templates[template] || ModernTemplate;
 
   return (
     <div
-      className="bg-white shadow-2xl overflow-hidden print:shadow-none w-[210mm] h-[297mm] print:w-[210mm] print:h-[297mm] print:bg-white print:m-0 flex flex-col"
+      className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden print:shadow-none print:bg-white print:m-0 flex flex-col border border-white/5"
       ref={ref}
       style={{
-        aspectRatio: "210 / 297",
+        width: size.width,
+        height: size.height,
+        aspectRatio: isLetter ? "8.5 / 11" : "210 / 297",
         printColorAdjust: "exact",
         WebkitPrintColorAdjust: "exact",
       }}
@@ -38,7 +47,7 @@ const PreviewSection = forwardRef(({ template }, ref) => {
         {`
                 @media print {
                     @page {
-                        size: A4;
+                        size: ${size.name};
                         margin: 0;
                     }
                     body {

@@ -51,9 +51,8 @@ const FormSection = () => {
                         <div key={section.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-300 shadow-sm">
                             <button
                                 onClick={() => toggleSection(section.id)}
-                                className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
-                                    isOpen ? 'bg-zinc-800/50' : 'hover:bg-zinc-800/30'
-                                }`}
+                                className={`w-full flex items-center justify-between p-4 text-left transition-colors ${isOpen ? 'bg-zinc-800/50' : 'hover:bg-zinc-800/30'
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-lg ${isOpen ? 'bg-lime-400/10 text-lime-400' : 'bg-zinc-800 text-zinc-400'}`}>

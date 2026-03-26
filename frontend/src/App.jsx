@@ -270,6 +270,7 @@ function App() {
 
           <Route path="/resume-builder" element={<InterviewLayout />}>
             <Route index element={<ResumeBuilder />} />
+            <Route path=":id" element={<ResumeBuilder />} />
           </Route>
 
           {/* Standalone GD Session (No Sidebar) */}

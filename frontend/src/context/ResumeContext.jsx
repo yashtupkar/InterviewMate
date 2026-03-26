@@ -1,25 +1,43 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useAuth } from "@clerk/clerk-react";
-import toast from "react-hot-toast";
 import axios from "axios";
+import { useUser } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
 
 const ResumeContext = createContext();
 
+export const useResume = () => {
+  const context = useContext(ResumeContext);
+  if (!context) {
+    throw new Error("useResume must be used within a ResumeProvider");
+  }
+  return context;
+};
+
+export const TEMPLATE_THEMES = {
+  modern: "#bef264",
+  elegant: "#94a3b8",
+  classic: "#1e293b",
+  tech: "#3b82f6",
+  corporate: "#0f172a",
+  executive: "#4338ca",
+  professional: "#059669",
+  creative: "#db2777",
+};
+
 const initialResumeState = {
+  title: "Untitled Resume",
+  template: "modern",
   personalInfo: {
-    fullName: "",
     firstName: "",
     lastName: "",
-    jobTitle: "",
+    fullName: "",
     email: "",
     phone: "",
     location: "",
-    links: [
-      { label: "Website", url: "" },
-      { label: "LinkedIn", url: "" },
-    ],
+    jobTitle: "",
     objective: "",
     photoUrl: "",
+    links: [],
   },
   sectionTitles: {
     objective: "Summary",
@@ -32,118 +50,177 @@ const initialResumeState = {
   },
   experience: [],
   education: [],
-  skills: [
-    {
-      category: "Programming Languages",
-      subSkills: "HTML, CSS, JavaScript",
-      level: "Expert",
-      visible: true,
-    },
-  ],
+  skills: [],
   projects: [],
   achievements: [],
   certifications: [],
+  customizations: {
+    language: "English (UK)",
+    dateFormat: "DD/MM/YYYY",
+    pageFormat: "A4",
+    layout: {
+      columns: "two",
+      spacing: {
+        fontSize: "10.5pt",
+        lineHeight: 1.15,
+        margin: { left: "22mm", right: "22mm", top: "12mm", bottom: "12mm" },
+        spaceBetweenEntries: 10,
+      },
+    },
+    colors: {
+      mode: "basic", // basic, advanced, border
+      subMode: "accent", // accent, multi, image
+      accent: "#bef264",
+      text: "#18181b",
+      background: "#ffffff",
+      border: { style: "single", color: "#e4e4e7" },
+      applyTo: {
+        name: true,
+        jobTitle: true,
+        headings: true,
+        headingsLine: true,
+        headerIcons: false,
+        dotsBarsBubbles: false,
+        dates: false,
+        entrySubtitle: false,
+        linkIcons: false,
+      },
+    },
+    fonts: { body: "Inter", headings: "Inter" },
+    sectionHeadings: {
+      capitalization: "uppercase",
+    },
+    entryLayout: {
+      subtitleStyle: "bold", // bold, italic, normal
+      subtitlePlacement: "next-line", // next-line, same-line
+      listStyle: "bullet", // bullet, hyphen, none
+    },
+    profileImage: {
+      style: "rounded", // circle, square, rounded
+      borderRadius: 8,
+      size: 80,
+    },
+  },
 };
 
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/resume";
+
 export const ResumeProvider = ({ children }) => {
-  const { userId, isLoaded } = useAuth();
+  const { user } = useUser();
   const [resumeData, setResumeData] = useState(initialResumeState);
   const [resumes, setResumes] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("idle"); // idle, saving, saved, error
+  const [resumeId, setResumeId] = useState(null);
 
   const fetchAllResumes = async () => {
-    if (isLoaded && userId) {
-      setIsLoading(true);
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/resume/${userId}`,
-        );
-        if (response.data.success) {
-          setResumes(response.data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching resumes:", error);
-      } finally {
-        setIsLoading(false);
+    if (!user?.id) return;
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE}/${user.id}`);
+      if (response.data.success) {
+        setResumes(response.data.data);
       }
+    } catch (error) {
+      console.error("Error fetching all resumes:", error);
+      toast.error("Could not load your resumes.");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAllResumes();
-  }, [userId, isLoaded]);
-
-  const createNewResume = () => {
-    setResumeData({
-      ...initialResumeState,
-      clerkId: userId,
-    });
-  };
+    if (user?.id) {
+      fetchAllResumes();
+    }
+  }, [user?.id]);
 
   const loadResume = async (id) => {
-    setIsLoading(true);
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/resume/single/${id}`,
-      );
-      if (response.data.success && response.data.data) {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE}/single/${id}`);
+      if (response.data.success) {
         const data = response.data.data;
-        setResumeData({
-          _id: data._id,
-          clerkId: data.clerkId,
-          title: data.title || "Untitled Resume",
-          personalInfo: data.personalInfo || initialResumeState.personalInfo,
-          sectionTitles: data.sectionTitles || initialResumeState.sectionTitles,
-          template: data.template || "modern",
-          experience: data.experience || [],
-          education: data.education || [],
-          skills: data.skills || [],
-          projects: data.projects || [],
-          achievements: data.achievements || [],
-          certifications: data.certifications || [],
-        });
+        // Merge with initial state to ensure new customization fields exist
+        const mergedData = {
+          ...initialResumeState,
+          ...data,
+          template: data.template || initialResumeState.template,
+          customizations: {
+            ...initialResumeState.customizations,
+            ...(data.customizations || {}),
+            layout: {
+              ...initialResumeState.customizations.layout,
+              ...(data.customizations?.layout || {}),
+              spacing: {
+                ...initialResumeState.customizations.layout.spacing,
+                ...(data.customizations?.layout?.spacing || {}),
+              },
+            },
+            colors: {
+              ...initialResumeState.customizations.colors,
+              ...(data.customizations?.colors || {}),
+            },
+          },
+        };
+        setResumeData(mergedData);
+        setResumeId(id);
       }
     } catch (error) {
-      console.error("Error loading resume:", error);
-      toast.error("Failed to load resume.");
+      console.error("Error fetching resume:", error);
+      toast.error("Failed to load resume. Please try again.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const saveResume = async () => {
-    if (!userId) return;
-    setIsSaving(true);
-    try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/resume/save`,
-        {
-          clerkId: userId,
-          ...resumeData,
+  const createNewResume = (template = "modern") => {
+    const themeColor = TEMPLATE_THEMES[template] || TEMPLATE_THEMES.modern;
+    setResumeData({
+      ...initialResumeState,
+      template,
+      customizations: {
+        ...initialResumeState.customizations,
+        colors: {
+          ...initialResumeState.customizations.colors,
+          accent: themeColor,
         },
-      );
+      },
+    });
+    setResumeId(null);
+  };
+
+  const saveResume = async () => {
+    if (!user?.id) return;
+    try {
+      setSaveStatus("saving");
+      const payload = {
+        ...resumeData,
+        clerkId: user.id,
+        _id: resumeId,
+      };
+
+      const response = await axios.post(`${API_BASE}/save`, payload);
+
       if (response.data.success) {
-        toast.success("Resume saved successfully!");
-        setResumeData((prev) => ({ ...prev, _id: response.data.data._id }));
-        fetchAllResumes(); // Refresh dashboard list
+        setSaveStatus("saved");
+        setResumeId(response.data.data._id);
+        fetchAllResumes(); // Refresh dashboard
+        setTimeout(() => setSaveStatus("idle"), 3000);
+        return response.data.data;
       }
     } catch (error) {
       console.error("Error saving resume:", error);
-      toast.error("Failed to save resume.");
-    } finally {
-      setIsSaving(false);
+      setSaveStatus("error");
     }
   };
 
   const deleteResume = async (id) => {
     try {
-      const response = await axios.delete(
-        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/resume/${id}`,
-      );
+      const response = await axios.delete(`${API_BASE}/${id}`);
       if (response.data.success) {
-        toast.success("Resume deleted!");
-        fetchAllResumes();
+        setResumes((prev) => prev.filter((r) => r._id !== id));
       }
     } catch (error) {
       console.error("Error deleting resume:", error);
@@ -151,74 +228,150 @@ export const ResumeProvider = ({ children }) => {
     }
   };
 
+  const updatePersonalInfo = (info) => {
+    setResumeData((prev) => ({
+      ...prev,
+      personalInfo: { ...prev.personalInfo, ...info },
+    }));
+  };
+
   const updateSectionTitle = (section, title) => {
     setResumeData((prev) => ({
       ...prev,
-      sectionTitles: {
-        ...prev.sectionTitles,
-        [section]: title,
-      },
+      sectionTitles: { ...prev.sectionTitles, [section]: title },
     }));
   };
 
-  const updatePersonalInfo = (data) => {
+  const addEntry = (section) => {
+    const newEntry = {
+      visible: true,
+      ...(section === "experience" && {
+        title: "",
+        company: "",
+        location: "",
+        startDate: "",
+        endDate: "",
+        current: false,
+        description: "",
+      }),
+      ...(section === "education" && {
+        institution: "",
+        degree: "",
+        field: "",
+        startDate: "",
+        endDate: "",
+        gpa: "",
+        location: "",
+      }),
+      ...(section === "skills" && { category: "", subSkills: "" }),
+      ...(section === "projects" && {
+        title: "",
+        link: "",
+        githubUrl: "",
+        startDate: "",
+        endDate: "",
+        current: false,
+        description: "",
+      }),
+      ...(section === "certifications" && { name: "", issuer: "", date: "" }),
+    };
+
     setResumeData((prev) => ({
       ...prev,
-      personalInfo: { ...prev.personalInfo, ...data },
+      [section]: [...(prev[section] || []), newEntry],
     }));
   };
 
-  const updateExperience = (data) => {
+  const updateEntry = (section, index, data) => {
+    setResumeData((prev) => {
+      const newSectionData = [...prev[section]];
+      newSectionData[index] = { ...newSectionData[index], ...data };
+      return { ...prev, [section]: newSectionData };
+    });
+  };
+
+  const removeEntry = (section, index) => {
+    setResumeData((prev) => ({
+      ...prev,
+      [section]: prev[section].filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateExperience = (data) =>
     setResumeData((prev) => ({ ...prev, experience: data }));
-  };
-
-  const updateEducation = (data) => {
+  const updateEducation = (data) =>
     setResumeData((prev) => ({ ...prev, education: data }));
-  };
-
-  const updateSkills = (data) => {
+  const updateSkills = (data) =>
     setResumeData((prev) => ({ ...prev, skills: data }));
-  };
-
-  const updateProjects = (data) => {
+  const updateProjects = (data) =>
     setResumeData((prev) => ({ ...prev, projects: data }));
-  };
-
-  const updateAchievements = (data) => {
+  const updateAchievements = (data) =>
     setResumeData((prev) => ({ ...prev, achievements: data }));
+  const updateCertifications = (data) =>
+    setResumeData((prev) => ({ ...prev, certifications: data }));
+
+  const updateCustomizations = (path, value) => {
+    setResumeData((prev) => {
+      const keys = path.split(".");
+      const updateNested = (obj, keys, value) => {
+        const [first, ...rest] = keys;
+        if (rest.length === 0) {
+          return { ...obj, [first]: value };
+        }
+        return {
+          ...obj,
+          [first]: updateNested(obj[first] || {}, rest, value),
+        };
+      };
+
+      return {
+        ...prev,
+        customizations: updateNested(prev.customizations || {}, keys, value),
+      };
+    });
   };
 
-  const updateCertifications = (data) => {
-    setResumeData((prev) => ({ ...prev, certifications: data }));
+  const resetCustomizations = () => {
+    setResumeData((prev) => ({
+      ...prev,
+      customizations: JSON.parse(
+        JSON.stringify(initialResumeState.customizations),
+      ),
+    }));
   };
 
   return (
     <ResumeContext.Provider
       value={{
         resumeData,
-        setResumeData,
         resumes,
-        isLoading,
-        isSaving,
-        createNewResume,
+        loading,
+        isLoading: loading,
+        isSaving: saveStatus === "saving",
+        saveStatus,
+        resumeId,
         loadResume,
+        createNewResume,
+        saveResume,
         deleteResume,
-        updateSectionTitle,
         updatePersonalInfo,
+        updateSectionTitle,
+        addEntry,
+        updateEntry,
+        removeEntry,
         updateExperience,
         updateEducation,
         updateSkills,
         updateProjects,
         updateAchievements,
         updateCertifications,
-        saveResume,
+        updateCustomizations,
+        resetCustomizations,
+        setResumeData,
+        fetchAllResumes,
       }}
     >
       {children}
     </ResumeContext.Provider>
   );
-};
-
-export const useResume = () => {
-  return useContext(ResumeContext);
 };

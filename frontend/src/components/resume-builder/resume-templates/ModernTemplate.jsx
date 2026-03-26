@@ -7,7 +7,16 @@ import {
   Github,
   Link as LinkIcon,
 } from "lucide-react";
+import {
+  formatResumeDate,
+  formatDescriptionList,
+  getFontFamily,
+} from "../../../utils/resumeHelpers";
 
+/**
+ * ModernTemplate - Dynamic version
+ * Supports full customization of colors, fonts, layout, and spacing.
+ */
 const ModernTemplate = ({ data }) => {
   const {
     personalInfo,
@@ -18,48 +27,192 @@ const ModernTemplate = ({ data }) => {
     projects,
     achievements,
     certifications,
+    customizations: c,
   } = data;
 
   const titles = sectionTitles || {};
 
+  // Default values if customizations are missing
+  const theme = {
+    accent: c?.colors?.accent || "#bef264",
+    text: c?.colors?.text || "#18181b",
+    background: c?.colors?.background || "#ffffff",
+    border: c?.colors?.border?.color || "#e4e4e7",
+    fontBody: c?.fonts?.body || "Inter",
+    fontHeading: c?.fonts?.headings || "Inter",
+    fontSize: c?.layout?.spacing?.fontSize || "10.5pt",
+    lineHeight: c?.layout?.spacing?.lineHeight || 1.15,
+    margin: c?.layout?.spacing?.margin || {
+      left: "22mm",
+      right: "22mm",
+      top: "12mm",
+      bottom: "12mm",
+    },
+    columnLayout: c?.layout?.columns || "two",
+    headingCase: c?.sectionHeadings?.capitalization || "uppercase",
+    subtitleStyle: c?.entryLayout?.subtitleStyle || "bold",
+    subtitlePlacement: c?.entryLayout?.subtitlePlacement || "next-line",
+    listStyle: c?.entryLayout?.listStyle || "bullet",
+    language: c?.language || "English (UK)",
+    dateFormat: c?.dateFormat || "DD/MM/YYYY",
+    spaceBetweenEntries: c?.layout?.spacing?.spaceBetweenEntries || 10,
+    applyTo: c?.colors?.applyTo || {
+      name: true,
+      jobTitle: true,
+      headings: true,
+      headingsLine: true,
+    },
+    profileImage: c?.profileImage || {
+      style: "rounded",
+      borderRadius: 8,
+      size: 80,
+    },
+  };
+
+  const getColor = (key, fallback = theme.text) => {
+    return (theme.applyTo || {})[key] ? theme.accent : fallback;
+  };
+
+  const fonts = {
+    body: getFontFamily(theme.fontBody),
+    heading: getFontFamily(theme.fontHeading),
+  };
+
+  // Simple date format helper
+  const formatDate = (dateStr) =>
+    formatResumeDate(dateStr, theme.dateFormat, theme.language);
+
   const getLinkIcon = (label, url) => {
     const text = (label + url).toLowerCase();
-    if (text.includes("linkedin")) return <Linkedin className="w-4 h-4" />;
-    if (text.includes("github")) return <Github className="w-4 h-4" />;
-    return <LinkIcon className="w-4 h-4" />;
+    if (text.includes("linkedin")) return <Linkedin size={14} />;
+    if (text.includes("github")) return <Github size={14} />;
+    return <LinkIcon size={14} />;
+  };
+
+  const SectionHeader = ({ title }) => (
+    <h2
+      style={{
+        color: getColor("headings"),
+        fontFamily: fonts.heading,
+        borderBottom: `2px solid ${theme.applyTo.headingsLine ? theme.accent : theme.border}`,
+        paddingBottom: "0.25rem",
+        marginBottom: "1rem",
+        textTransform: theme.headingCase,
+        fontSize: "1.1em",
+        fontWeight: "bold",
+        letterSpacing: "0.05em",
+      }}
+    >
+      {title}
+    </h2>
+  );
+
+  const containerStyle = {
+    padding: `${theme.margin.top} ${theme.margin.right} ${theme.margin.bottom} ${theme.margin.left}`,
+    fontFamily: fonts.body,
+    fontSize: theme.fontSize,
+    lineHeight: theme.lineHeight,
+    color: theme.text,
+    backgroundColor: theme.background,
+    width: "100%",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
   };
 
   return (
-    <div className="p-8 font-sans bg-white leading-tight text-zinc-800 w-full h-full flex flex-col">
+    <div style={containerStyle}>
       {/* Header */}
-      <header className="mb-4 border-b-2 border-zinc-200 pb-4 flex justify-between items-start gap-4">
-        <div className="flex-1">
-          <h1 className="text-3xl font-black text-zinc-900 mb-1 uppercase tracking-tighter">
+      <header
+        style={{
+          marginBottom: "1.5rem",
+          borderBottom: `2px solid ${theme.border}`,
+          paddingBottom: "1rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "start",
+          gap: "1rem",
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <h1
+            style={{
+              fontSize: "2.5em",
+              fontWeight: 900,
+              color: getColor("name"),
+              margin: 0,
+              marginBottom: "0.25rem",
+              textTransform: "uppercase",
+              letterSpacing: "-0.025em",
+              fontFamily: fonts.heading,
+            }}
+          >
             {personalInfo.fullName ||
               `${personalInfo.firstName || ""} ${personalInfo.lastName || ""}`.trim() ||
               "Your Name"}
           </h1>
-          <p className="text-lg text-lime-600 font-bold mb-2 tracking-tight">
+          <p
+            style={{
+              fontSize: "1.125em",
+              color: getColor("jobTitle"),
+              fontWeight: "bold",
+              marginBottom: "0.75rem",
+              fontFamily: fonts.heading,
+            }}
+          >
             {personalInfo.jobTitle || "Job Title"}
           </p>
 
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-zinc-600">
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "1rem",
+              fontSize: "0.75em",
+              fontWeight: 500,
+              color: "#52525b",
+            }}
+          >
             {personalInfo.email && (
-              <div className="flex items-center gap-1.5 hover:text-lime-600 transition-colors">
-                <Mail className="w-3.5 h-3.5" />{" "}
-                <span>{personalInfo.email}</span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  color: getColor("headerIcons", "#52525b"),
+                }}
+              >
+                <Mail size={12} />{" "}
+                <span style={{ color: "#52525b" }}>{personalInfo.email}</span>
               </div>
             )}
             {personalInfo.phone && (
-              <div className="flex items-center gap-1.5 hover:text-lime-600 transition-colors">
-                <Phone className="w-3.5 h-3.5" />{" "}
-                <span>{personalInfo.phone}</span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  color: getColor("headerIcons", "#52525b"),
+                }}
+              >
+                <Phone size={12} />{" "}
+                <span style={{ color: "#52525b" }}>{personalInfo.phone}</span>
               </div>
             )}
             {personalInfo.location && (
-              <div className="flex items-center gap-1.5 hover:text-lime-600 transition-colors">
-                <MapPin className="w-3.5 h-3.5" />{" "}
-                <span>{personalInfo.location}</span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                  color: getColor("headerIcons", "#52525b"),
+                }}
+              >
+                <MapPin size={12} />{" "}
+                <span style={{ color: "#52525b" }}>
+                  {personalInfo.location}
+                </span>
               </div>
             )}
             {(personalInfo.links || []).map(
@@ -70,10 +223,25 @@ const ModernTemplate = ({ data }) => {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 hover:text-lime-600 transition-colors"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.375rem",
+                      color: "inherit",
+                      textDecoration: "none",
+                    }}
                   >
-                    {getLinkIcon(link.label, link.url)}
-                    <span>{link.label || "Link"}</span>
+                    <span
+                      style={{
+                        color: getColor("linkIcons", "#52525b"),
+                        display: "flex",
+                      }}
+                    >
+                      {getLinkIcon(link.label, link.url)}
+                    </span>
+                    <span style={{ color: "#52525b" }}>
+                      {link.label || "Link"}
+                    </span>
                   </a>
                 ),
             )}
@@ -81,27 +249,54 @@ const ModernTemplate = ({ data }) => {
         </div>
 
         {personalInfo.photoUrl && (
-          <div className="w-20 h-20 rounded-xl overflow-hidden shadow-lg border-2 border-zinc-100 shrink-0">
+          <div
+            style={{
+              width: `${theme.profileImage.size}px`,
+              height: `${theme.profileImage.size}px`,
+              borderRadius:
+                theme.profileImage.style === "circle"
+                  ? "50%"
+                  : theme.profileImage.style === "square"
+                    ? "0"
+                    : `${theme.profileImage.borderRadius}px`,
+              overflow: "hidden",
+              border: `2px solid ${theme.border}`,
+              flexShrink: 0,
+            }}
+          >
             <img
               src={personalInfo.photoUrl}
-              alt="Profile"
-              className="w-full h-full object-cover"
+              alt={`${personalInfo.fullName || "Profile"} photo`}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           </div>
         )}
       </header>
 
       {/* Content Area */}
-      <div className="grid grid-cols-3 gap-6 overflow-hidden">
-        {/* Main Content (Left) */}
-        <div className="col-span-2 space-y-4 overflow-hidden">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: theme.columnLayout === "one" ? "1fr" : "2fr 1fr",
+          gap: "1.5rem",
+          overflow: "hidden",
+        }}
+      >
+        {/* Main Content (Left or Full) */}
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+        >
           {/* Summary */}
           {personalInfo.objective && (
             <section>
-              <h2 className="text-md font-bold text-zinc-900 border-b border-zinc-200 pb-0.5 mb-2 uppercase tracking-wider text-lime-600">
-                {titles.objective || "Summary"}
-              </h2>
-              <p className="text-xs text-zinc-700 whitespace-pre-wrap">
+              <SectionHeader title={titles.objective || "Summary"} />
+              <p
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontSize: "0.875em",
+                  fontFamily: fonts.body,
+                }}
+              >
                 {personalInfo.objective}
               </p>
             </section>
@@ -110,35 +305,108 @@ const ModernTemplate = ({ data }) => {
           {/* Experience */}
           {experience?.some((exp) => exp.visible !== false) && (
             <section>
-              <h2 className="text-md font-bold text-zinc-900 border-b border-zinc-200 pb-0.5 mb-3 uppercase tracking-wider text-lime-600">
-                {titles.experience || "Experience"}
-              </h2>
-              <div className="space-y-3">
+              <SectionHeader title={titles.experience || "Experience"} />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: `${theme.spaceBetweenEntries}px`,
+                }}
+              >
                 {experience.map(
                   (exp, i) =>
                     exp.visible !== false && (
                       <div
                         key={i}
-                        className="relative pl-3 border-l-2 border-zinc-100"
+                        style={{
+                          paddingLeft: "0.75rem",
+                          borderLeft: `2px solid ${theme.border}`,
+                        }}
                       >
-                        <div className="flex justify-between items-start mb-0.5">
-                          <div>
-                            <h3 className="font-bold text-zinc-900 uppercase tracking-tight text-sm">
-                              {exp.title || "(Job Title)"}
-                            </h3>
-                            <p className="text-xs font-bold text-lime-600">
-                              {exp.company || "Company Name"}{" "}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "start",
+                            marginBottom: "2px",
+                            flexDirection:
+                              theme.subtitlePlacement === "next-line"
+                                ? "column"
+                                : "row",
+                          }}
+                        >
+                          <h3
+                            style={{
+                              fontWeight: "bold",
+                              textTransform: "uppercase",
+                              fontSize: "0.875em",
+                              fontFamily: fonts.heading,
+                            }}
+                          >
+                            {exp.title}
+                          </h3>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              width:
+                                theme.subtitlePlacement === "next-line"
+                                  ? "100%"
+                                  : "auto",
+                              alignItems: "center",
+                              gap: "10px",
+                            }}
+                          >
+                            <p
+                              style={{
+                                fontSize: "0.8em",
+                                fontWeight:
+                                  theme.subtitleStyle === "bold"
+                                    ? "bold"
+                                    : "normal",
+                                fontStyle:
+                                  theme.subtitleStyle === "italic"
+                                    ? "italic"
+                                    : "normal",
+                                color: getColor("entrySubtitle", "#52525b"),
+                                fontFamily: fonts.body,
+                              }}
+                            >
+                              {exp.company}{" "}
                               {exp.location && `• ${exp.location}`}
                             </p>
+                            <span
+                              style={{
+                                fontSize: "0.7em",
+                                fontWeight: "bold",
+                                color: getColor("dates"),
+                                textTransform: "uppercase",
+                                backgroundColor: "#fafafa",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontFamily: fonts.body,
+                              }}
+                            >
+                              {formatDate(exp.startDate)} -{" "}
+                              {exp.current
+                                ? "Present"
+                                : formatDate(exp.endDate)}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-bold text-zinc-400 uppercase whitespace-nowrap bg-zinc-50 px-1.5 py-0.5 rounded">
-                            {exp.startDate || "Start"} -{" "}
-                            {exp.current ? "Present" : exp.endDate || "End"}
-                          </span>
                         </div>
                         {exp.description && (
-                          <p className="text-xs text-zinc-700 whitespace-pre-wrap mt-1 leading-tight">
-                            {exp.description}
+                          <p
+                            style={{
+                              fontSize: "0.85em",
+                              marginTop: "4px",
+                              whiteSpace: "pre-wrap",
+                              fontFamily: fonts.body,
+                            }}
+                          >
+                            {formatDescriptionList(
+                              exp.description,
+                              theme.listStyle,
+                            )}
                           </p>
                         )}
                       </div>
@@ -151,35 +419,128 @@ const ModernTemplate = ({ data }) => {
           {/* Projects */}
           {projects?.some((proj) => proj.visible !== false) && (
             <section>
-              <h2 className="text-md font-bold text-zinc-900 border-b border-zinc-200 pb-0.5 mb-3 uppercase tracking-wider text-lime-600">
-                {titles.projects || "Projects"}
-              </h2>
-              <div className="space-y-3">
+              <SectionHeader title={titles.projects || "Projects"} />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: `${theme.spaceBetweenEntries}px`,
+                }}
+              >
                 {projects.map(
                   (proj, i) =>
                     proj.visible !== false && (
                       <div
                         key={i}
-                        className="relative pl-3 border-l-2 border-zinc-100"
+                        style={{
+                          paddingLeft: "0.75rem",
+                          borderLeft: `2px solid ${theme.border}`,
+                        }}
                       >
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <h3 className="font-bold text-zinc-900 uppercase tracking-tight text-sm">
-                            {proj.title || "Project Title"}
-                          </h3>
-                          {proj.link && (
-                            <a
-                              href={proj.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] font-bold text-lime-600 hover:underline"
-                            >
-                              View Project
-                            </a>
-                          )}
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "start",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
+                            {proj.link ? (
+                              <a
+                                href={proj.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  fontWeight: "bold",
+                                  textTransform: "uppercase",
+                                  fontSize: "0.875em",
+                                  fontFamily: fonts.heading,
+                                  color: theme.text,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                {proj.title}
+                              </a>
+                            ) : (
+                              <h3
+                                style={{
+                                  fontWeight: "bold",
+                                  textTransform: "uppercase",
+                                  fontSize: "0.875em",
+                                  fontFamily: fonts.heading,
+                                }}
+                              >
+                                {proj.title}
+                              </h3>
+                            )}
+                            {proj.link && (
+                              <a
+                                href={proj.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  fontSize: "0.7em",
+                                  fontWeight: "bold",
+                                  color: theme.accent,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                [LINK]
+                              </a>
+                            )}
+                            {proj.githubUrl && (
+                              <a
+                                href={proj.githubUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  fontSize: "0.7em",
+                                  fontWeight: "bold",
+                                  color: theme.accent,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                [CODE]
+                              </a>
+                            )}
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "0.7em",
+                              fontWeight: "bold",
+                              color: getColor("dates"),
+                              textTransform: "uppercase",
+                              backgroundColor: "#fafafa",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontFamily: fonts.body,
+                            }}
+                          >
+                            {proj.startDate &&
+                              `${formatDate(proj.startDate)} - ${proj.current ? "Present" : formatDate(proj.endDate)}`}
+                          </span>
                         </div>
                         {proj.description && (
-                          <p className="text-xs text-zinc-700 whitespace-pre-wrap leading-tight">
-                            {proj.description}
+                          <p
+                            style={{
+                              fontSize: "0.85em",
+                              marginTop: "2px",
+                              whiteSpace: "pre-wrap",
+                              color: "#52525b",
+                              fontFamily: fonts.body,
+                            }}
+                          >
+                            {formatDescriptionList(
+                              proj.description,
+                              theme.listStyle,
+                            )}
                           </p>
                         )}
                       </div>
@@ -189,124 +550,266 @@ const ModernTemplate = ({ data }) => {
             </section>
           )}
 
-          {/* Achievements */}
-          {achievements?.some((ach) => ach.visible !== false) && (
-            <section>
-              <h2 className="text-md font-bold text-zinc-900 border-b border-zinc-200 pb-0.5 mb-3 uppercase tracking-wider text-lime-600">
-                {titles.achievements || "Achievements"}
-              </h2>
-              <div className="space-y-2">
-                {achievements.map(
-                  (ach, i) =>
-                    ach.visible !== false && (
-                      <div key={i} className="flex gap-3">
-                        <div className="text-zinc-400 font-bold text-[10px] uppercase pt-0.5 shrink-0 w-20">
-                          {ach.date}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-zinc-900 uppercase tracking-tight text-xs">
-                            {ach.title}
-                          </h3>
-                          <p className="text-xs text-zinc-700 mt-0.5 leading-tight">
-                            {ach.description}
-                          </p>
-                        </div>
-                      </div>
-                    ),
-                )}
-              </div>
-            </section>
+          {theme.columnLayout === "one" && (
+            <SidebarContent
+              titles={titles}
+              skills={skills}
+              education={education}
+              certifications={certifications}
+              theme={theme}
+              fonts={fonts}
+              formatDate={formatDate}
+            />
           )}
         </div>
 
-        {/* Sidebar (Right) */}
-        <div className="space-y-6 overflow-hidden">
-          {/* Skills */}
-          {skills?.some((skill) => skill.visible !== false) && (
-            <section>
-              <h2 className="text-md font-bold text-zinc-900 border-b border-zinc-200 pb-0.5 mb-2 uppercase tracking-wider text-lime-600">
-                {titles.skills || "Skills"}
-              </h2>
-              <div className="space-y-3">
-                {skills.map(
-                  (skill, index) =>
-                    skill.visible !== false && (
-                      <div key={index}>
-                        <h3 className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-0.5">
-                          {skill.category}
-                        </h3>
-                        <p className="text-xs font-bold text-zinc-800 leading-tight">
-                          {skill.subSkills}
-                        </p>
-                      </div>
-                    ),
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Education */}
-          {education?.some((edu) => edu.visible !== false) && (
-            <section>
-              <h2 className="text-md font-bold text-zinc-900 border-b border-zinc-200 pb-0.5 mb-2 uppercase tracking-wider text-lime-600">
-                {titles.education || "Education"}
-              </h2>
-              <div className="space-y-3">
-                {education.map(
-                  (edu, i) =>
-                    edu.visible !== false && (
-                      <div key={i}>
-                        <h3 className="font-bold text-zinc-900 text-xs uppercase mb-0.5">
-                          {edu.degree || "Degree"}
-                        </h3>
-                        <p className="text-xs font-bold text-lime-600 leading-tight">
-                          {edu.institution || "Institution"}
-                        </p>
-                        <div className="flex justify-between text-[10px] font-bold text-zinc-400 mt-0.5 uppercase tracking-tighter">
-                          <span>
-                            {edu.startDate || "Start"} - {edu.endDate || "End"}
-                          </span>
-                          {edu.gpa && (
-                            <span className="text-lime-600/70">
-                              GPA: {edu.gpa}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ),
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Certifications */}
-          {certifications?.some((cert) => cert.visible !== false) && (
-            <section>
-              <h2 className="text-md font-bold text-zinc-900 border-b border-zinc-200 pb-0.5 mb-2 uppercase tracking-wider text-lime-600">
-                {titles.certifications || "Certifications"}
-              </h2>
-              <div className="space-y-2">
-                {certifications.map(
-                  (cert, i) =>
-                    cert.visible !== false && (
-                      <div key={i}>
-                        <h3 className="font-bold text-zinc-900 text-xs uppercase leading-tight mb-0.5">
-                          {cert.name}
-                        </h3>
-                        <p className="text-[10px] font-bold text-lime-600/80">
-                          {cert.issuer}
-                        </p>
-                        <p className="text-[9px] font-bold text-zinc-400 uppercase mt-0.5">
-                          {cert.date}
-                        </p>
-                      </div>
-                    ),
-                )}
-              </div>
-            </section>
-          )}
-        </div>
+        {/* Sidebar (Right) - Only if two columns */}
+        {theme.columnLayout !== "one" && (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
+          >
+            <SidebarContent
+              titles={titles}
+              skills={skills}
+              education={education}
+              certifications={certifications}
+              theme={theme}
+              fonts={fonts}
+              formatDate={formatDate}
+            />
+          </div>
+        )}
       </div>
+    </div>
+  );
+};
+
+const SidebarContent = ({
+  titles,
+  skills,
+  education,
+  certifications,
+  theme,
+  fonts,
+  formatDate,
+}) => {
+  const SectionHeader = ({ title }) => (
+    <h2
+      style={{
+        color: theme.applyTo.headings ? theme.accent : theme.text,
+        fontFamily: fonts.heading,
+        borderBottom: `2px solid ${theme.applyTo.headingsLine ? theme.accent : theme.border}`,
+        paddingBottom: "0.25rem",
+        marginBottom: "1rem",
+        textTransform: theme.headingCase,
+        fontSize: "1em",
+        fontWeight: "bold",
+        letterSpacing: "0.05em",
+      }}
+    >
+      {title}
+    </h2>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {/* Skills */}
+      {skills?.some((skill) => skill.visible !== false) && (
+        <section>
+          <SectionHeader title={titles.skills || "Skills"} />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: `${theme.spaceBetweenEntries * 0.75}px`,
+            }}
+          >
+            {skills.map(
+              (skill, index) =>
+                skill.visible !== false && (
+                  <div key={index}>
+                    <h3
+                      style={{
+                        fontSize: "0.6em",
+                        fontWeight: 900,
+                        color: "#a1a1aa",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.2em",
+                        marginBottom: "2px",
+                        fontFamily: fonts.heading,
+                      }}
+                    >
+                      {skill.category}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "0.8em",
+                        fontWeight: "bold",
+                        fontFamily: fonts.body,
+                      }}
+                    >
+                      {skill.subSkills}
+                    </p>
+                  </div>
+                ),
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Education */}
+      {education?.some((edu) => edu.visible !== false) && (
+        <section>
+          <SectionHeader title={titles.education || "Education"} />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: `${theme.spaceBetweenEntries}px`,
+            }}
+          >
+            {education.map(
+              (edu, i) =>
+                edu.visible !== false && (
+                  <div key={i}>
+                    <p
+                      style={{
+                        fontSize: "0.8em",
+                        color: "#52525b",
+                        fontFamily: fonts.body,
+                      }}
+                    >
+                      {edu.degree} {edu.field && `in ${edu.field}`}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "0.8em",
+                        fontWeight:
+                          theme.subtitleStyle === "bold" ? "bold" : "normal",
+                        fontStyle:
+                          theme.subtitleStyle === "italic"
+                            ? "italic"
+                            : "normal",
+                        color: theme.applyTo.entrySubtitle
+                          ? theme.accent
+                          : "#52525b",
+                        fontFamily: fonts.body,
+                      }}
+                    >
+                      {edu.institution}
+                    </p>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.7em",
+                        fontWeight: "bold",
+                        color: theme.applyTo.dates ? theme.accent : "#52525b",
+                        textTransform: "uppercase",
+                        marginTop: "2px",
+                        fontFamily: fonts.body,
+                      }}
+                    >
+                      <span>
+                        {formatDate(edu.startDate)} - {formatDate(edu.endDate)}
+                      </span>
+                      {edu.gpa && (
+                        <span
+                          style={{
+                            color: theme.applyTo.dotsBarsBubbles
+                              ? theme.accent
+                              : "#52525b",
+                          }}
+                        >
+                          GPA: {edu.gpa}
+                        </span>
+                      )}
+                    </div>
+                    {edu.description && (
+                      <p
+                        style={{
+                          fontSize: "0.75em",
+                          marginTop: "0.25rem",
+                          color: "#71717a",
+                          whiteSpace: "pre-wrap",
+                          fontFamily: fonts.body,
+                        }}
+                      >
+                        {formatDescriptionList(
+                          edu.description,
+                          theme.listStyle,
+                        )}
+                      </p>
+                    )}
+                  </div>
+                ),
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Certifications */}
+      {certifications?.some((cert) => cert.visible !== false) && (
+        <section>
+          <SectionHeader title={titles.certifications || "Certifications"} />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: `${theme.spaceBetweenEntries * 0.5}px`,
+            }}
+          >
+            {certifications.map(
+              (cert, i) =>
+                cert.visible !== false && (
+                  <div
+                    key={i}
+                    style={{
+                      border: `1px solid ${theme.border}`,
+                      padding: "0.5rem",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontWeight: "bold",
+                        fontSize: "0.8em",
+                        textTransform: "uppercase",
+                        fontFamily: fonts.heading,
+                      }}
+                    >
+                      {cert.name}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "0.7em",
+                        fontWeight: "bold",
+                        color: theme.applyTo.entrySubtitle
+                          ? theme.accent
+                          : "#52525b",
+                        fontFamily: fonts.body,
+                      }}
+                    >
+                      {cert.issuer}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "0.6em",
+                        fontWeight: "bold",
+                        color: "#a1a1aa",
+                        textTransform: "uppercase",
+                        marginTop: "2px",
+                        fontFamily: fonts.body,
+                      }}
+                    >
+                      {cert.date}
+                    </p>
+                  </div>
+                ),
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
