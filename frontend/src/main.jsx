@@ -20,8 +20,8 @@ createRoot(document.getElementById("root")).render(
     <HelmetProvider>
       <BrowserRouter>
         <AppProvider>
-          <ClerkProvider 
-            publishableKey={PUBLISHABLE_KEY} 
+          <ClerkProvider
+            publishableKey={PUBLISHABLE_KEY}
             afterSignOutUrl="/"
             signInUrl="/signin"
             signUpUrl="/signup"

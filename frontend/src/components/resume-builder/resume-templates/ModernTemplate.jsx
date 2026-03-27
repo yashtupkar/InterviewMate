@@ -11,7 +11,8 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+  getLinkIcon,
+} from "../../../utils/resumeHelpers.jsx";
 
 /**
  * ModernTemplate - Dynamic version
@@ -21,12 +22,14 @@ const ModernTemplate = ({ data }) => {
   const {
     personalInfo,
     sectionTitles,
+    profiles,
     experience,
     education,
     skills,
     projects,
     achievements,
     certifications,
+    customSections,
     customizations: c,
   } = data;
 
@@ -82,13 +85,6 @@ const ModernTemplate = ({ data }) => {
   const formatDate = (dateStr) =>
     formatResumeDate(dateStr, theme.dateFormat, theme.language);
 
-  const getLinkIcon = (label, url) => {
-    const text = (label + url).toLowerCase();
-    if (text.includes("linkedin")) return <Linkedin size={14} />;
-    if (text.includes("github")) return <Github size={14} />;
-    return <LinkIcon size={14} />;
-  };
-
   const SectionHeader = ({ title }) => (
     <h2
       style={{
@@ -115,10 +111,9 @@ const ModernTemplate = ({ data }) => {
     color: theme.text,
     backgroundColor: theme.background,
     width: "100%",
-    height: "100%",
+    minHeight: "297mm",
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden",
   };
 
   return (
@@ -274,32 +269,130 @@ const ModernTemplate = ({ data }) => {
       </header>
 
       {/* Content Area */}
-      <div
+    <div
         style={{
           display: "grid",
           gridTemplateColumns: theme.columnLayout === "one" ? "1fr" : "2fr 1fr",
           gap: "1.5rem",
-          overflow: "hidden",
         }}
       >
         {/* Main Content (Left or Full) */}
         <div
           style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
         >
-          {/* Summary */}
-          {personalInfo.objective && (
-            <section>
-              <SectionHeader title={titles.objective || "Summary"} />
-              <p
-                style={{
-                  whiteSpace: "pre-wrap",
-                  fontSize: "0.875em",
-                  fontFamily: fonts.body,
-                }}
-              >
-                {personalInfo.objective}
-              </p>
-            </section>
+          {/* Profiles/Summaries */}
+          {profiles?.some((p) => p.visible !== false && p.content) && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.25rem",
+              }}
+            >
+              {profiles.map(
+                (profile, i) =>
+                  profile.visible !== false &&
+                  profile.content && (
+                    <section key={i}>
+                      <SectionHeader
+                        title={profile.title || titles.profiles || "Summary"}
+                      />
+                      <p
+                        style={{
+                          whiteSpace: "pre-wrap",
+                          fontSize: "0.875em",
+                          fontFamily: fonts.body,
+                        }}
+                      >
+                        {profile.content}
+                      </p>
+                    </section>
+                  ),
+              )}
+            </div>
+          )}
+
+          {/* Custom Sections (Render in main column) */}
+          {customSections?.map(
+            (section) =>
+              section.entries?.some((e) => e.visible !== false) && (
+                <section key={section.id}>
+                  <SectionHeader title={section.title} />
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: `${theme.spaceBetweenEntries}px`,
+                    }}
+                  >
+                    {section.entries.map(
+                      (entry, i) =>
+                        entry.visible !== false && (
+                          <div
+                            key={i}
+                            style={{
+                              paddingLeft: "0.75rem",
+                              borderLeft: `2px solid ${theme.border}`,
+                            }}
+                          >
+                            <h3
+                              style={{
+                                fontWeight: "bold",
+                                textTransform: "uppercase",
+                                fontSize: "0.875em",
+                                fontFamily: fonts.heading,
+                                marginBottom: "2px",
+                              }}
+                            >
+                              {entry.link ? (
+                                <a
+                                  href={entry.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    color: "inherit",
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  {entry.title}
+                                </a>
+                              ) : (
+                                entry.title
+                              )}
+                            </h3>
+                            {entry.subtitle && (
+                              <p
+                                style={{
+                                  fontSize: "0.9em",
+                                  fontStyle: "italic",
+                                  color: "#71717a",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                {entry.subtitle}
+                              </p>
+                            )}
+                            {entry.content && (
+                              <p
+                                style={{
+                                  fontSize: "0.85em",
+                                  whiteSpace: "pre-wrap",
+                                  color: "#52525b",
+                                  fontFamily: fonts.body,
+                                }}
+                              >
+                                {formatDescriptionList(
+                                  entry.content,
+                                  theme.listStyle,
+                                )}
+                              </p>
+                            )}
+                          </div>
+                        ),
+                    )}
+                  </div>
+                </section>
+              ),
           )}
 
           {/* Experience */}

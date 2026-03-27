@@ -18,7 +18,8 @@ import {
   FiLinkedin,
   FiChevronLeft,
   FiChevronRight,
-  FiChevronDown
+  FiChevronDown,
+  FiGift
 } from "react-icons/fi";
 
 import Logo from "../common/Logo";
@@ -71,10 +72,10 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
     { name: "Mock Interviews", icon: <HiSparkles />, path: "/dashboard/setup", active: location.pathname === "/dashboard/setup" },
     { name: "GD Simulator", icon: <FaUsers />, path: "/gd/setup", active: location.pathname === "/gd/setup" },
     { name: "Reports", icon: <BsFileEarmarkTextFill />, path: "/dashboard/reports", active: location.pathname.startsWith("/dashboard/reports") },
-    { 
-      name: "Resume Tools", 
-      icon: <TbBriefcaseFilled />, 
-      active: location.pathname === "/ats-scorer" || location.pathname === "/resume-builder", 
+    {
+      name: "Resume Tools",
+      icon: <TbBriefcaseFilled />,
+      active: location.pathname === "/ats-scorer" || location.pathname === "/resume-builder",
       subItems: [
         { name: "ATS Scanner", path: "/ats-scorer", active: location.pathname === "/ats-scorer", badge: "New" },
         { name: "Resume Builder", path: "/resume-builder", active: location.pathname === "/resume-builder", badge: "New" }
@@ -106,7 +107,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
             </span>
           )}
         </div>
-        <button 
+        <button
           onClick={onClose}
           className="md:hidden p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors border border-transparent hover:border-white/10"
         >
@@ -115,7 +116,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
       </div>
 
       {/* Collapse Toggle Button (Desktop only) */}
-      <button 
+      <button
         onClick={toggleCollapse}
         className="hidden md:flex absolute -right-3 top-[3rem] bg-[#bef264] text-black hover:text-black border border-white/20 hover:border-white/40 items-center justify-center rounded-full w-6 h-6 transition-colors z-[51] shadow-md"
       >
@@ -145,11 +146,10 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                       }
                     }}
                     title={isCollapsed ? item.name : ""}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${
-                      item.active || openDropdowns[item.name]
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${item.active || openDropdowns[item.name]
                         ? "bg-[#bef264]/10 text-[#bef264]"
                         : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <div className={`flex items-center ${isCollapsed ? "justify-center w-full" : "gap-2"}`}>
                       <span className={`text-lg shrink-0 ${item.active || openDropdowns[item.name] ? "text-[#bef264]" : "text-zinc-500"}`}>
@@ -175,11 +175,10 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                           key={subItem.name}
                           to={subItem.path}
                           onClick={onClose}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            subItem.active
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${subItem.active
                               ? "text-[#bef264] bg-[#bef264]/5"
                               : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
-                          }`}
+                            }`}
                         >
                           <span className="truncate">{subItem.name}</span>
                           {subItem.badge && (
@@ -199,8 +198,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                   onClick={onClose}
                   title={isCollapsed ? item.name : ""}
                   className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"} px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${item.active
-                      ? "bg-[#bef264]/10 text-[#bef264]"
-                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+                    ? "bg-[#bef264]/10 text-[#bef264]"
+                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
                     }`}
                 >
                   <span className={`text-lg shrink-0 ${item.active ? "text-[#bef264]" : "text-zinc-500"}`}>{item.icon}</span>
@@ -289,7 +288,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
           <div className="bg-[#bef264] rounded-2xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 hover:scale-[1.02]">
             <div className="flex items-center justify-between px-0.5">
               <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] leading-none opacity-80">
-                {subscription.tier} 
+                {subscription.tier}
               </span>
               <Link to="/pricing" onClick={onClose} className="text-[10px] font-black text-black/60 hover:text-black transition-colors uppercase tracking-widest leading-none border-b border-black/10 hover:border-black transition-all pb-0.5">
                 Upgrade
@@ -298,17 +297,17 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
 
             <div className="space-y-2.5">
               <div className="flex justify-between items-center text-[10px] font-black tracking-widest text-black">
-                 <span className="uppercase opacity-60">Credits</span>
-                 <span className="text-black text-xs italic">
-                   {Math.round(subscription.credits || 0)} <span className="text-black/30 mx-0.5 not-italic">/</span> {subscription.limits.credits || 200}
-                 </span>
+                <span className="uppercase opacity-60">Credits</span>
+                <span className="text-black text-xs italic">
+                  {Math.round(subscription.credits || 0)} <span className="text-black/30 mx-0.5 not-italic">/</span> {subscription.limits.credits || 200}
+                </span>
               </div>
               <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5">
-                <div 
+                <div
                   className="h-full bg-black rounded-full transition-all duration-1000 ease-out relative"
                   style={{ width: `${Math.min(100, ((subscription.credits || 0) / (subscription.limits.credits || 200)) * 100)}%` }}
                 >
-                   <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
+                  <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
                 </div>
               </div>
             </div>

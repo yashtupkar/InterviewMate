@@ -12,11 +12,14 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+  getLinkIcon,
+} from "../../../utils/resumeHelpers.jsx";
 
 const CreativeTemplate = ({ data }) => {
   const {
     personalInfo,
+    sectionTitles,
+    profiles,
     experience,
     education,
     skills,
@@ -25,6 +28,8 @@ const CreativeTemplate = ({ data }) => {
     certifications,
     customizations: c,
   } = data;
+
+  const titles = sectionTitles || {};
 
   const theme = {
     accent: c?.colors?.accent || "#bef264",
@@ -64,26 +69,18 @@ const CreativeTemplate = ({ data }) => {
   const formatDate = (dateStr) =>
     formatResumeDate(dateStr, theme.dateFormat, theme.language);
 
-  const getLinkIcon = (label, url) => {
-    const text = (label + url).toLowerCase();
-    if (text.includes("linkedin")) return <Linkedin className="w-3.5 h-3.5" />;
-    if (text.includes("github")) return <Github className="w-3.5 h-3.5" />;
-    return <LinkIcon className="w-3.5 h-3.5" />;
-  };
-
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         width: "100%",
-        height: "100%",
+        minHeight: "297mm",
         backgroundColor: theme.background,
         color: theme.text,
         fontFamily: fonts.body,
         fontSize: theme.fontSize,
         lineHeight: theme.lineHeight,
-        overflow: "hidden",
       }}
     >
       {/* Artistic Header */}
@@ -157,9 +154,9 @@ const CreativeTemplate = ({ data }) => {
         </div>
       </header>
 
-      <div className="flex-1 p-6 grid grid-cols-4 gap-6 overflow-hidden">
+      <div className="flex-1 p-6 grid grid-cols-4 gap-6">
         {/* Left Column - Details */}
-        <div className="col-span-1 space-y-6 order-1 overflow-hidden">
+        <div className="col-span-1 space-y-6 order-1">
           {/* Skills */}
           {skills?.some((skill) => skill.visible !== false) && (
             <section>
@@ -295,28 +292,43 @@ const CreativeTemplate = ({ data }) => {
         </div>
 
         {/* Right Column - Experience & Work */}
-        <div className="col-span-3 space-y-6 order-2 overflow-hidden">
-          {/* Summary */}
-          {personalInfo.objective && (
-            <section>
-              <p
-                style={{
-                  fontSize: "1.125rem",
-                  fontWeight: "bold",
-                  color: "#27272a",
-                  lineHeight: 1.25,
-                  tracking: "tight",
-                  fontStyle: "italic",
-                  opacity: 0.9,
-                  borderLeft: `4px solid ${theme.accent}`,
-                  paddingLeft: "1rem",
-                  paddingVertical: "4px",
-                  fontFamily: fonts.body,
-                }}
-              >
-                "{personalInfo.objective}"
-              </p>
-            </section>
+        <div className="col-span-3 space-y-6 order-2">
+          {/* Profiles/Summaries */}
+          {profiles?.some((p) => p.visible !== false && p.content) && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.5rem",
+              }}
+            >
+              {profiles.map(
+                (profile, i) =>
+                  profile.visible !== false &&
+                  profile.content && (
+                    <section key={i}>
+                      <p
+                        style={{
+                          fontSize: "1.125rem",
+                          fontWeight: "bold",
+                          color: "#27272a",
+                          lineHeight: 1.25,
+                          tracking: "tight",
+                          fontStyle: "italic",
+                          opacity: 0.9,
+                          borderLeft: `4px solid ${theme.accent}`,
+                          paddingLeft: "1rem",
+                          paddingVertical: "4px",
+                          fontFamily: fonts.body,
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        "{profile.content}"
+                      </p>
+                    </section>
+                  ),
+              )}
+            </div>
           )}
 
           {/* Experience */}

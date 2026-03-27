@@ -3,12 +3,13 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+} from "../../../utils/resumeHelpers.jsx";
 
 const ClassicTemplate = ({ data }) => {
   const {
     personalInfo,
     sectionTitles,
+    profiles,
     experience,
     education,
     skills,
@@ -68,10 +69,9 @@ const ClassicTemplate = ({ data }) => {
         fontSize: theme.fontSize,
         lineHeight: theme.lineHeight,
         width: "100%",
-        height: "100%",
+        minHeight: "297mm",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
       }}
     >
       {/* Centered Header */}
@@ -125,35 +125,46 @@ const ClassicTemplate = ({ data }) => {
       </header>
 
       <div className="space-y-3">
-        {/* Profile / Objective */}
-        {personalInfo.objective && (
-          <section>
-            <h2
-              style={{
-                fontSize: "0.75rem",
-                fontWeight: "bold",
-                color: getColor("headings", "#000000"),
-                borderBottom: `1px solid ${theme.applyTo.headingsLine ? theme.accent : "#d4d4d8"}`,
-                paddingBottom: "2px",
-                marginBottom: "4px",
-                textTransform: "uppercase",
-                fontFamily: fonts.heading,
-              }}
-            >
-              {titles.objective || "Profile"}
-            </h2>
-            <p
-              style={{
-                fontSize: "0.75rem",
-                color: "#18181b",
-                textAlign: "justify",
-                lineHeight: 1.4,
-                fontFamily: fonts.body,
-              }}
-            >
-              {personalInfo.objective}
-            </p>
-          </section>
+        {/* Profiles/Summaries */}
+        {profiles?.some((p) => p.visible !== false && p.content) && (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
+            {profiles.map(
+              (profile, i) =>
+                profile.visible !== false &&
+                profile.content && (
+                  <section key={i}>
+                    <h2
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: "bold",
+                        color: getColor("headings", "#000000"),
+                        borderBottom: `1px solid ${theme.applyTo.headingsLine ? theme.accent : "#d4d4d8"}`,
+                        paddingBottom: "2px",
+                        marginBottom: "4px",
+                        textTransform: "uppercase",
+                        fontFamily: fonts.heading,
+                      }}
+                    >
+                      {profile.title || titles.profiles || "Profile"}
+                    </h2>
+                    <p
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#18181b",
+                        textAlign: "justify",
+                        lineHeight: 1.4,
+                        fontFamily: fonts.body,
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {profile.content}
+                    </p>
+                  </section>
+                ),
+            )}
+          </div>
         )}
 
         {/* Work Experience */}

@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useResume } from "../../../context/ResumeContext";
+import AIUpgradePopup from "../../common/AIUpgradePopup";
+import MonthYearPicker from "../../common/MonthYearPicker";
 import {
   Plus,
   Trash2,
@@ -8,22 +10,21 @@ import {
   GripVertical,
   Check,
   FolderKanban,
-  Pencil,
-  X,
+  Sparkles,
 } from "lucide-react";
 
 const ProjectsForm = () => {
-  const { resumeData, updateProjects, updateSectionTitle } = useResume();
-  const { projects, sectionTitles } = resumeData;
+  const { resumeData, updateProjects } = useResume();
+  const { projects } = resumeData;
   const [editingIndex, setEditingIndex] = useState(null);
   const [editEntry, setEditEntry] = useState(null);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [tempTitle, setTempTitle] = useState(sectionTitles.projects);
+  const [showAIUpgrade, setShowAIUpgrade] = useState(false);
 
-  const handleTitleSave = () => {
-    updateSectionTitle("projects", tempTitle);
-    setIsEditingTitle(false);
-  };
+  useEffect(() => {
+    if (projects.length === 0 && editingIndex === null) {
+      handleAdd();
+    }
+  }, [projects.length]);
 
   const handleAdd = () => {
     const newEntry = {
@@ -99,77 +100,78 @@ const ProjectsForm = () => {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                Project Title
-              </label>
-              <input
-                type="text"
-                value={editEntry.title}
-                onChange={(e) =>
-                  setEditEntry({ ...editEntry, title: e.target.value })
-                }
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
-                placeholder="e.g. Chatbot AI"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                Live Link (Portfolio/Demo)
-              </label>
-              <input
-                type="url"
-                value={editEntry.link}
-                onChange={(e) =>
-                  setEditEntry({ ...editEntry, link: e.target.value })
-                }
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm"
-                placeholder="https://my-demo.com"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+              Project Title
+            </label>
+            <input
+              type="text"
+              value={editEntry.title || ""}
+              onChange={(e) =>
+                setEditEntry({ ...editEntry, title: e.target.value })
+              }
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-lime-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
+              placeholder="e.g. Chatbot AI"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+              Live Link (Portfolio/Demo)
+            </label>
+            <input
+              type="url"
+              value={editEntry.link || ""}
+              onChange={(e) =>
+                setEditEntry({ ...editEntry, link: e.target.value })
+              }
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-lime-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
+              placeholder="https://my-demo.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+              GitHub Source Code (Optional)
+            </label>
+            <input
+              type="url"
+              value={editEntry.githubUrl || ""}
+              onChange={(e) =>
+                setEditEntry({ ...editEntry, githubUrl: e.target.value })
+              }
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-lime-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
+              placeholder="https://github.com/..."
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                GitHub Source Code (Optional)
+                Start Date
               </label>
-              <input
-                type="url"
-                value={editEntry.githubUrl || ""}
-                onChange={(e) =>
-                  setEditEntry({ ...editEntry, githubUrl: e.target.value })
+              <MonthYearPicker
+                value={editEntry.startDate}
+                onChange={(val) =>
+                  setEditEntry({ ...editEntry, startDate: val })
                 }
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm"
-                placeholder="https://github.com/..."
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-                <div>
-                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                        Start Date
-                    </label>
-                    <input
-                        type="month"
-                        value={editEntry.startDate || ""}
-                        onChange={(e) => setEditEntry({ ...editEntry, startDate: e.target.value })}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm"
-                    />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                        End Date
-                    </label>
-                    <input
-                        type="month"
-                        value={editEntry.endDate || ""}
-                        disabled={editEntry.current}
-                        onChange={(e) => setEditEntry({ ...editEntry, endDate: e.target.value })}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all shadow-sm disabled:opacity-50"
-                    />
-                </div>
-            </div>
+            {!editEntry.current && (
+              <div>
+                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
+                  End Date
+                </label>
+                <MonthYearPicker
+                  value={editEntry.endDate}
+                  onChange={(val) =>
+                    setEditEntry({ ...editEntry, endDate: val })
+                  }
+                  align="right"
+                  showPresent={true}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 py-1">
@@ -180,7 +182,7 @@ const ProjectsForm = () => {
               onChange={(e) =>
                 setEditEntry({ ...editEntry, current: e.target.checked })
               }
-              className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-pink-500 focus:ring-pink-500/20"
+              className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-lime-500 focus:ring-lime-500/20"
             />
             <label
               htmlFor="current-project"
@@ -191,102 +193,69 @@ const ProjectsForm = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-              Description
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Description
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowAIUpgrade(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-lime-400 rounded-lg border border-zinc-800 text-[10px] font-black uppercase tracking-widest transition-all group"
+              >
+                <Sparkles className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                Rewrite with AI
+              </button>
+            </div>
             <textarea
               value={editEntry.description}
               onChange={(e) =>
                 setEditEntry({ ...editEntry, description: e.target.value })
               }
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-pink-500/50 transition-all min-h-[150px] resize-none"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-lime-500/50 transition-all min-h-[150px] resize-none"
               placeholder="Describe the project, technologies used, and your impact..."
             />
           </div>
 
           <button
             onClick={handleDone}
-            className="w-full py-4 bg-gradient-to-r from-pink-600 to-pink-400 text-white font-bold rounded-2xl shadow-lg hover:shadow-pink-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 group mt-4"
+            className="w-full py-4 bg-gradient-to-r from-lime-600 to-lime-400 text-zinc-950 font-bold rounded-2xl shadow-lg hover:shadow-lime-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 group mt-4"
           >
             <Check className="w-5 h-5" />
             DONE
           </button>
         </div>
+        <AIUpgradePopup
+          isOpen={showAIUpgrade}
+          onClose={() => setShowAIUpgrade(false)}
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-pink-500/10 rounded-lg">
-            <FolderKanban className="w-5 h-5 text-pink-500" />
-          </div>
-          {isEditingTitle ? (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={tempTitle}
-                onChange={(e) => setTempTitle(e.target.value)}
-                className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:border-pink-500 transition-all w-48"
-                autoFocus
-              />
-              <button
-                onClick={handleTitleSave}
-                className="p-1 text-lime-400 hover:scale-110 transition-transform"
-              >
-                <Check className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditingTitle(false);
-                  setTempTitle(sectionTitles.projects);
-                }}
-                className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <h2 className="text-xl font-bold text-white tracking-tight">
-              {sectionTitles.projects}
-            </h2>
-          )}
-        </div>
-
-        {!isEditingTitle && (
-          <button
-            onClick={() => setIsEditingTitle(true)}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-pink-500 transition-colors bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-zinc-800/50 hover:border-pink-500/30"
-          >
-            <Pencil className="w-3 h-3" />
-            Edit Heading
-          </button>
-        )}
-      </div>
-
       <div className="space-y-3">
         {projects.map((proj, index) => (
           <div
             key={index}
             onClick={() => handleEdit(index)}
-            className="group flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-pink-500/30 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+            className="group flex items-center justify-between p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-lime-500/30 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
           >
             <div className="flex items-center gap-4">
               <GripVertical className="w-5 h-5 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
               <div>
-                <span className="block font-bold text-white tracking-tight group-hover:text-pink-400 transition-colors">
+                <span className="block font-bold text-white tracking-tight group-hover:text-lime-400 transition-colors">
                   {proj.title || "(No Project Title)"}
                 </span>
                 <span className="text-[10px] text-zinc-500 font-medium block">
-                  {proj.startDate && `${proj.startDate} - ${proj.current ? "Present" : proj.endDate || "End"}`}
+                  {proj.startDate &&
+                    `${proj.startDate} - ${proj.current ? "Present" : proj.endDate || "End"}`}
                   {proj.link && ` • Link`}
                   {proj.githubUrl && ` • Code`}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-2 transition-opacity">
               <button
                 onClick={(e) => {
                   e.stopPropagation();

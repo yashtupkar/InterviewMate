@@ -75,6 +75,25 @@ const resumeSchema = new mongoose.Schema({
         issuer: { type: String, default: '' },
         date: { type: String, default: '' }
     }],
+    profiles: [{
+        visible: { type: Boolean, default: true },
+        title: { type: String, default: '' },
+        content: { type: String, default: '' }
+    }],
+    customSections: [{
+        id: { type: String },
+        title: { type: String, default: 'Custom Section' },
+        entries: [{
+            visible: { type: Boolean, default: true },
+            title: { type: String, default: '' },
+            subtitle: { type: String, default: '' },
+            location: { type: String, default: '' },
+            startDate: { type: String, default: '' },
+            endDate: { type: String, default: '' },
+            content: { type: String, default: '' },
+            link: { type: String, default: '' }
+        }]
+    }],
     customizations: {
         language: { type: String, default: 'English (UK)' },
         dateFormat: { type: String, default: 'DD/MM/YYYY' },

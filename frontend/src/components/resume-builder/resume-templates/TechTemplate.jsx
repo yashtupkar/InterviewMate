@@ -13,7 +13,7 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+} from "../../../utils/resumeHelpers.jsx";
 
 const TechTemplate = ({ data }) => {
   const {
@@ -77,13 +77,12 @@ const TechTemplate = ({ data }) => {
       style={{
         display: "flex",
         width: "100%",
-        height: "100%",
+        minHeight: "297mm",
         backgroundColor: theme.background,
         color: theme.text,
         fontFamily: fonts.body,
         fontSize: theme.fontSize,
         lineHeight: theme.lineHeight,
-        overflow: "hidden",
       }}
     >
       {/* Dark Sidebar */}
@@ -175,7 +174,7 @@ const TechTemplate = ({ data }) => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-8 overflow-hidden bg-white">
+      <main className="flex-1 p-8 bg-white">
         <header className="mb-8">
           <h1
             style={{

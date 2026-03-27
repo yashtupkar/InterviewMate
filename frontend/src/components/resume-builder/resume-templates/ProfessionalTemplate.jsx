@@ -11,7 +11,7 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+} from "../../../utils/resumeHelpers.jsx";
 
 /**
  * ProfessionalTemplate - Dynamic version
@@ -85,10 +85,9 @@ const ProfessionalTemplate = ({ data }) => {
     color: theme.text,
     backgroundColor: theme.background,
     width: "100%",
-    height: "100%",
+    minHeight: "297mm",
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden",
   };
 
   const SectionHeader = ({ title }) => (
@@ -268,7 +267,6 @@ const ProfessionalTemplate = ({ data }) => {
           display: "flex",
           flexDirection: "column",
           gap: "1rem",
-          overflow: "hidden",
         }}
       >
         {/* Experience */}

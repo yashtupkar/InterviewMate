@@ -11,11 +11,13 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+} from "../../../utils/resumeHelpers.jsx";
 
 const CorporateTemplate = ({ data }) => {
   const {
     personalInfo,
+    sectionTitles,
+    profiles,
     experience,
     education,
     skills,
@@ -24,6 +26,8 @@ const CorporateTemplate = ({ data }) => {
     certifications,
     customizations: c,
   } = data;
+
+  const titles = sectionTitles || {};
 
   const theme = {
     accent: c?.colors?.accent || "#312e81",
@@ -80,11 +84,10 @@ const CorporateTemplate = ({ data }) => {
         fontSize: theme.fontSize,
         lineHeight: theme.lineHeight,
         width: "100%",
-        height: "100%",
+        minHeight: "297mm",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        overflow: "hidden",
       }}
     >
       {/* Centered Professional Header */}
@@ -178,41 +181,58 @@ const CorporateTemplate = ({ data }) => {
       </header>
 
       {/* Two Column Layout */}
-      <div className="grid grid-cols-4 gap-10 w-full flex-1 overflow-hidden">
+      <div className="grid grid-cols-4 gap-10 w-full flex-1">
         {/* Main Content (3/4) */}
-        <div className="col-span-3 space-y-8 overflow-hidden">
-          {/* Summary */}
-          {personalInfo.objective && (
-            <section>
-              <h2
-                style={{
-                  fontSize: "0.75rem",
-                  fontWeight: 900,
-                  color: getColor("headings", "#1e1b4b"),
-                  textTransform: "uppercase",
-                  letterSpacing: "0.2rem",
-                  marginBottom: "1rem",
-                  borderLeft: `4px solid ${theme.accent}`,
-                  paddingLeft: "1rem",
-                  paddingVertical: "4px",
-                  fontFamily: fonts.heading,
-                }}
-              >
-                Professional Profile
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#3f3f46",
-                  lineHeight: 1.6,
-                  textAlign: "justify",
-                  fontStyle: "italic",
-                  fontFamily: fonts.body,
-                }}
-              >
-                {personalInfo.objective}
-              </p>
-            </section>
+        <div className="col-span-3 space-y-8">
+          {/* Profiles/Summaries */}
+          {profiles?.some((p) => p.visible !== false && p.content) && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1.5rem",
+              }}
+            >
+              {profiles.map(
+                (profile, i) =>
+                  profile.visible !== false &&
+                  profile.content && (
+                    <section key={i}>
+                      <h2
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 900,
+                          color: getColor("headings", "#1e1b4b"),
+                          textTransform: "uppercase",
+                          letterSpacing: "0.2rem",
+                          marginBottom: "1rem",
+                          borderLeft: `4px solid ${theme.accent}`,
+                          paddingLeft: "1rem",
+                          paddingVertical: "4px",
+                          fontFamily: fonts.heading,
+                        }}
+                      >
+                        {profile.title ||
+                          titles.profiles ||
+                          "Professional Profile"}
+                      </h2>
+                      <p
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#3f3f46",
+                          lineHeight: 1.6,
+                          textAlign: "justify",
+                          fontStyle: "italic",
+                          fontFamily: fonts.body,
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {profile.content}
+                      </p>
+                    </section>
+                  ),
+              )}
+            </div>
           )}
 
           {/* Professional Experience */}
@@ -408,7 +428,7 @@ const CorporateTemplate = ({ data }) => {
         </div>
 
         {/* Sidebar (1/4) */}
-        <div className="col-span-1 space-y-8 overflow-hidden">
+        <div className="col-span-1 space-y-8">
           {/* Skills Area */}
           {skills?.some((skill) => skill.visible !== false) && (
             <section>

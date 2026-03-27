@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useResume } from "../../../context/ResumeContext";
-import MonthYearPicker from "../../common/MonthYearPicker";
+import AIUpgradePopup from "../../common/AIUpgradePopup";
 import {
   Plus,
   Trash2,
@@ -8,58 +8,63 @@ import {
   EyeOff,
   GripVertical,
   Check,
-  Award,
+  User,
+  Sparkles,
 } from "lucide-react";
 
-const CertificationsForm = () => {
-  const { resumeData, updateCertifications } = useResume();
-  const { certifications } = resumeData;
+const ProfileForm = ({ onDone }) => {
+  const { resumeData, updateProfiles } = useResume();
+  const { profiles = [] } = resumeData;
   const [editingIndex, setEditingIndex] = useState(null);
   const [editEntry, setEditEntry] = useState(null);
+  const [showAIUpgrade, setShowAIUpgrade] = useState(false);
 
   useEffect(() => {
-    if (certifications.length === 0 && editingIndex === null) {
+    if (profiles.length === 0 && editingIndex === null) {
       handleAdd();
     }
-  }, [certifications.length]);
+  }, [profiles.length]);
 
   const handleAdd = () => {
     const newEntry = {
-      name: "",
-      issuer: "",
-      date: "",
+      title: "Professional Summary",
+      content: "",
       visible: true,
     };
-    setEditingIndex(certifications.length);
+    setEditingIndex(profiles.length);
     setEditEntry(newEntry);
   };
 
   const handleEdit = (index) => {
     setEditingIndex(index);
-    setEditEntry({ ...certifications[index] });
+    setEditEntry({ ...profiles[index] });
   };
 
   const handleDone = () => {
-    const newCert = [...certifications];
-    if (editingIndex === certifications.length) {
-      newCert.push(editEntry);
+    const newProfiles = [...profiles];
+    if (editingIndex === profiles.length) {
+      if (editEntry.content.trim()) {
+        newProfiles.push(editEntry);
+      }
+    } else if (editEntry.content.trim()) {
+      newProfiles[editingIndex] = editEntry;
     } else {
-      newCert[editingIndex] = editEntry;
+      newProfiles.splice(editingIndex, 1);
     }
-    updateCertifications(newCert);
+    updateProfiles(newProfiles);
     setEditingIndex(null);
     setEditEntry(null);
   };
 
   const handleRemove = (index) => {
-    const newCert = certifications.filter((_, i) => i !== index);
-    updateCertifications(newCert);
+    const newProfiles = profiles.filter((_, i) => i !== index);
+    updateProfiles(newProfiles);
   };
 
   const toggleVisibility = (index) => {
-    const newCert = [...certifications];
-    newCert[index].visible = !newCert[index].visible;
-    updateCertifications(newCert);
+    const newProfiles = [...profiles];
+    newProfiles[index].visible = !newProfiles[index].visible;
+    updateProfiles(newProfiles);
   };
 
   if (editingIndex !== null) {
@@ -67,11 +72,13 @@ const CertificationsForm = () => {
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-2xl font-bold text-white tracking-tight">
-            Edit Certification
+            Professional Summary
           </h2>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toggleVisibility(editingIndex)}
+              onClick={() => {
+                setEditEntry({ ...editEntry, visible: !editEntry.visible });
+              }}
               className="p-2 bg-zinc-800/50 rounded-lg hover:text-lime-400 transition-colors"
             >
               {editEntry.visible ? (
@@ -82,6 +89,9 @@ const CertificationsForm = () => {
             </button>
             <button
               onClick={() => {
+                if (editingIndex < profiles.length) {
+                  handleRemove(editingIndex);
+                }
                 setEditingIndex(null);
                 setEditEntry(null);
               }}
@@ -94,42 +104,23 @@ const CertificationsForm = () => {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-              Certification Name
-            </label>
-            <input
-              type="text"
-              value={editEntry.name}
+            <div className="flex items-center justify-between mb-2">
+              <button
+                type="button"
+                onClick={() => setShowAIUpgrade(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-lime-400 rounded-lg border border-zinc-800 text-[10px] font-black uppercase tracking-widest transition-all group"
+              >
+                <Sparkles className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                Rewrite with AI
+              </button>
+            </div>
+            <textarea
+              value={editEntry.content}
               onChange={(e) =>
-                setEditEntry({ ...editEntry, name: e.target.value })
+                setEditEntry({ ...editEntry, content: e.target.value })
               }
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-lime-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
-              placeholder="e.g. AWS Certified Solutions Architect"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-              Issuer
-            </label>
-            <input
-              type="text"
-              value={editEntry.issuer}
-              onChange={(e) =>
-                setEditEntry({ ...editEntry, issuer: e.target.value })
-              }
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-lime-500/50 transition-all placeholder:text-zinc-600 shadow-sm"
-              placeholder="e.g. Amazon Web Services"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-              Date
-            </label>
-            <MonthYearPicker
-              value={editEntry.date}
-              onChange={(val) => setEditEntry({ ...editEntry, date: val })}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-lime-500/50 transition-all min-h-[150px] resize-none"
+              placeholder="e.g. Results-oriented professional with a proven track record..."
             />
           </div>
 
@@ -141,6 +132,10 @@ const CertificationsForm = () => {
             DONE
           </button>
         </div>
+        <AIUpgradePopup
+          isOpen={showAIUpgrade}
+          onClose={() => setShowAIUpgrade(false)}
+        />
       </div>
     );
   }
@@ -148,7 +143,7 @@ const CertificationsForm = () => {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        {certifications.map((cert, index) => (
+        {profiles.map((profile, index) => (
           <div
             key={index}
             onClick={() => handleEdit(index)}
@@ -157,11 +152,8 @@ const CertificationsForm = () => {
             <div className="flex items-center gap-4">
               <GripVertical className="w-5 h-5 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
               <div>
-                <span className="block font-bold text-white tracking-tight group-hover:text-lime-400 transition-colors">
-                  {cert.name || "(No Certification Name)"}
-                </span>
-                <span className="text-xs text-zinc-500 font-medium">
-                  {cert.issuer || "Issuer"} • {cert.date || "Date"}
+                <span className="text-xs text-zinc-500 font-medium line-clamp-2 max-w-[300px]">
+                  {profile.content || "Add your summary content..."}
                 </span>
               </div>
             </div>
@@ -173,7 +165,7 @@ const CertificationsForm = () => {
                 }}
                 className="p-2 bg-zinc-800 rounded-lg text-zinc-400 hover:text-lime-400 transition-colors"
               >
-                {cert.visible !== false ? (
+                {profile.visible !== false ? (
                   <Eye className="w-4 h-4" />
                 ) : (
                   <EyeOff className="w-4 h-4" />
@@ -198,10 +190,10 @@ const CertificationsForm = () => {
         className="w-full py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-[0.98] shadow-sm"
       >
         <Plus className="w-5 h-5" />
-        Add Certification
+        Add Profile
       </button>
     </div>
   );
 };
 
-export default CertificationsForm;
+export default ProfileForm;

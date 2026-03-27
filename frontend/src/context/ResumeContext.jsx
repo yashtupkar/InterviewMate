@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useUser } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
@@ -39,8 +39,16 @@ const initialResumeState = {
     photoUrl: "",
     links: [],
   },
+  profiles: [
+    {
+      title: "Summary",
+      content: "",
+      visible: true,
+    },
+  ],
   sectionTitles: {
     objective: "Summary",
+    profiles: "Profile",
     experience: "Experience",
     education: "Education",
     skills: "Skills",
@@ -54,6 +62,7 @@ const initialResumeState = {
   projects: [],
   achievements: [],
   certifications: [],
+  customSections: [], // Array of { id, title, entries: [{ title, content, visible }] }
   customizations: {
     language: "English (UK)",
     dateFormat: "DD/MM/YYYY",
@@ -113,6 +122,29 @@ export const ResumeProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState("idle"); // idle, saving, saved, error
   const [resumeId, setResumeId] = useState(null);
+  const skipInitialSave = useRef(true);
+  const saveTimeout = useRef(null);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (skipInitialSave.current) {
+      skipInitialSave.current = false;
+      return;
+    }
+
+    if (!user?.id || !resumeId) return;
+
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+
+    setSaveStatus("unsaved");
+    saveTimeout.current = setTimeout(() => {
+      saveResume();
+    }, 2500); // 2.5 second debounce
+
+    return () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
+  }, [resumeData]);
 
   const fetchAllResumes = async () => {
     if (!user?.id) return;
@@ -142,6 +174,23 @@ export const ResumeProvider = ({ children }) => {
       const response = await axios.get(`${API_BASE}/single/${id}`);
       if (response.data.success) {
         const data = response.data.data;
+
+        // Migration: If legacy resume has objective but no profiles, convert it
+        if (
+          data.personalInfo?.objective &&
+          (!data.profiles || data.profiles.length === 0)
+        ) {
+          data.profiles = [
+            {
+              title: data.sectionTitles?.objective || "Summary",
+              content: data.personalInfo.objective,
+              visible: true,
+            },
+          ];
+        } else if (!data.profiles || data.profiles.length === 0) {
+          data.profiles = [{ title: "Summary", content: "", visible: true }];
+        }
+
         // Merge with initial state to ensure new customization fields exist
         const mergedData = {
           ...initialResumeState,
@@ -164,6 +213,7 @@ export const ResumeProvider = ({ children }) => {
             },
           },
         };
+        skipInitialSave.current = true;
         setResumeData(mergedData);
         setResumeId(id);
       }
@@ -177,6 +227,7 @@ export const ResumeProvider = ({ children }) => {
 
   const createNewResume = (template = "modern") => {
     const themeColor = TEMPLATE_THEMES[template] || TEMPLATE_THEMES.modern;
+    skipInitialSave.current = true;
     setResumeData({
       ...initialResumeState,
       template,
@@ -232,6 +283,23 @@ export const ResumeProvider = ({ children }) => {
     setResumeData((prev) => ({
       ...prev,
       personalInfo: { ...prev.personalInfo, ...info },
+    }));
+  };
+
+  const updateProfiles = (profiles) => {
+    setResumeData((prev) => ({
+      ...prev,
+      profiles,
+    }));
+  };
+
+  const addProfile = () => {
+    setResumeData((prev) => ({
+      ...prev,
+      profiles: [
+        ...(prev.profiles || []),
+        { title: "Summary", content: "", visible: true },
+      ],
     }));
   };
 
@@ -310,6 +378,47 @@ export const ResumeProvider = ({ children }) => {
   const updateCertifications = (data) =>
     setResumeData((prev) => ({ ...prev, certifications: data }));
 
+  const addCustomSection = (title) => {
+    setResumeData((prev) => ({
+      ...prev,
+      customSections: [
+        ...(prev.customSections || []),
+        {
+          id: `custom_${Date.now()}`,
+          title: title || "Custom Section",
+          entries: [
+            {
+              title: "New Item",
+              subtitle: "",
+              location: "",
+              startDate: "",
+              endDate: "",
+              content: "",
+              link: "",
+              visible: true,
+            },
+          ],
+        },
+      ],
+    }));
+  };
+
+  const updateCustomSection = (id, data) => {
+    setResumeData((prev) => ({
+      ...prev,
+      customSections: (prev.customSections || []).map((s) =>
+        s.id === id ? { ...s, ...data } : s,
+      ),
+    }));
+  };
+
+  const removeCustomSection = (id) => {
+    setResumeData((prev) => ({
+      ...prev,
+      customSections: (prev.customSections || []).filter((s) => s.id !== id),
+    }));
+  };
+
   const updateCustomizations = (path, value) => {
     setResumeData((prev) => {
       const keys = path.split(".");
@@ -355,6 +464,8 @@ export const ResumeProvider = ({ children }) => {
         saveResume,
         deleteResume,
         updatePersonalInfo,
+        updateProfiles,
+        addProfile,
         updateSectionTitle,
         addEntry,
         updateEntry,
@@ -365,6 +476,9 @@ export const ResumeProvider = ({ children }) => {
         updateProjects,
         updateAchievements,
         updateCertifications,
+        addCustomSection,
+        updateCustomSection,
+        removeCustomSection,
         updateCustomizations,
         resetCustomizations,
         setResumeData,

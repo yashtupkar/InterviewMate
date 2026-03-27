@@ -12,7 +12,7 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+} from "../../../utils/resumeHelpers.jsx";
 
 /**
  * ElegantTemplate - A structured, professional template with a left-aligned date column.
@@ -22,6 +22,7 @@ const ElegantTemplate = ({ data }) => {
   const {
     personalInfo,
     sectionTitles,
+    profiles,
     experience,
     education,
     skills,
@@ -116,11 +117,10 @@ const ElegantTemplate = ({ data }) => {
         fontSize: theme.fontSize,
         lineHeight: theme.lineHeight,
         width: "100%",
-        height: "100%",
+        minHeight: "297mm",
         padding: `${theme.margin.top} ${theme.margin.right} ${theme.margin.bottom} ${theme.margin.left}`,
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
       }}
     >
       {/* Header */}
@@ -238,7 +238,7 @@ const ElegantTemplate = ({ data }) => {
       </header>
 
       {/* Profile */}
-      {personalInfo.objective && (
+      {/* {personalInfo.objective && (
         <section>
           <SectionHeader title={titles.objective || "Profile"} />
           <p
@@ -252,6 +252,34 @@ const ElegantTemplate = ({ data }) => {
             {personalInfo.objective}
           </p>
         </section>
+      )} */}
+      {profiles?.some((p) => p.visible !== false && p.content) && (
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+        >
+          {profiles.map(
+            (profile, i) =>
+              profile.visible !== false &&
+              profile.content && (
+                <section key={i}>
+                  <SectionHeader title={profile.title || titles.profiles || "Profile"} />
+
+                  <p
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#18181b",
+                      textAlign: "justify",
+                      lineHeight: 1.4,
+                      fontFamily: fonts.body,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {profile.content}
+                  </p>
+                </section>
+              ),
+          )}
+        </div>
       )}
 
       {/* Work Experience */}

@@ -11,7 +11,7 @@ import {
   formatResumeDate,
   formatDescriptionList,
   getFontFamily,
-} from "../../../utils/resumeHelpers";
+} from "../../../utils/resumeHelpers.jsx";
 
 const ExecutiveTemplate = ({ data }) => {
   const {
@@ -22,6 +22,7 @@ const ExecutiveTemplate = ({ data }) => {
     projects,
     achievements,
     certifications,
+    profiles,
     customizations: c,
   } = data;
 
@@ -80,10 +81,9 @@ const ExecutiveTemplate = ({ data }) => {
         fontSize: theme.fontSize,
         lineHeight: theme.lineHeight,
         width: "100%",
-        height: "100%",
+        minHeight: "297mm",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
       }}
     >
       {/* Premium Header */}
@@ -177,39 +177,49 @@ const ExecutiveTemplate = ({ data }) => {
       </header>
 
       {/* Content Area */}
-      <div className="grid grid-cols-3 gap-8 overflow-hidden">
+      <div className="grid grid-cols-3 gap-8">
         {/* Main Content (Left) */}
-        <div className="col-span-2 space-y-5 overflow-hidden border-r border-zinc-100 pr-6">
-          {/* Summary */}
-          {personalInfo.objective && (
-            <section>
-              <h2
-                style={{
-                  fontSize: "1.125rem",
-                  fontWeight: 800,
-                  color: getColor("headings", "#082f49"),
-                  borderBottom: `2px solid ${theme.applyTo.headingsLine ? `${theme.accent}20` : "#e0f2fe"}`,
-                  paddingBottom: "4px",
-                  marginBottom: "8px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  fontFamily: fonts.heading,
-                }}
-              >
-                Executive Profile
-              </h2>
-              <p
-                style={{
-                  fontSize: "0.75rem",
-                  color: "#374151",
-                  textAlign: "justify",
-                  lineHeight: 1.5,
-                  fontFamily: fonts.body,
-                }}
-              >
-                {personalInfo.objective}
-              </p>
-            </section>
+        <div className="col-span-2 space-y-5 border-r border-zinc-100 pr-6">
+
+          {profiles?.some((p) => p.visible !== false && p.content) && (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+            >
+              {profiles.map(
+                (profile, i) =>
+                  profile.visible !== false &&
+                  profile.content && (
+                    <section key={i}>
+                      <h2
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                          color: getColor("headings", "#000000"),
+                          borderBottom: `1px solid ${theme.applyTo.headingsLine ? theme.accent : "#d4d4d8"}`,
+                          paddingBottom: "2px",
+                          marginBottom: "4px",
+                          textTransform: "uppercase",
+                          fontFamily: fonts.heading,
+                        }}
+                      >
+                        {profile.title || titles.profiles || "Profile"}
+                      </h2>
+                      <p
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#18181b",
+                          textAlign: "justify",
+                          lineHeight: 1.4,
+                          fontFamily: fonts.body,
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {profile.content}
+                      </p>
+                    </section>
+                  ),
+              )}
+            </div>
           )}
 
           {/* Experience */}
@@ -228,7 +238,7 @@ const ExecutiveTemplate = ({ data }) => {
                   fontFamily: fonts.heading,
                 }}
               >
-                Professional Background
+                {experience.title  || "Work Experience"}
               </h2>
               <div
                 style={{
@@ -361,6 +371,24 @@ const ExecutiveTemplate = ({ data }) => {
                           >
                             {proj.title || "Project Title"}
                           </h3>
+                          <div className="flex gap-2 items-center">
+                            {proj.githubUrl && (
+                            <a
+                              href={proj.githubUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: "bold",
+                                color: "#0369a1",
+                                textDecoration: "none",
+                                fontStyle: "italic",
+                                fontFamily: fonts.body,
+                              }}
+                            >
+                              [Code]
+                            </a>
+                          )}
                           {proj.link && (
                             <a
                               href={proj.link}
@@ -375,9 +403,10 @@ const ExecutiveTemplate = ({ data }) => {
                                 fontFamily: fonts.body,
                               }}
                             >
-                              Case Study ↗
+                              [Link]
                             </a>
-                          )}
+                            )}
+                            </div>
                         </div>
                         {proj.description && (
                           <p
@@ -406,7 +435,7 @@ const ExecutiveTemplate = ({ data }) => {
         </div>
 
         {/* Sidebar (Right) */}
-        <div className="space-y-6 overflow-hidden">
+        <div className="space-y-6">
           {/* Skills */}
           {skills?.some((skill) => skill.visible !== false) && (
             <section>
