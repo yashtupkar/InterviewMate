@@ -105,6 +105,16 @@ const PLAN_CONFIG = {
         creditDelta: 200, // 150 + 50 bonus
         isTopup: true
     },
+    // Test plan (for production testing)
+    student_test: {
+        tier: 'Student Flash',
+        planName: 'Student Flash (Test - ₹1)',
+        amountPaise: 100,      // ₹1
+        billingCycle: 'monthly',
+        expiryDays: 30,
+        credits: 200,
+        isTopup: false
+    },
 };
 
 // ─── Create Razorpay Order ────────────────────────────────────────────────────

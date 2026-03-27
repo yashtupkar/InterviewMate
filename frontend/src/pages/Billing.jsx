@@ -69,6 +69,7 @@ const Billing = () => {
     });
 
     const topups = [
+        { planId: "student_test", name: "Student Test", price: "1", credits: "200" },
         { planId: "quick_boost", name: "Quick Boost", price: "29", credits: "30" },
         { planId: "power_pack",  name: "Power Pack",  price: "49", credits: "70" },
         { planId: "pro_master",  name: "Pro Master",  price: "99", credits: "200" },
