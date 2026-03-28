@@ -178,9 +178,9 @@ const PricingSection = ({
             <h2 className="text-[#bef264] font-bold tracking-wider uppercase text-xs mb-3">
               Pricing &amp; Plans
             </h2>
-            <h3 className="text-3xl md:text-4xl font-black text-white mb-4">
-              Elevate your performance.
-            </h3>
+            <h2 className="text-3xl md:text-5xl font-black text-white mb-6">
+              Affordable Plans for Every Ambition
+            </h2>
             <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
               Discover our flexible pricing plans designed to meet the needs of students, job seekers, and professionals.
             </p>
@@ -222,12 +222,11 @@ const PricingSection = ({
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative p-6 rounded-[1.5rem] flex flex-col ${plan.name === "Free" && "col-span-3 md:col-span-1 hidden"} transition-all duration-300 hover:translate-y-[-4px] ${
-                plan.recommended
+              className={`relative p-6 rounded-[1.5rem] flex flex-col w-full max-w-[20rem] mx-auto md:mx-0 md:max-w-none ${plan.name === "Free" && "col-span-3 md:col-span-1 hidden"} transition-all duration-300 hover:translate-y-[-4px] ${plan.recommended
                   ? "bg-[#121214] border-2 border-[#bef264] shadow-[0_0_40px_rgba(190,242,100,0.1)] scale-105 z-20"
                   : "bg-[#121214] border border-white/5 shadow-xl"
               }`}

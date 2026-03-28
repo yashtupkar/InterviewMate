@@ -14,11 +14,15 @@ const codingRoutes = require('./routes/codingRoutes');
 const customInterviewRoutes = require('./routes/customInterviewRoutes');
 const atsRoutes = require('./routes/ats.route');
 const resumeRoutes = require('./routes/resume.route');
-
-const app = express();
+const waitlistRoutes = require('./routes/waitlistRoutes');
 
 // Connect to Database
 connectDB();
+
+const app = express();
+
+// Trust the first proxy (needed for express-rate-limit on certain hosts/local setups)
+app.set('trust proxy', 1);
 
 // Middleware
 app.use('/api/webhooks', express.raw({ type: '*/*' })); // Raw body for Clerk + Razorpay webhooks
@@ -38,6 +42,7 @@ app.use('/api/coding', codingRoutes);
 app.use('/api/custom-interview', customInterviewRoutes);
 app.use('/api/ats', atsRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/waitlist', waitlistRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

@@ -34,9 +34,13 @@ import VoiceTest from "./pages/VoiceTest";
 import HelpPage from "./pages/Help";
 import AtsScorer from "./pages/AtsScorer";
 import ResumeBuilder from "./pages/ResumeBuilder";
+import AboutUs from "./pages/AboutUs";
+import LandingHome from "./pages/LandingHome";
+import Contact from "./pages/Contact";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/common/ScrollToTop";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -121,6 +125,7 @@ function App() {
 
   return (
     <InterviewProvider>
+      <ScrollToTop />
       <Toaster
         position="top-center"
         toastOptions={{
@@ -179,10 +184,37 @@ function App() {
       <Routes>
         {/* Homepage Route */}
         <Route
+          path="/landing"
+          element={
+            <Layout>
+              <LandingHome backendStatus={backendStatus} />
+            </Layout>
+          }
+        />
+
+        <Route
           path="/"
           element={
             <Layout>
               <Homepage backendStatus={backendStatus} />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/about"
+          element={
+            <Layout>
+              <AboutUs />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/contact"
+          element={
+            <Layout>
+              <Contact />
             </Layout>
           }
         />

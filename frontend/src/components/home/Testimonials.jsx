@@ -1,22 +1,62 @@
 import React from 'react';
-import { Star, Quote, CheckCircle2 } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 const testimonials = [
+  {
+    name: "Jillie Bernard",
+    role: "Founder & CEO",
+    content: "InterviewMate has revolutionized my preparation process. Its intuitive interface and robust features save me so much time, allowing me to focus on my skills rather than stressing about the format. It's like having an extra pair of hands!",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie1",
+    rating: 5,
+  },
+  {
+    name: "David Miller",
+    role: "Lead Software Engineer",
+    content: "The best interview prep tool I've used. InterviewMate is a game-changer for engineering candidates. It's intuitive and powerful features have drastically improved my technical responses.",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
+    rating: 5,
+  },
+  {
+    name: "Jillie Bernard",
+    role: "Founder & CEO",
+    content: "Absolutely love InterviewMate! The clean design and ease of use are unmatched. The intuitive interface simplifies complex tasks, making it perfect for both beginners and seasoned professionals. A game-changer in digital prep!",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie2",
+    rating: 5,
+  },
+  {
+    name: "David Miller",
+    role: "Lead Software Engineer",
+    content: "The best UI kit I've used for Framer. InterviewMate is a game-changer for designers. Its intuitive interface and powerful features have drastically improved my workflow, allowing me to focus more on creativity and less on tedious tasks. It's a game-changer that saves me so much time!",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David2",
+    rating: 5,
+  },
+  {
+    name: "Jillie Bernard",
+    role: "Founder & CEO",
+    content: "InterviewMate has revolutionized my design process. It's intuitive and saves me so much time!",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie3",
+    rating: 5,
+  },
+  {
+    name: "Jillie Bernard",
+    role: "Director of Sales",
+    content: "Absolutely love InterviewMate! The clean design and ease of use are unmatched.",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie4",
+    rating: 5,
+  },
   {
     name: "Aryan Sharma",
     role: "Google SDE Intern",
     content: "The real-time feedback on my posture and confidence during the mock interview was a game-changer. I felt much more prepared for my actual interviews.",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aryan",
     rating: 5,
-    verified: true
   },
   {
     name: "Sneha Patel",
     role: "Product Manager at Atlassian",
-    content: "PlaceMateAI helped me practice those tricky behavioral questions that usually trip me up. The AI-suggested improvements were spot on and very helpful.",
+    content: "InterviewMate helped me practice those tricky behavioral questions that usually trip me up. The AI-suggested improvements were spot on and very helpful.",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sneha",
     rating: 5,
-    verified: true
   },
   {
     name: "Rohan Gupta",
@@ -24,81 +64,67 @@ const testimonials = [
     content: "The variety of interview roles offered is impressive. I could practice for specific data science roles and get feedback tailored to that field.",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rohan",
     rating: 5,
-    verified: true
-  },
-  {
-    name: "Ishita Verma",
-    role: "UX Designer at Microsoft",
-    content: "Being able to review my interview recordings with detailed feedback helped me identify areas for improvement I never would have noticed otherwise.",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ishita",
-    rating: 5,
-    verified: true
   }
 ];
 
 const Testimonials = () => {
   return (
-    <section className="py-32 px-6 max-w-7xl mx-auto">
-      <div className="flex flex-col items-center mb-20 text-center">
-        <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-[10px] font-black text-primary mb-6 uppercase tracking-[0.2em]">
-          Success Stories
-        </div>
+    <section id="testimonials" className="py-20 px-6 ">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col items-center mb-16 text-center">
+          <div className="text-[#bef264] font-bold tracking-wider uppercase text-xs mb-3">
+            Testimonials
+          </div>
         <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
-          Loved by <span className="text-primary italic">thousands</span> of students
-        </h2>
-        <p className="text-gray-400 max-w-2xl text-lg font-medium leading-relaxed">
-          From landing internships to securing high-paying full-time roles at top tech companies.
-        </p>
-      </div>
+What people are saying about us          </h2>
+          <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
+            Hear from our incredible customers who are building at lightning speed.
+          </p>
+        </div>
 
-      <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
-        {testimonials.map((t, idx) => (
-          <div key={idx} className="break-inside-avoid bg-[#121214]/60 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-8 hover:border-primary/20 transition-all duration-500 group cursor-default shadow-2xl">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex gap-1">
+        {/* Masonry Grid */}
+        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+          {testimonials.map((t, idx) => (
+            <div 
+              key={idx} 
+              className="break-inside-avoid bg-[#1a1a1b] border border-white/5 rounded-3xl p-4 hover:border-white/10 transition-all duration-300 group shadow-lg flex flex-col"
+            >
+              {/* Stars */}
+              <div className="flex gap-1 mb-6">
                 {[...Array(t.rating)].map((_, i) => (
-                  <Star key={i} size={14} className="text-primary fill-current" />
+                  <Star key={i} size={18} className="text-[#facc15] fill-[#facc15]" />
                 ))}
               </div>
-              <Quote size={24} className="text-white/5 group-hover:text-primary/10 transition-colors duration-500" />
-            </div>
 
-            <p className="text-gray-300 text-sm leading-relaxed mb-8 italic">
-              "{t.content}"
-            </p>
+              {/* Content */}
+              <p className="text-gray-300 text-sm leading-relaxed mb-8 font-medium">
+                {t.content}
+              </p>
 
-            <div className="flex items-center gap-4">
-              <div className="relative">
+              {/* User Profile */}
+              <div className="flex items-center gap-4 mt-auto">
                 <img
                   src={t.avatar}
                   alt={t.name}
-                  className="w-12 h-12 rounded-2xl object-cover bg-white/5 border border-white/10 group-hover:scale-105 transition-transform duration-500 shadow-xl"
+                  className="w-10 h-10 rounded-full object-cover bg-white/5"
                 />
-                {t.verified && (
-                  <div className="absolute -bottom-1 -right-1 bg-[#121214] rounded-full p-0.5">
-                    <CheckCircle2 size={14} className="text-primary fill-current" />
-                  </div>
-                )}
-              </div>
-              <div>
-                <h4 className="text-white font-bold text-sm group-hover:text-primary transition-colors">{t.name}</h4>
-                <p className="text-gray-500 text-[11px] font-black uppercase tracking-wider">{t.role}</p>
+                <div>
+                  <h4 className="text-white font-bold text-base leading-tight">
+                    {t.name}
+                  </h4>
+                  <p className="text-gray-500 text-sm font-medium">
+                    {t.role}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Social Proof Footer */}
-      <div className="mt-20 flex flex-wrap items-center justify-center gap-12 opacity-30 grayscale contrast-125">
-        <span className="text-white font-black text-xl tracking-tighter italic">GOOGLE</span>
-        <span className="text-white font-black text-xl tracking-tighter italic">AMAZON</span>
-        <span className="text-white font-black text-xl tracking-tighter italic">MICROSOFT</span>
-        <span className="text-white font-black text-xl tracking-tighter italic">ADOBE</span>
-        <span className="text-white font-black text-xl tracking-tighter italic">UBER</span>
+          ))}
+        </div>
       </div>
     </section>
   );
 };
 
 export default Testimonials;
+

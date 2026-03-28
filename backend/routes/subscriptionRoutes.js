@@ -20,7 +20,7 @@ const orderRateLimit = rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { xForwardedForHeader: false }, // suppress IPv6 warning for custom keyGenerator
+    validate: false, // Disable expensive validation to prevent ERR_ERL_KEY_GEN_IPV6 on local/IPv6 setups
     message: { message: 'Too many order requests. Please wait a minute before trying again.' },
     keyGenerator: (req) => req.auth?.userId || req.ip,
 });
@@ -31,7 +31,7 @@ const verifyRateLimit = rateLimit({
     max: 5,
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { xForwardedForHeader: false },
+    validate: false,
     message: { message: 'Too many verification attempts. Please wait a minute.' },
     keyGenerator: (req) => req.auth?.userId || req.ip,
 });
@@ -42,7 +42,7 @@ const refundRateLimit = rateLimit({
     max: 2,
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { xForwardedForHeader: false },
+    validate: false,
     message: { message: 'Too many refund requests. Maximum 2 per hour allowed.' },
     keyGenerator: (req) => req.auth?.userId || req.ip,
 });
@@ -51,9 +51,9 @@ const refundRateLimit = rateLimit({
 
 router.get('/status', ClerkExpressRequireAuth(), getSubscriptionStatus);
 
-router.post('/create-order',    ClerkExpressRequireAuth(), orderRateLimit,  createOrder);
-router.post('/verify-payment',  ClerkExpressRequireAuth(), verifyRateLimit, verifyPayment);
-router.post('/request-refund',  ClerkExpressRequireAuth(), refundRateLimit, requestRefund);
+router.post('/create-order',    ClerkExpressRequireAuth(), createOrder);
+router.post('/verify-payment',  ClerkExpressRequireAuth(), verifyPayment);
+router.post('/request-refund',  ClerkExpressRequireAuth(), requestRefund);
 
 router.post('/deduct-interview', ClerkExpressRequireAuth(), deductInterviewCredit);
 router.post('/deduct-gd',        ClerkExpressRequireAuth(), deductGdCredit);

@@ -33,6 +33,7 @@ const featuresList = [
       "Industry-standard STAR method optimization."
     ],
     icon: BarChart,
+    videoSrc: "/assets/featuresVideo/ai-report-feedback.mp4",
     reverse: false
   },
   {
@@ -44,6 +45,8 @@ const featuresList = [
       "Smart keyword optimization for your industry."
     ],
     icon: FileText,
+    videoSrc: "/assets/featuresVideo/resume-builder.mp4",
+
     reverse: true
   },
   {
@@ -61,18 +64,17 @@ const featuresList = [
 
 const Features = () => {
   return (
-    <section className="py-32 px-6 max-w-7xl mx-auto flex flex-col items-center relative overflow-hidden">
+    <section id="features" className="py-20 px-6 max-w-7xl mx-auto flex flex-col items-center relative overflow-hidden">
       {/* Decorative background element */}
-      <div className="absolute top-0 left-1/2 w-full max-w-[1000px] h-[500px] bg-primary/5 blur-[120px] rounded-full -z-10 -translate-x-1/2 -translate-y-1/2" />
 
       <div className="flex flex-col items-center mb-24 text-center">
-        <div className="inline-flex items-center px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-[10px] font-black text-primary mb-6 uppercase tracking-[0.2em]">
+        <div className="text-[#bef264] font-bold tracking-wider uppercase text-xs mb-3">
           Core Capabilities
         </div>
-        <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
+        <h2 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
           Everything you need to <span className="text-primary">break through</span>
         </h2>
-        <p className="text-gray-400 max-w-xl text-lg font-medium leading-relaxed">
+        <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
           Powerful AI-driven tools engineered to give you the edge in today's competitive job market.
         </p>
       </div>
@@ -101,14 +103,29 @@ const Features = () => {
             </div>
 
             {/* Video Box Half */}
-            <div className="flex-1 w-full">
-              <div className="aspect-[4/3] md:aspect-video bg-[#0d0d0f] border border-white/5 rounded-3xl flex items-center justify-center shadow-2xl relative overflow-hidden group hover:border-white/10 transition-all duration-500">
-                <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                {/* Simulated Video Placeholder */}
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/5 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-500">
-                  <feature.icon size={28} className="text-gray-500 group-hover:text-white transition-colors duration-500" />
-                </div>
+            <div className="flex-[1.2] lg:flex-[1.4] w-full relative group">
+              {/* Neo-brutalist "under-layer" for 3D depth */}
+              <div className="absolute inset-0 bg-zinc-700 rounded-xl translate-x-3 translate-y-3 group-hover:translate-x-4 group-hover:translate-y-4 transition-transform duration-300"></div>
+              
+              <div className="aspect-[4/3] md:aspect-video bg-[#0d0d12] border border-zinc-700  rounded-xl flex items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1">
+                {feature.videoSrc ? (
+                  <video 
+                    src={feature.videoSrc}
+                    className="w-full h-full object-cover"
+                    autoPlay 
+                    loop 
+                    muted 
+                    playsInline
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    {/* Simulated Video Placeholder */}
+                    <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 group-hover:bg-white/10 transition-all duration-500">
+                      <feature.icon size={28} className="text-gray-500 group-hover:text-white transition-colors duration-500" />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

@@ -10,6 +10,7 @@ import FAQ from "../components/home/FAQ";
 import CTA from "../components/home/CTA";
 import PricingSection from "../components/home/PricingSection";
 import Background from "../components/common/Background";
+import WaitlistSection from "../components/home/WaitlistSection";
 
 const Homepage = ({ backendStatus }) => {
   const location = useLocation();
@@ -17,6 +18,12 @@ const Homepage = ({ backendStatus }) => {
   useEffect(() => {
     if (location.hash === "#pricing") {
       const element = document.getElementById("pricing");
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+    if (location.hash === "#features") {
+      const element = document.getElementById("features");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -30,13 +37,13 @@ const Homepage = ({ backendStatus }) => {
       </Helmet>
       <div className="min-h-screen  overflow-x-hidden selection:bg-indigo-500/30">
         <Background />
-
         <Hero backendStatus={backendStatus} />
-        <Steps />
+     
         <Features />
         <PricingSection />
         <Testimonials />
         <FAQ />
+        <WaitlistSection />
         <CTA />
       </div>
     </>

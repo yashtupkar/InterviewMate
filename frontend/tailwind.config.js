@@ -12,6 +12,8 @@ export default {
           hover: '#a3e635',
           glow: 'rgba(190, 242, 100, 0.2)',
         },
+        'custom-accent': '#bef264',
+        'custom-muted': '#88888e',
         background: '#09090b',
         surface: '#121214',
         'surface-alt': '#18181b',

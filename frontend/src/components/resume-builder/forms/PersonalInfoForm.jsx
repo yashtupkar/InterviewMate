@@ -25,9 +25,43 @@ const PersonalInfoForm = ({ onDone }) => {
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File is too large. Please select an image under 5MB.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        updatePersonalInfo({ photoUrl: reader.result });
+        const img = new Image();
+        img.onload = () => {
+          // Compress Image using Canvas
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDimension = 400; // Profile pics are small, 400px is plenty
+
+          if (width > height) {
+            if (width > maxDimension) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            }
+          } else {
+            if (height > maxDimension) {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to dataURL with jpeg compression
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+          updatePersonalInfo({ photoUrl: compressedDataUrl });
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }

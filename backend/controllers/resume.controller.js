@@ -9,7 +9,9 @@ exports.getAllResumes = async (req, res, next) => {
       return next(new ApiError(400, "Clerk ID is required."));
     }
 
-    const resumes = await Resume.find({ clerkId }).sort({ updatedAt: -1 });
+    const resumes = await Resume.find({ clerkId })
+      .sort({ updatedAt: -1 })
+      .lean();
 
     return res.status(200).json({
       success: true,
@@ -67,7 +69,7 @@ exports.saveResume = async (req, res, next) => {
       resume = await Resume.findByIdAndUpdate(
         _id,
         { $set: updateData },
-        { new: true, runValidators: true, context: "query" },
+        { returnDocument: "after", runValidators: true, context: "query" },
       );
     } else {
       // Create new resume

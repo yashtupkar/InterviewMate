@@ -122,28 +122,17 @@ export const ResumeProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState("idle"); // idle, saving, saved, error
   const [resumeId, setResumeId] = useState(null);
-  const skipInitialSave = useRef(true);
-  const saveTimeout = useRef(null);
+  const skipStatusRef = useRef(true);
 
-  // Auto-save effect
+  // Track unsaved changes
   useEffect(() => {
-    if (skipInitialSave.current) {
-      skipInitialSave.current = false;
+    if (skipStatusRef.current) {
+      skipStatusRef.current = false;
       return;
     }
-
-    if (!user?.id || !resumeId) return;
-
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-
-    setSaveStatus("unsaved");
-    saveTimeout.current = setTimeout(() => {
-      saveResume();
-    }, 2500); // 2.5 second debounce
-
-    return () => {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    };
+    if (saveStatus !== "saving") {
+      setSaveStatus("unsaved");
+    }
   }, [resumeData]);
 
   const fetchAllResumes = async () => {
@@ -213,9 +202,10 @@ export const ResumeProvider = ({ children }) => {
             },
           },
         };
-        skipInitialSave.current = true;
+        skipStatusRef.current = true;
         setResumeData(mergedData);
         setResumeId(id);
+        setSaveStatus("idle");
       }
     } catch (error) {
       console.error("Error fetching resume:", error);
@@ -227,7 +217,6 @@ export const ResumeProvider = ({ children }) => {
 
   const createNewResume = (template = "modern") => {
     const themeColor = TEMPLATE_THEMES[template] || TEMPLATE_THEMES.modern;
-    skipInitialSave.current = true;
     setResumeData({
       ...initialResumeState,
       template,

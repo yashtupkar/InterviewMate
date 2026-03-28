@@ -47,6 +47,7 @@ const ResumeBuilder = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const {
+    isLoading,
     isSaving,
     saveStatus,
     saveResume,
@@ -118,6 +119,21 @@ const ResumeBuilder = () => {
       <Helmet>
         <title>{resumeData.title || "Resume Builder"} | PlaceMateAI</title>
       </Helmet>
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-lime-400/20 border-t-lime-400 rounded-full animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Logo size={24} />
+            </div>
+          </div>
+          <p className="mt-4 text-sm font-bold text-white uppercase tracking-[0.2em] animate-pulse">
+            Fetching Resume Data...
+          </p>
+        </div>
+      )}
 
       {/* Modern Header */}
       <header className="h-[64px] bg-zinc-900/50 backdrop-blur-md border-b border-zinc-800/50 flex items-center justify-between px-4 shrink-0 z-50">
