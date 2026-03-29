@@ -95,7 +95,7 @@ For a detailed cost analysis, see [pricing.md](./pricing.md).
    npm install
    # Create .env and add:
    VITE_CLERK_PUBLISHABLE_KEY=your_key
-   VITE_API_BASE_URL=http://localhost:5000
+   VITE_BACKEND_URL=http://localhost:5000
    ```
 
 ### Running Locally

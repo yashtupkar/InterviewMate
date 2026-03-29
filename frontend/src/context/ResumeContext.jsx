@@ -113,7 +113,7 @@ const initialResumeState = {
 };
 
 const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/resume";
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 export const ResumeProvider = ({ children }) => {
   const { user } = useUser();
@@ -139,7 +139,7 @@ export const ResumeProvider = ({ children }) => {
     if (!user?.id) return;
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE}/${user.id}`);
+      const response = await axios.get(`${API_BASE}/api/resume/${user.id}`);
       if (response.data.success) {
         setResumes(response.data.data);
       }
@@ -160,7 +160,7 @@ export const ResumeProvider = ({ children }) => {
   const loadResume = async (id) => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE}/single/${id}`);
+      const response = await axios.get(`${API_BASE}/api/resume/single/${id}`);
       if (response.data.success) {
         const data = response.data.data;
 
@@ -241,7 +241,7 @@ export const ResumeProvider = ({ children }) => {
         _id: resumeId,
       };
 
-      const response = await axios.post(`${API_BASE}/save`, payload);
+      const response = await axios.post(`${API_BASE}/api/resume/save`, payload);
 
       if (response.data.success) {
         setSaveStatus("saved");
