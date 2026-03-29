@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { FiCheckCircle, FiXCircle, FiZap, FiArrowRight, FiPlus, FiStar } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import UniversalPopup from '../common/UniversalPopup';
 
-const PaymentStatusModal = ({ 
-    isOpen, 
-    onClose, 
-    tier, 
-    status = 'success', 
-    planId 
+const PaymentStatusModal = ({
+    isOpen,
+    onClose,
+    tier,
+    status = 'success',
+    planId
 }) => {
     const navigate = useNavigate();
-    const [animationTrigger, setAnimationTrigger] = useState(false);
+    const [verifying, setVerifying] = useState(true);
 
     useEffect(() => {
         if (isOpen) {
-            setTimeout(() => setAnimationTrigger(true), 100);
-        } else {
-            setAnimationTrigger(false);
+            setVerifying(true);
+            // Simulate a brief verification and UI buffer
+            const timer = setTimeout(() => {
+                setVerifying(false);
+            }, 1800);
+            return () => clearTimeout(timer);
         }
-    }, [isOpen]);
+    }, [isOpen, status]);
 
     if (!isOpen) return null;
 
@@ -27,18 +31,20 @@ const PaymentStatusModal = ({
     const isTopup = planId?.startsWith('topup_') || ['quick_boost', 'power_pack', 'pro_master'].includes(planId);
 
     const getTitle = () => {
+        if (verifying) return "Verifying Payment...";
         if (isRefunded) return "Refund Initiated";
         if (isSuccess) {
             if (isTopup) return "Credits Loaded! 🚀";
             if (tier === 'Infinite Elite') return "Welcome to the Elite 💎";
             if (tier === 'Placement Pro') return "Welcome to the Pro Club 🎖️";
             if (tier === 'Student Flash') return "Welcome aboard! ⛵";
-            return "Welcome to the Pro Club! 🎉";
+            return "Payment Successful! 🎉";
         }
         return "Payment Failed";
     };
 
     const getDescription = () => {
+        if (verifying) return "Please wait while we confirm your transaction securely.";
         if (isRefunded) return "Your refund request has been received. Your status will update shortly.";
         if (isSuccess) {
             if (isTopup) return "Your new credits are ready for use. Go crush that next session!";
@@ -48,89 +54,107 @@ const PaymentStatusModal = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl transition-all duration-500 overflow-hidden">
+        <UniversalPopup
+            isOpen={isOpen}
+            onClose={() => {
+                if (!verifying) {
+                    onClose();
+                    if (isSuccess && !isRefunded && !isTopup) {
+                        if (window.location.pathname !== '/dashboard') {
+                            window.location.href = '/dashboard';
+                        } else {
+                            window.location.reload();
+                        }
+                    }
+                }
+            }}
+            maxWidth="max-w-sm"
+            padding="p-0"
+            showClose={!verifying}
+        >
             {/* 👑 Celebration Glows */}
-            {isSuccess && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#bef264]/5 rounded-full blur-[120px] animate-pulse"></div>
-                    {/* Floating Glow Orbs */}
-                    <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-[#bef264]/10 blur-3xl animate-bounce-slow"></div>
-                    <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-[#bef264]/5 blur-3xl animate-bounce-slow" style={{ animationDelay: '2s' }}></div>
+            {!verifying && isSuccess && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#bef264]/10 rounded-full blur-[80px] animate-pulse"></div>
                 </div>
             )}
 
-            <div className={`
-                relative bg-zinc-900 border border-white/10 rounded-[2.5rem] p-4 max-w-sm w-full shadow-[0_32px_128px_-16px_rgba(0,0,0,0.8)] 
-                transition-all duration-700 transform flex flex-col items-center overflow-hidden
-                ${animationTrigger ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-12 scale-90 opacity-0'}
-            `}>
+            <div className={`relative px-6 pt-12 pb-6 flex flex-col items-center overflow-hidden transition-all duration-500`}>
                 {/* 🎖️ Central Illustration (The "Medal") */}
-                <div className="relative mt-10 mb-8 flex items-center justify-center">
+                <div className="relative mb-8 flex items-center justify-center">
                     {/* Outer Rings */}
-                    <div className={`
-                        absolute w-44 h-44 rounded-full border-2 border-[#bef264]/10 scale-[1.2] transition-transform duration-1000
-                        ${animationTrigger ? 'scale-[1.3] opacity-50' : 'scale-0 opacity-0'}
-                    `}></div>
-                    <div className={`
-                        absolute w-44 h-44 rounded-full border border-[#bef264]/20 scale-[1.1] animate-ping-slow opacity-20
-                    `}></div>
-                    
+                    {!verifying && (
+                        <>
+                            <div className="absolute w-40 h-40 rounded-full border-2 border-[#bef264]/10 scale-[1.2] animate-pulse"></div>
+                            <div className="absolute w-40 h-40 rounded-full border border-[#bef264]/20 scale-[1.1] animate-ping-slow opacity-20"></div>
+                        </>
+                    )}
+
                     {/* Main Medal Body */}
                     <div className={`
-                        relative w-36 h-36 rounded-full flex items-center justify-center transition-all duration-700 
-                        ${animationTrigger ? 'scale-100' : 'scale-0'}
-                        ${isSuccess ? 'bg-gradient-to-br from-[#bef264] to-[#84cc16] shadow-[0_0_60px_rgba(190,242,100,0.3)]' : 'bg-red-500'}
+                        relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-700 z-10
+                        ${verifying ? 'bg-zinc-800 border border-white/10' : (isSuccess ? 'bg-gradient-to-br from-[#bef264] to-[#84cc16] shadow-[0_0_60px_rgba(190,242,100,0.3)] scale-100' : 'bg-red-500 scale-100 shadow-[0_0_60px_rgba(239,68,68,0.3)]')}
                     `}>
-                        {/* Shine Effect */}
-                        <div className="absolute inset-2 border-2 border-white/20 rounded-full"></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-full"></div>
-                        
-                        {/* The Large Checkmark */}
-                        {isSuccess ? (
-                            <FiCheckCircle className="w-16 h-16 text-black drop-shadow-lg" />
+                        {/* Shine Effect (Only for success/fail) */}
+                        {!verifying && (
+                            <>
+                                <div className="absolute inset-2 border-2 border-white/20 rounded-full"></div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-full"></div>
+                            </>
+                        )}
+
+                        {/* Icon */}
+                        {verifying ? (
+                            <FiLoader className="w-12 h-12 text-[#bef264] animate-spin" />
+                        ) : isSuccess ? (
+                            <FiCheckCircle className="w-14 h-14 text-black drop-shadow-lg animate-bounce" />
                         ) : (
-                            <FiXCircle className="w-16 h-16 text-white drop-shadow-lg" />
+                            <FiXCircle className="w-14 h-14 text-white drop-shadow-lg animate-pulse" />
                         )}
                     </div>
                 </div>
 
                 {/* 📝 Text Content */}
-                <div className="px-6 pb-6 text-center">
+                <div className="w-full text-center z-10 relative">
                     <h2 className={`
-                        text-2xl font-black mb-3 text-white tracking-tight transition-all duration-700 delay-300
-                        ${animationTrigger ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
+                        text-2xl font-black mb-2 text-white tracking-tight transition-all duration-500
                     `}>
                         {getTitle()}
                     </h2>
-                    
+
                     <p className={`
-                        text-zinc-500 text-sm font-bold leading-relaxed mb-10 transition-all duration-700 delay-500
-                        ${animationTrigger ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
+                        text-zinc-500 text-sm font-bold leading-relaxed transition-all duration-500
+                        ${verifying ? 'mb-2' : 'mb-6'}
                     `}>
                         {getDescription()}
                     </p>
 
                     <div className={`
-                        w-full transition-all duration-700 delay-700 pt-6 border-t border-white/5
-                        ${animationTrigger ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}
+                        w-full transition-all duration-500 overflow-hidden
+                        ${verifying ? 'max-h-0 opacity-0' : 'max-h-24 opacity-100 pt-6 border-t border-white/5 mt-6'}
                     `}>
                         <button
                             onClick={() => {
                                 onClose();
-                                if (isSuccess) navigate('/dashboard');
+                                if (isSuccess) {
+                                    if (window.location.pathname !== '/dashboard') {
+                                        window.location.href = '/dashboard';
+                                    } else {
+                                        window.location.reload();
+                                    }
+                                }
                             }}
                             className={`
-                                w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300
-                                ${isSuccess ? 'text-[#bef264] hover:text-[#d9ff96]' : 'text-zinc-500 hover:text-white'}
+                                w-full py-4 text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 rounded-xl
+                                ${isSuccess ? 'bg-[#bef264]/10 text-[#bef264] hover:bg-[#bef264]/20 hover:text-[#d9ff96]' : 'bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'}
                             `}
                         >
                             {isSuccess ? 'Got it, Thanks!' : 'Go Back'}
-                            <div className="h-0.5 w-12 mx-auto mt-1 bg-current opacity-30"></div>
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </UniversalPopup>
     );
 };
 

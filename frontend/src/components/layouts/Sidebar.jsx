@@ -99,14 +99,14 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
     <aside className={`fixed left-0 top-0 h-screen bg-black border-r border-white/20 flex flex-col z-[50] transition-all duration-300 ease-in-out md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"} ${isCollapsed ? "w-18 " : "w-64"}`}>
       {/* Logo */}
       <div className={`px-4 py-4 flex items-center h-16 relative ${isCollapsed ? "justify-center" : "justify-between"}`}>
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           {<Logo size={isCollapsed ? 32 : 32} />}
           {!isCollapsed && (
             <span className="text-white text-xl cursor-pointer font-semibold tracking-tight">
               PlaceMate<span className="text-primary">AI</span>
             </span>
           )}
-        </div>
+        </Link>
         <button
           onClick={onClose}
           className="md:hidden p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors border border-transparent hover:border-white/10"
