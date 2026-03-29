@@ -14,7 +14,7 @@ const subscriptionSchema = new mongoose.Schema({
     },
     credits: {
         type: Number,
-        default: 25 // 25 Credits for Free Tier
+        default: 25
     },
     planExpiry: {
         type: Date

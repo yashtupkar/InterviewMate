@@ -30,4 +30,14 @@ const clerkAuth = asyncHandler(async (req, res, next) => {
   }
 });
 
-module.exports = clerkAuth;
+const isAdmin = asyncHandler(async (req, res, next) => {
+  if (req.user?.role !== 'admin') {
+    throw new ApiError(403, "Access denied: Admin privileges required");
+  }
+  next();
+});
+
+module.exports = {
+  clerkAuth,
+  isAdmin
+};

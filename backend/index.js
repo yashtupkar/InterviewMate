@@ -15,6 +15,7 @@ const customInterviewRoutes = require('./routes/customInterviewRoutes');
 const atsRoutes = require('./routes/ats.route');
 const resumeRoutes = require('./routes/resume.route');
 const waitlistRoutes = require('./routes/waitlistRoutes');
+const questionRoutes = require('./routes/questionRoutes');
 
 // Connect to Database
 connectDB();
@@ -43,6 +44,7 @@ app.use('/api/custom-interview', customInterviewRoutes);
 app.use('/api/ats', atsRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/waitlist', waitlistRoutes);
+app.use('/api/questions', questionRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

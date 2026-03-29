@@ -37,6 +37,12 @@ import ResumeBuilder from "./pages/ResumeBuilder";
 import AboutUs from "./pages/AboutUs";
 import LandingHome from "./pages/LandingHome";
 import Contact from "./pages/Contact";
+import QuestionBankDashboard from "./pages/QuestionBank/QuestionBankDashboard";
+import QuestionBankList from "./pages/QuestionBank/QuestionBankList";
+import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
+import QuestionBankLayout from "./layout/QuestionBankLayout";
+import AdminRoute from "./components/AdminRoute";
+import SeedQuestions from "./pages/Admin/SeedQuestions";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -218,6 +224,45 @@ function App() {
             </Layout>
           }
         />
+
+        <Route
+          path="/questions"
+          element={
+            <QuestionBankLayout>
+              <QuestionBankDashboard />
+            </QuestionBankLayout>
+          }
+        />
+
+        <Route
+          path="/questions/list"
+          element={
+            <QuestionBankLayout>
+              <QuestionBankList />
+            </QuestionBankLayout>
+          }
+        />
+
+        <Route
+          path="/questions/:id"
+          element={
+            <QuestionBankLayout>
+              <QuestionDetail />
+            </QuestionBankLayout>
+          }
+        />
+
+        {/* Admin Routes */}
+        <Route element={<AdminRoute />}>
+           <Route 
+             path="/admin/seed-questions" 
+             element={
+               <QuestionBankLayout>
+                 <SeedQuestions />
+               </QuestionBankLayout>
+             } 
+           />
+        </Route>
 
         <Route
           path="/terms"

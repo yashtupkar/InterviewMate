@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const clerkAuth = require("../middleware/auth");
+const { clerkAuth } = require("../middleware/auth");
 const {
   analyzeProfile,
   generateHeadlines,

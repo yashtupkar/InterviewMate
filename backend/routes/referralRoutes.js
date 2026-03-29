@@ -5,7 +5,7 @@ const { createClerkClient } = require('@clerk/clerk-sdk-node');
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
-const auth = require('../middleware/auth');
+const { clerkAuth: auth } = require('../middleware/auth');
 
 router.get('/stats', auth, referralController.getReferralStats);
 router.get('/info/:code', referralController.getReferrerInfo);

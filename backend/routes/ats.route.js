@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { scoreResume } = require('../controllers/ats.controller');
-const clerkAuth = require('../middleware/auth');
+const { clerkAuth } = require('../middleware/auth');
 
 // Use memory storage for multer since we just pass the buffer to pdf-parse
 const storage = multer.memoryStorage();

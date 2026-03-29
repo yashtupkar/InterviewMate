@@ -82,4 +82,13 @@ router.post('/sync', asyncHandler(async (req, res) => {
     });
 }));
 
+const { clerkAuth } = require('../middleware/auth');
+
+router.get('/profile', clerkAuth, asyncHandler(async (req, res) => {
+    res.status(200).json({
+        success: true,
+        user: req.user
+    });
+}));
+
 module.exports = router;

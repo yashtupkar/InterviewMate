@@ -19,7 +19,8 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiChevronDown,
-  FiGift
+  FiGift,
+  FiBookOpen
 } from "react-icons/fi";
 
 import Logo from "../common/Logo";
@@ -81,13 +82,12 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
         { name: "Resume Builder", path: "/resume-builder", active: location.pathname === "/resume-builder", badge: "New" }
       ]
     },
+    { name: "Question Bank", icon: <FiBookOpen />, path: "/questions", active: location.pathname.startsWith("/questions"), badge: "Free" },
+
   ];
 
   const exposureItems = [
-    // { name: "Jobs", icon: <FiBriefcase />, path: "#", badge: "Coming soon" },
-    { name: "LinkedIn AI", icon: <FiLinkedin />, path: "/dashboard/linkedin", active: location.pathname === "/dashboard/linkedin", badge: "Working On" },
-
-    // { name: "Leaderboard", icon: <FiAward />, path: "#", badge: "Coming So.." },
+    { name: "LinkedIn AI", icon: <FiLinkedin />, path: "/dashboard/linkedin", active: location.pathname === "/dashboard/linkedin", badge: "Premium" },
   ];
 
   const bottomItems = [
@@ -219,26 +219,54 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
           {!isCollapsed && <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-2">Exposure</h3>}
           <div className="space-y-1">
             {exposureItems.map((item) => (
-              <div
-                key={item.name}
-                title={isCollapsed ? item.name : ""}
-                className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 cursor-not-allowed group relative`}
-              >
-                <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}>
-                  <span className="text-lg shrink-0 text-zinc-600">{item.icon}</span>
-                  {!isCollapsed && <span>{item.name}</span>}
-                </div>
-                {!isCollapsed && item.badge && (
-                  <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-white/5 whitespace-nowrap">
-                    {item.badge}
-                  </span>
-                )}
-                {isCollapsed && (
-                  <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
-                    {item.name} {item.badge ? `(${item.badge})` : ""}
+              item.path === "#" || item.badge === "Working On" ? (
+                <div
+                  key={item.name}
+                  title={isCollapsed ? item.name : ""}
+                  className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 cursor-not-allowed group relative`}
+                >
+                  <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}>
+                    <span className="text-lg shrink-0 text-zinc-600">{item.icon}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
                   </div>
-                )}
-              </div>
+                  {!isCollapsed && item.badge && (
+                    <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-white/5 whitespace-nowrap">
+                      {item.badge}
+                    </span>
+                  )}
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
+                      {item.name} {item.badge ? `(${item.badge})` : ""}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  onClick={onClose}
+                  title={isCollapsed ? item.name : ""}
+                  className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${item.active
+                    ? "bg-[#bef264]/10 text-[#bef264]"
+                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+                    }`}
+                >
+                  <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}>
+                    <span className={`text-lg shrink-0 ${item.active ? "text-[#bef264]" : "text-zinc-500"}`}>{item.icon}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
+                  </div>
+                  {!isCollapsed && item.badge && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border whitespace-nowrap ${item.active ? "bg-[#bef264]/20 text-[#bef264] border-[#bef264]/30" : "bg-white/5 text-white/70 border-white/10"}`}>
+                      {item.badge}
+                    </span>
+                  )}
+                  {isCollapsed && (
+                    <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
+                      {item.name} {item.badge ? `(${item.badge})` : ""}
+                    </div>
+                  )}
+                </Link>
+              )
             ))}
           </div>
         </div>

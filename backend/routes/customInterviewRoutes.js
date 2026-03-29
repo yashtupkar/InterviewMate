@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const customInterviewController = require("../controllers/customInterviewController");
-const userAuth = require("../middleware/auth");
+const { clerkAuth: userAuth } = require("../middleware/auth");
 
 // 1. Start Custom Session (Generation of Prompt & DB Entry)
 router.post("/start", userAuth, customInterviewController.startCustomSession);

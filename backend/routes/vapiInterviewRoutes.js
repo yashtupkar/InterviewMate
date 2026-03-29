@@ -8,17 +8,17 @@ const {
   retryAnalysis,
   reportVapiFailure,
 } = require("../controllers/vapiInterviewController");
-const auth = require("../middleware/auth"); // Corrected middleware name
+const { clerkAuth: userAuth } = require("../middleware/auth");
 
-vapiInterviewRouter.post("/start", auth, startInterview);
-vapiInterviewRouter.get("/report/:sessionId", auth, getInterviewReport);
+vapiInterviewRouter.post("/start", userAuth, startInterview);
+vapiInterviewRouter.get("/report/:sessionId", userAuth, getInterviewReport);
 vapiInterviewRouter.post(
   "/report-from-transcript",
-  auth,
+  userAuth,
   generateReportFromTranscript,
 );
-vapiInterviewRouter.post("/retry-analysis", auth, retryAnalysis);
-vapiInterviewRouter.get("/user", auth, getUserInterviews);
-vapiInterviewRouter.post("/report-failure", auth, reportVapiFailure);
+vapiInterviewRouter.post("/retry-analysis", userAuth, retryAnalysis);
+vapiInterviewRouter.get("/user", userAuth, getUserInterviews);
+vapiInterviewRouter.post("/report-failure", userAuth, reportVapiFailure);
 
 module.exports = vapiInterviewRouter;
