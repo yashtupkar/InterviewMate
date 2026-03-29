@@ -73,8 +73,8 @@ const useRazorpay = ({ onPaymentSuccess, onPaymentFailure } = {}) => {
                 amount: orderData.amountPaise,
                 currency: orderData.currency,
                 name: 'PlaceMateAI',
+                image:"https://res.cloudinary.com/dmuldbzko/image/upload/v1774767725/logo_wunfoq.png",
                 description: orderData.planName,
-                image: '/logo.png',  // optional: your logo URL
                 order_id: orderData.razorpayOrderId,
                 prefill: {
                     name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
