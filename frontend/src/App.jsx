@@ -42,7 +42,7 @@ import QuestionBankList from "./pages/QuestionBank/QuestionBankList";
 import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
 import QuestionBankLayout from "./layout/QuestionBankLayout";
 import AdminRoute from "./components/AdminRoute";
-import SeedQuestions from "./pages/Admin/SeedQuestions";
+import SeedQuestions from "./pages/adminScreens/SeedQuestions";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
