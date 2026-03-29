@@ -112,15 +112,21 @@ const createOrder = async (req, res) => {
         const idempotencyKey = `${user._id}_${planId}_${windowBucket}`;
 
         // Return existing created order if within same window
-        const existingOrder = await Order.findOne({ idempotencyKey, status: 'created' });
+        const existingOrder = await Order.findOne({ idempotencyKey });
         if (existingOrder) {
-            return res.json({
-                razorpayOrderId: existingOrder.razorpayOrderId,
-                amountPaise: existingOrder.amount,
-                currency: existingOrder.currency,
-                key: process.env.RAZORPAY_KEY_ID,
-                planName: existingOrder.planName,
-            });
+            if (existingOrder.status === 'created') {
+                return res.json({
+                    razorpayOrderId: existingOrder.razorpayOrderId,
+                    amountPaise: existingOrder.amount,
+                    currency: existingOrder.currency,
+                    key: process.env.RAZORPAY_KEY_ID,
+                    planName: existingOrder.planName,
+                });
+            } else {
+                return res.status(400).json({ 
+                    message: 'You have recently purchased or initiated this plan. To prevent accidental double charges, please wait a few minutes before trying again.' 
+                });
+            }
         }
 
         // Create real Razorpay order
@@ -160,6 +166,10 @@ const createOrder = async (req, res) => {
             planName: plan.planName,
         });
     } catch (error) {
+        if (error.code === 11000) {
+            console.warn(`[Order] Duplicate create attempt (E11000) for user ${req.auth?.userId || 'unknown'} — plan ${planId}`);
+            return res.status(400).json({ message: 'Your order is currently processing. Please wait a moment.' });
+        }
         console.error('[Order] Create order failed:', error);
         res.status(500).json({ message: 'Failed to create payment order. Please try again.' });
     }
@@ -294,13 +304,16 @@ const handleRazorpayWebhook = async (req, res) => {
             const session = await mongoose.startSession();
             session.startTransaction();
             try {
+                // Record the prior state to determine if verifyPayment already ran
+                const wasAlreadyPaid = order.status === 'paid';
+
                 order.razorpayPaymentId = order.razorpayPaymentId || razorpayPaymentId;
                 order.status = 'paid';
                 order.webhookVerified = true;
                 await order.save({ session });
 
-                // Only update subscription if verifyPayment hasn't already done it
-                if (!order.webhookVerified || order.status !== 'paid') {
+                // If verifyPayment hasn't run yet, upgrade the subscription here!
+                if (!wasAlreadyPaid) {
                     const subscription = await Subscription.findOne({ user: order.user }).session(session);
                     if (subscription) {
                         const plan = PLAN_CONFIG[order.planId];
@@ -311,12 +324,12 @@ const handleRazorpayWebhook = async (req, res) => {
                                 subscription.paymentHistory.push(order._id);
                             }
                             await subscription.save({ session });
+                            console.log(`[Webhook] Realtime subscription upgrade applied: ${plan.tier}`);
                         }
                     }
                 } else {
-                    // verifyPayment already ran — just mark webhook confirmed
-                    order.webhookVerified = true;
-                    await order.save({ session });
+                    // verifyPayment previously completed the upgrade; we're just syncing the webhook flag.
+                    console.log(`[Webhook] verifyPayment already ran. Synced flag for ${razorpayOrderId}`);
                 }
 
                 await session.commitTransaction();
