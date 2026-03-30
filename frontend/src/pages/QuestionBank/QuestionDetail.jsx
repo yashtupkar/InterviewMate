@@ -102,7 +102,7 @@ const QuestionDetail = () => {
   return (
     // ONLY UI UPDATED — logic same
 
-    <div className="min-h-screen  text-white px-4 md:px-8 pt-4">
+    <div className="min-h-screen  text-white px-4 md:px-8 pt-24">
 
       <div className="max-w-6xl mx-auto">
 

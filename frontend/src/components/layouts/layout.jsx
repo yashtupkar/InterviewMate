@@ -1,34 +1,28 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/clerk-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { FiUser, FiLogOut, FiSettings, FiLayout, FiCreditCard, FiGift, FiTwitter, FiLinkedin, FiYoutube, FiGithub, FiMenu, FiX } from "react-icons/fi";
+import { FiUser, FiLogOut, FiLayout, FiCreditCard, FiGift, FiMenu, FiX, FiChevronDown, FiFileText, FiCheckSquare, FiLinkedin, FiBook, FiTool } from "react-icons/fi";
 import Logo from "../common/Logo";
 
 import Footer from "./Footer";
+import Background from "../common/Background";
 
 const Layout = ({ children }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
   const { user } = useUser();
   const { signOut, openUserProfile } = useClerk();
   const navigate = useNavigate();
   const location = useLocation();
-  const menuRef = React.useRef(null);
+  const menuRef = useRef(null);
+  const toolsRef = useRef(null);
 
   const handlePricingClick = (e) => {
     if (location.pathname === "/") {
       e.preventDefault();
       const element = document.getElementById("pricing");
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-  };
-  const handleFeatureClick = (e) => {
-    if (location.pathname === "/") {
-      e.preventDefault();
-      const element = document.getElementById("features");
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
       }
@@ -44,6 +38,9 @@ const Layout = ({ children }) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsProfileOpen(false);
       }
+      if (toolsRef.current && !toolsRef.current.contains(event.target)) {
+        setIsToolsOpen(false);
+      }
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -54,13 +51,27 @@ const Layout = ({ children }) => {
     };
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsToolsOpen(false);
+  }, [location.pathname]);
+
+  const toolsMenuItems = [
+    { label: "Resume Builder", to: "/resume-builder", icon: <FiFileText size={15} />, desc: "Build ATS-friendly resumes", isProtected: true },
+    { label: "ATS Scorer", to: "/ats-scorer", icon: <FiCheckSquare size={15} />, desc: "Check resume compatibility", isProtected: true },
+    { label: "LinkedIn Optimizer", to: "/dashboard/linkedin", icon: <FiLinkedin size={15} />, desc: "Optimize your LinkedIn profile", isProtected: true },
+  ];
+
+  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + "/");
+
   return (
     <div className="flex flex-col min-h-screen relative z-10 w-full">
-      <nav className={`fixed lg:top-2 top-0 left-1/2 -translate-x-1/2 w-full lg:w-[80%] z-[100] transition-all duration-500 ease-in-out ${isMobileMenuOpen
+      <nav className={`fixed  top-0 left-1/2 -translate-x-1/2 w-full  z-[100] transition-all duration-500 ease-in-out ${isMobileMenuOpen
         ? "h-screen bg-zinc-900 md:h-auto lg:bg-black/20 lg:backdrop-blur-lg overflow-hidden"
         : isScrolled
-          ? "h-[72px] md:h-auto bg-black/50 lg:bg-zinc-900/50 border-b border-[#bef264] backdrop-blur-lg shadow-2xl lg:rounded-full"
-          : "h-[72px] md:h-auto bg-transparent lg:border-b border-transparent lg:rounded-full"
+          ? "h-[72px] md:h-auto bg-black/50 lg:bg-zinc-900/50  backdrop-blur-lg shadow-2xl lg:rounded-full"
+          : "h-[72px] md:h-auto bg-transparent  border-transparent "
         }`}>
 
         {/* Navbar Header (Logo & Actions) */}
@@ -72,10 +83,63 @@ const Layout = ({ children }) => {
             </Link>
           </div>
 
-          <div className="hidden md:flex gap-8 text-sm items-center">
-            <Link to="/about" className="text-white  hover:text-primary transition-colors">About</Link>
-            <Link to="/#features" onClick={handleFeatureClick} className="text-white  hover:text-primary transition-colors">Features</Link>
-            <Link to="/#pricing" onClick={handlePricingClick} className="text-white  hover:text-primary transition-colors">Pricing</Link>
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex gap-7 text-sm items-center">
+            <Link
+              to="/questions"
+              className={`flex items-center gap-1.5 font-medium transition-colors ${isActive("/questions") ? "text-[#bef264]" : "text-white hover:text-[#bef264]"}`}
+            >
+              <FiBook size={15} />
+              Question Bank
+            </Link>
+
+            {/* Tools Dropdown */}
+            <div className="relative" ref={toolsRef}>
+              <button
+                onClick={() => setIsToolsOpen(!isToolsOpen)}
+                className={`flex items-center gap-1.5 font-medium transition-colors ${isToolsOpen ? "text-[#bef264]" : "text-white hover:text-[#bef264]"}`}
+              >
+                <FiTool size={14} />
+                Tools
+                <FiChevronDown size={14} className={`transition-transform duration-200 ${isToolsOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {isToolsOpen && (
+                <div className="absolute z-50 top-10 left-1/2 -translate-x-1/2 w-64 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-xl">
+                  {toolsMenuItems.map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.isProtected ? (user ? item.to : `/signin?redirect_url=${encodeURIComponent(item.to)}`) : item.to}
+                      onClick={() => setIsToolsOpen(false)}
+                      className="flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-[#bef264]/10 text-[#bef264] flex items-center justify-center shrink-0 group-hover:bg-[#bef264]/20 transition-colors">
+                        {item.icon}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white group-hover:text-[#bef264] transition-colors">{item.label}</p>
+                        <p className="text-[11px] text-zinc-500">{item.desc}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Link
+              to="/#pricing"
+              onClick={handlePricingClick}
+              className="text-white font-medium hover:text-[#bef264] transition-colors"
+            >
+              Pricing
+            </Link>
+
+            <Link
+              to="/about"
+              className={`font-medium transition-colors ${isActive("/about") ? "text-[#bef264]" : "text-white hover:text-[#bef264]"}`}
+            >
+              About
+            </Link>
             <Link to="/contact" className="text-white  hover:text-primary transition-colors">Contact</Link>
           </div>
 
@@ -95,7 +159,7 @@ const Layout = ({ children }) => {
               </Link>
 
               {/* Custom Profile Dropdown (Desktop) */}
-              <div className="relative hidden  md:flex items-center gap-4" ref={menuRef}>
+              <div className="relative hidden md:flex items-center gap-4" ref={menuRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center gap-2 p-1 rounded-full border border-white/10 hover:border-[#bef264]/50 transition-all active:scale-95 bg-white/5"
@@ -108,18 +172,18 @@ const Layout = ({ children }) => {
                 </button>
 
                 {isProfileOpen && (
-                  <div className="absolute z-50 top-14 right-0 w-64 bg-zinc-900  rounded-2xl shadow-2xl shadow-zinc-700/50 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-xl">
-                    <div className="flex px-4 py-2  items-start gap-2 border-b border-white/5 mb-2">
+                  <div className="absolute z-50 top-14 right-0 w-64 bg-zinc-900 rounded-2xl shadow-2xl shadow-zinc-700/50 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-xl">
+                    <div className="flex px-4 py-2 items-start gap-2 border-b border-white/5 mb-2">
                       <img
-                      src={user?.imageUrl}
-                      alt={user?.firstName}
-                      className="w-8 h-8 rounded-full object-cover shadow-lg"
-                    />
-                    <div className=" ">
+                        src={user?.imageUrl}
+                        alt={user?.firstName}
+                        className="w-8 h-8 rounded-full object-cover shadow-lg"
+                      />
+                      <div>
                         <p className="text-white text-sm capitalize font-bold truncate">{user?.fullName}</p>
-                      <p className="text-zinc-300 text-[10px] truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                        <p className="text-zinc-300 text-[10px] truncate">{user?.primaryEmailAddress?.emailAddress}</p>
                       </div>
-                    </div> 
+                    </div>
 
                     <Link
                       to="/dashboard"
@@ -136,7 +200,6 @@ const Layout = ({ children }) => {
                       <FiUser className="text-zinc-500" />
                       Manage Profile
                     </button>
-                    {/* ... other profile links ... */}
                     <Link
                       to="/billing"
                       onClick={() => setIsProfileOpen(false)}
@@ -169,7 +232,7 @@ const Layout = ({ children }) => {
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden text-zinc-300  "
+              className="md:hidden text-zinc-300"
             >
               {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
             </button>
@@ -177,47 +240,77 @@ const Layout = ({ children }) => {
         </div>
 
         {/* Mobile Expanded Menu Content */}
-        <div className={`md:hidden flex flex-col px-8 py-4 gap-8 transition-all duration-500 ${isMobileMenuOpen ? "opacity-100 translate-y-0 text-[18px]" : "opacity-0 -translate-y-10 pointer-events-none"}`}>
-          <nav className="flex flex-col gap-8">
-            {[
-              { label: "Home", to: "/" },
-              { label: "About", to: "/about" },
-              { label: "Features", to: "/features" },
-              { label: "Pricing", to: "/#pricing", onClick: handlePricingClick },
-              { label: "Testimonials", to: "/#testimonials" },
-              { label: "Contact", to: "/contact" },
-            ].map((link) => (
-              <Link
-                key={link.label}
-                to={link.to}
-                onClick={(e) => { link.onClick?.(e); setIsMobileMenuOpen(false); }}
-                className="text-white text-sm hover:text-primary transition-all font-semibold"
-              >
-                {link.label}
-              </Link>
-            ))}
+        <div className={`md:hidden flex flex-col px-8 py-4 gap-6 transition-all duration-500 ${isMobileMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"}`}>
+
+          {/* Product Links */}
+          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold">Explore</p>
+          <nav className="flex flex-col gap-5">
+            <Link
+              to="/questions"
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+            >
+              <FiBook size={16} className="text-[#bef264]/60" />
+              Question Bank
+            </Link>
+            <Link
+              to={user ? "/resume-builder" : `/signin?redirect_url=${encodeURIComponent("/resume-builder")}`}
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+            >
+              <FiFileText size={16} className="text-[#bef264]/60" />
+              Resume Builder
+            </Link>
+            <Link
+              to={user ? "/ats-scorer" : `/signin?redirect_url=${encodeURIComponent("/ats-scorer")}`}
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+            >
+              <FiCheckSquare size={16} className="text-[#bef264]/60" />
+              ATS Scorer
+            </Link>
+            <Link
+              to={user ? "/dashboard/linkedin" : `/signin?redirect_url=${encodeURIComponent("/dashboard/linkedin")}`}
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+            >
+              <FiLinkedin size={16} className="text-[#bef264]/60" />
+              LinkedIn Optimizer
+            </Link>
           </nav>
 
           <div className="h-px bg-white/5" />
 
-          <div className="flex flex-col gap-6">
+          {/* General Links */}
+          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold">Company</p>
+          <nav className="flex flex-col gap-5">
+            <Link to="/#pricing" onClick={handlePricingClick} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold">
+              Pricing
+            </Link>
+            <Link to="/about" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold">
+              About
+            </Link>
+            <Link to="/contact" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold">
+              Contact
+            </Link>
+          </nav>
+
+          <div className="h-px bg-white/5" />
+
+          {/* Auth Actions */}
+          <div className="flex flex-col gap-4">
             <SignedIn>
               <Link
                 to="/dashboard"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-black bg-[#bef264] px-4 py-2 rounded-lg text-sm text-center transition-all font-semibold"
+                className="text-black bg-[#bef264] px-4 py-2.5 rounded-xl text-sm text-center transition-all font-bold"
               >
                 Dashboard
               </Link>
               <button
-                onClick={() => { openUserProfile(); setIsMobileMenuOpen(false); }}
-                className="text-white text-sm text-center hover:text-primary bg-zinc-800 px-4 py-2 rounded-lg transition-all font-semibold text-left"
+                onClick={() => openUserProfile()}
+                className="text-white text-sm text-center hover:text-[#bef264] bg-zinc-800 px-4 py-2.5 rounded-xl transition-all font-semibold"
               >
                 Manage Profile
               </button>
               <button
-                onClick={() => { signOut(); setIsMobileMenuOpen(false); }}
-                className="text-red-400 text-sm hover:text-red-300 text-center bg-zinc-800 px-4 py-2 rounded-lg transition-all font-semibold text-left"
+                onClick={() => signOut()}
+                className="text-red-400 text-sm hover:text-red-300 text-center bg-zinc-800 px-4 py-2.5 rounded-xl transition-all font-semibold"
               >
                 Log Out
               </button>
@@ -225,10 +318,15 @@ const Layout = ({ children }) => {
             <SignedOut>
               <Link
                 to="/signin"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-white hover:text-primary transition-all font-semibold"
+                className="text-black bg-[#bef264] px-4 py-2.5 rounded-xl text-sm text-center transition-all font-bold"
               >
                 Sign In
+              </Link>
+              <Link
+                to="/signup"
+                className="text-white text-sm text-center hover:text-[#bef264] bg-zinc-800 px-4 py-2.5 rounded-xl transition-all font-semibold border border-white/5"
+              >
+                Create Account
               </Link>
             </SignedOut>
           </div>
@@ -236,6 +334,7 @@ const Layout = ({ children }) => {
       </nav>
 
       <main className="flex-1 w-full relative z-0">
+        <Background/>
         {children}
       </main>
 

@@ -1,11 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams, useLocation } from 'react-router-dom';
+import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import { MdOutlineComputer } from "react-icons/md";
 import { BsCheckCircle } from 'react-icons/bs';
-import { FiUsers, FiClock, FiZap, FiCpu, FiStar, FiLayers } from 'react-icons/fi';
+import { FiUsers, FiClock, FiZap, FiCpu, FiStar, FiLogIn, FiUserPlus, FiLock } from 'react-icons/fi';
 import GoogleAdsBlock from '../../components/common/GoogleAdsBlock';
+import UniversalPopup from '../../components/common/UniversalPopup';
+import Logo from '../../components/common/Logo';
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -27,7 +30,9 @@ const QuestionSkeleton = () => (
 
 const QuestionBankList = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isSignedIn } = useAuth();
 
   const [questions, setQuestions] = useState([]);
   const [filters, setFilters] = useState({ skills: [], companies: [], domains: [] });
@@ -48,6 +53,9 @@ const QuestionBankList = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalQuestions, setTotalQuestions] = useState(0);
+
+  // Auth gate popup state — triggers on pagination for guests
+  const [showAuthGate, setShowAuthGate] = useState(false);
 
   // 🔥 Dynamic Headline
   const generateHeadline = () => {
@@ -92,7 +100,6 @@ const QuestionBankList = () => {
       .then(res => setFilters(res.data.data))
       .catch(console.error);
       
-    // Load behavioral categories from stats
     axios.get(`${backendURL}/api/questions/stats/aggregates`)
       .then(res => {
         if (res.data.success) {
@@ -134,6 +141,16 @@ const QuestionBankList = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Pagination with auth gate for guests
+  const handleNextPage = () => {
+    if (!isSignedIn) {
+      setShowAuthGate(true);
+      return;
+    }
+    setPage(p => p + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const getDifficultyColor = (d) => {
     if (d === "easy") return "bg-green-500/10 text-green-400";
     if (d === "medium") return "bg-yellow-500/10 text-yellow-400";
@@ -154,11 +171,84 @@ const QuestionBankList = () => {
   };
 
   return (
-    <div className="min-h-screen  text-white px-4 md:px-8  pt-4">
+    <div className="min-h-screen  text-white px-4 md:px-8 pb-24 pt-24">
+
+      {/* Auth Gate Popup — Quora/Medium/LinkedIn-style */}
+      <UniversalPopup
+        isOpen={showAuthGate}
+        onClose={() => setShowAuthGate(false)}
+        maxWidth="max-w-md"
+        padding="p-0"
+      >
+        {/* Top accent banner */}
+        <div className="relative bg-gradient-to-br from-[#bef264]/15 via-zinc-900 to-zinc-900 px-6 pt-7 pb-5">
+          <div className="absolute top-0 left-0 w-full h-full opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1.5px 1.5px, white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
+          <div className="relative text-center">
+           <Logo size={34} className='mx-auto mb-2' />
+            <h3 className="text-xl font-black text-white mb-1 tracking-tight">Sign in to see more</h3>
+            <p className="text-zinc-500 text-sm font-medium">
+              Unlock {totalQuestions}+ questions across {filters.companies?.length || 0}+ companies
+            </p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 pb-6 pt-4">
+          {/* Feature checklist */}
+          <div className="space-y-2.5 mb-5">
+            {[
+              'Unlimited access to all questions',
+              'Full solutions with code examples',
+              'AI-powered mock interviews',
+              'Company-specific question sets',
+            ].map((feature, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-[#bef264]/15 flex items-center justify-center shrink-0">
+                  <svg className="w-3 h-3 text-[#bef264]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <span className="text-sm text-zinc-300 font-medium">{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="space-y-2.5">
+            <Link
+              to={`/signin?redirect_url=${encodeURIComponent(location.pathname + location.search)}`}
+              onClick={() => setShowAuthGate(false)}
+              className="flex items-center justify-center gap-2 w-full bg-[#bef264] text-black py-3 rounded-xl font-black text-sm hover:bg-[#d4ff7e] transition-all active:scale-[0.97] hover:shadow-[0_0_24px_rgba(190,242,100,0.25)]"
+            >
+              <FiLogIn className="w-4 h-4" />
+              Continue with Sign In
+            </Link>
+            <Link
+              to={`/signup?redirect_url=${encodeURIComponent(location.pathname + location.search)}`}
+              onClick={() => setShowAuthGate(false)}
+              className="flex items-center justify-center gap-2 w-full bg-zinc-800/80 text-white py-3 rounded-xl font-bold text-sm border border-white/5 hover:bg-zinc-700 transition-all active:scale-[0.97]"
+            >
+              <FiUserPlus className="w-4 h-4" />
+              Create Free Account
+            </Link>
+          </div>
+
+          {/* Social proof footer */}
+          <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-center gap-2.5">
+            <div className="flex -space-x-2">
+              {['bg-emerald-500', 'bg-blue-500', 'bg-amber-500', 'bg-violet-500'].map((color, i) => (
+                <div key={i} className={`w-6 h-6 rounded-full ${color} border-2 border-zinc-900 flex items-center justify-center text-[8px] text-white font-black`}>
+                  {['Y', 'A', 'R', 'S'][i]}
+                </div>
+              ))}
+            </div>
+            <span className="text-zinc-500 text-xs font-semibold">1,200+ joined this week · 100% free</span>
+          </div>
+        </div>
+      </UniversalPopup>
 
       {/* HEADER */}
       <div className="max-w-7xl mx-auto mb-8">
-        {/* BACK */}
         <Link to="/questions" className="text-sm text-zinc-300 hover:text-white mb-4 inline-flex items-center gap-1">
           ← Back
         </Link>
@@ -167,8 +257,6 @@ const QuestionBankList = () => {
           {generateHeadline().split(" ").slice(1).join(" ")}
         </h1>
 
- 
-        {/* RESULT COUNT */}
         <div className="text-sm text-zinc-400 mt-2">
           Showing <span className="text-white">{totalQuestions}</span> results
         </div>
@@ -255,8 +343,6 @@ const QuestionBankList = () => {
             <div className="hidden lg:block">
               <GoogleAdsBlock slotId="sidebar-ad" />
             </div>
-           
-
 
           </div>
         </div>
@@ -264,7 +350,6 @@ const QuestionBankList = () => {
         {/* CENTER LIST */}
         <div className="lg:col-span-6 space-y-4">
 
-       
           {loading ? (
             <div className="space-y-4">
               {[...Array(6)].map((_, i) => (
@@ -326,10 +411,7 @@ const QuestionBankList = () => {
               </span>
               <button 
                 disabled={page === totalPages} 
-                onClick={() => {
-                  setPage(p => p + 1);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
+                onClick={handleNextPage}
                 className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg disabled:opacity-50 text-sm"
               >
                 Next
@@ -341,8 +423,6 @@ const QuestionBankList = () => {
 
         {/* RIGHT SIDE */}
         <div className="lg:col-span-3 hidden lg:block space-y-4">
-
-         
 
           <div className='flex flex-col items-center gap-4 sticky top-24'>
           <div className="bg-zinc-900  p-4 rounded-xl border border-zinc-800">

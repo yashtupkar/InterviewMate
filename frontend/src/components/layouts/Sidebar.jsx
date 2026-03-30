@@ -26,11 +26,12 @@ import {
 import Logo from "../common/Logo";
 import { MdSpaceDashboard, MdLiveHelp } from "react-icons/md";
 import { HiSparkles } from "react-icons/hi2";
-import { FaUsers } from "react-icons/fa";
+import { FaBook, FaUsers } from "react-icons/fa";
 import { BsFileEarmarkTextFill, BsFileEarmarkPersonFill } from "react-icons/bs";
 import { IoChatboxEllipses } from "react-icons/io5";
 import FeedbackPopup from "../modals/FeedbackPopup";
 import { TbBriefcaseFilled } from "react-icons/tb";
+import Skeleton from "../common/Skeleton";
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
   const location = useLocation();
@@ -40,6 +41,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [subscription, setSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [openDropdowns, setOpenDropdowns] = useState({});
   const menuRef = React.useRef(null);
 
@@ -53,6 +55,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
         setSubscription(res.data);
       } catch (err) {
         console.error("Error fetching subscription:", err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchSubscription();
@@ -82,7 +86,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
         { name: "Resume Builder", path: "/resume-builder", active: location.pathname === "/resume-builder", badge: "New" }
       ]
     },
-    { name: "Question Bank", icon: <FiBookOpen />, path: "/questions", active: location.pathname.startsWith("/questions"), badge: "Free" },
+    { name: "Question Bank", icon: <FaBook/>, path: "/questions", active: location.pathname.startsWith("/questions"), badge: "Free" },
 
   ];
 
@@ -312,34 +316,38 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
         </div>
 
         {/* Compact Subscriptions Card - Circular Redesign */}
-        {subscription && !isCollapsed && (
-          <div className="bg-[#bef264] rounded-2xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 hover:scale-[1.02]">
-            <div className="flex items-center justify-between px-0.5">
-              <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] leading-none opacity-80">
-                {subscription.tier}
-              </span>
-              <Link to="/pricing" onClick={onClose} className="text-[10px] font-black text-black/60 hover:text-black transition-colors uppercase tracking-widest leading-none border-b border-black/10 hover:border-black transition-all pb-0.5">
-                Upgrade
-              </Link>
-            </div>
-
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-center text-[10px] font-black tracking-widest text-black">
-                <span className="uppercase opacity-60">Credits</span>
-                <span className="text-black text-xs italic">
-                  {Math.round(subscription.credits || 0)} <span className="text-black/30 mx-0.5 not-italic">/</span> {subscription.limits.credits || 200}
+        {!isCollapsed && (
+          loading ? (
+            <Skeleton className="h-[100px] w-full rounded-xl mx-1" />
+          ) : subscription ? (
+            <div className="bg-[#bef264] rounded-xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 hover:scale-[1.02]">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] leading-none opacity-80">
+                  {subscription.tier}
                 </span>
+                <Link to="/pricing" onClick={onClose} className="text-[10px] font-black text-black/60 hover:text-black transition-colors uppercase tracking-widest leading-none border-b border-black/10 hover:border-black transition-all pb-0.5">
+                  Upgrade
+                </Link>
               </div>
-              <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5">
-                <div
-                  className="h-full bg-black rounded-full transition-all duration-1000 ease-out relative"
-                  style={{ width: `${Math.min(100, ((subscription.credits || 0) / (subscription.limits.credits || 200)) * 100)}%` }}
-                >
-                  <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
+
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center text-[10px] font-black tracking-widest text-black">
+                  <span className="uppercase opacity-60">Credits</span>
+                  <span className="text-black text-xs italic">
+                    {Math.round(subscription.credits || 0)} <span className="text-black/30 mx-0.5 not-italic">/</span> {subscription.limits.credits || 200}
+                  </span>
+                </div>
+                <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5">
+                  <div
+                    className="h-full bg-black rounded-full transition-all duration-1000 ease-out relative"
+                    style={{ width: `${Math.min(100, ((subscription.credits || 0) / (subscription.limits.credits || 200)) * 100)}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : null
         )}
 
         {/* User Profile */}

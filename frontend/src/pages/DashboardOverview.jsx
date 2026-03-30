@@ -35,6 +35,7 @@ import { formatDistanceToNow, differenceInHours, format } from "date-fns";
 import { interviewAgents } from "../constants/agents";
 import { GoClockFill } from "react-icons/go";
 import { FaCheckCircle, FaClock, FaUsers } from "react-icons/fa";
+import Skeleton from "../components/common/Skeleton";
 
 const DashboardOverview = () => {
   const { getToken } = useAuth();
@@ -181,18 +182,7 @@ const DashboardOverview = () => {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
-  if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="min-h-screen flex items-center justify-center">
-            <FiLoader className="w-8 h-8 text-[#bef264] animate-spin" />
-          </div>
-          <p className="text-zinc-500 font-medium">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Removed global loading check to support skeleton loaders
 
   return (
     <>
@@ -242,8 +232,10 @@ const DashboardOverview = () => {
               </p>
             </div>
             <div className="flex gap-4 w-full md:w-auto">
-              {subscription ? (
-                <div className="bg-[#bef264] rounded-3xl p-6 flex flex-col gap-5 shadow-[0_20px_50px_-12px_rgba(190,242,100,0.4)] min-w-[280px] group transition-all duration-500 hover:scale-[1.02]">
+              {loading ? (
+                <Skeleton className="min-w-[280px] h-[140px] rounded-2xl" />
+              ) : subscription ? (
+                <div className="bg-[#bef264] rounded-2xl p-6 flex flex-col gap-5 shadow-[0_20px_50px_-12px_rgba(190,242,100,0.4)] min-w-[280px] group transition-all duration-500 hover:scale-[1.02]">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[11px] font-black text-black uppercase tracking-[0.2em] leading-none shrink-0 opacity-80">
                       {subscription.tier}
@@ -317,7 +309,15 @@ const DashboardOverview = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+          {loading ? (
+            Array(5)
+              .fill(0)
+              .map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-2xl glass-panel" />
+              ))
+          ) : (
+            <>
+              <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
             <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FaClock size={24} />
             </div>
@@ -383,31 +383,32 @@ const DashboardOverview = () => {
             </div>
           </div>
 
-          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
-              <FiTarget size={24} />
-            </div>
-            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
-              Avg Session Score
-            </p>
-            <h3 className="text-2xl font-black text-white">
-              {avgScore > 0 ? avgScore : 0}
-              <span className="text-lg text-zinc-500">%</span>
-            </h3>
-            <div className="mt-3 flex items-center gap-2">
-              <span
-                className={`text-xs font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${avgScore > 70 ? "bg-emerald-500/10 text-emerald-400" : "bg-[#bef264]/10 text-[#bef264]"}`}
-              >
-                <FiTrendingUp size={12} />{" "}
-                {avgScore > 75
-                  ? "Excellent"
-                  : avgScore > 50
-                    ? "Steady"
-                    : "Improving"}
-              </span>
-           
-            </div>
-          </div>
+              <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+                <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+                  <FiTarget size={24} />
+                </div>
+                <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                  Avg Session Score
+                </p>
+                <h3 className="text-2xl font-black text-white">
+                  {avgScore > 0 ? avgScore : 0}
+                  <span className="text-lg text-zinc-500">%</span>
+                </h3>
+                <div className="mt-3 flex items-center gap-2">
+                  <span
+                    className={`text-xs font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${avgScore > 70 ? "bg-emerald-500/10 text-emerald-400" : "bg-[#bef264]/10 text-[#bef264]"}`}
+                  >
+                    <FiTrendingUp size={12} />{" "}
+                    {avgScore > 75
+                      ? "Excellent"
+                      : avgScore > 50
+                        ? "Steady"
+                        : "Improving"}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Activity Grid - Asymmetric Layout */}
@@ -427,8 +428,16 @@ const DashboardOverview = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Featured Activity */}
-              <div
+              {loading ? (
+                <>
+                  <Skeleton className="md:col-span-2 h-[320px] rounded-[2rem] glass-panel" />
+                  <Skeleton className="h-[200px] rounded-[2rem] glass-panel" />
+                  <Skeleton className="h-[200px] rounded-[2rem] glass-panel" />
+                </>
+              ) : (
+                <>
+                  {/* Featured Activity */}
+                  <div
                 onClick={() => navigate("/dashboard/setup")}
                 className="md:col-span-2 glass-panel p-8 rounded-[2rem] group cursor-pointer border border-[#bef264]/10 hover:border-[#bef264]/40 transition-all duration-500 relative overflow-hidden shadow-[0_0_40px_rgba(190,242,100,0.05)]"
               >
@@ -502,22 +511,24 @@ const DashboardOverview = () => {
                 </div>
               </div>
 
-              <div
-                onClick={() => navigate("/billing")}
-                className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10"
-              >
-                <h4 className="text-lg font-black text-white mb-2">
-                  Upgrade Plan
-                </h4>
-                <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">
-                  Get specific improvements, advanced insights, and extended
-                  usage limits tailored to you.
-                </p>
-                <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
-                  <span>View Options</span>
-                  <FiChevronRight size={14} />
-                </div>
-              </div>
+                  <div
+                    onClick={() => navigate("/billing")}
+                    className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10"
+                  >
+                    <h4 className="text-lg font-black text-white mb-2">
+                      Upgrade Plan
+                    </h4>
+                    <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">
+                      Get specific improvements, advanced insights, and extended
+                      usage limits tailored to you.
+                    </p>
+                    <div className="flex items-center gap-2 text-indigo-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                      <span>View Options</span>
+                      <FiChevronRight size={14} />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -550,79 +561,89 @@ const DashboardOverview = () => {
               </div>
 
               <div className="w-full flex-1 flex items-center justify-center -mt-4">
-                <ResponsiveContainer width="100%" height={320}>
-                  <RadarChart
-                    cx="50%"
-                    cy="50%"
-                    outerRadius="80%"
-                    data={skillMatrix}
-                  >
-                    <PolarGrid stroke="rgba(255,255,255,0.05)" />
-                    <PolarAngleAxis
-                      dataKey="subject"
-                      tick={{ fill: "#71717a", fontSize: 10, fontWeight: 800 }}
-                    />
-                    <PolarRadiusAxis
-                      angle={30}
-                      domain={[0, 100]}
-                      tick={false}
-                      axisLine={false}
-                    />
-                    <Radar
-                      name="Interview"
-                      dataKey="Interview"
-                      stroke="#bef264"
-                      fill="#bef264"
-                      fillOpacity={0.2}
-                      strokeWidth={3}
-                    />
-                    <Radar
-                      name="GD"
-                      dataKey="GD"
-                      stroke="#f59e0b"
-                      fill="#f59e0b"
-                      fillOpacity={0.2}
-                      strokeWidth={3}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#18181b",
-                        border: "1px solid #27272a",
-                        borderRadius: "12px",
-                        fontSize: "12px",
-                      }}
-                      itemStyle={{ fontWeight: 800 }}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+                {loading ? (
+                  <Skeleton className="w-[320px] h-[320px] rounded-full" />
+                ) : (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <RadarChart
+                      cx="50%"
+                      cy="50%"
+                      outerRadius="80%"
+                      data={skillMatrix}
+                    >
+                      <PolarGrid stroke="rgba(255,255,255,0.05)" />
+                      <PolarAngleAxis
+                        dataKey="subject"
+                        tick={{ fill: "#71717a", fontSize: 10, fontWeight: 800 }}
+                      />
+                      <PolarRadiusAxis
+                        angle={30}
+                        domain={[0, 100]}
+                        tick={false}
+                        axisLine={false}
+                      />
+                      <Radar
+                        name="Interview"
+                        dataKey="Interview"
+                        stroke="#bef264"
+                        fill="#bef264"
+                        fillOpacity={0.2}
+                        strokeWidth={3}
+                      />
+                      <Radar
+                        name="GD"
+                        dataKey="GD"
+                        stroke="#f59e0b"
+                        fill="#f59e0b"
+                        fillOpacity={0.2}
+                        strokeWidth={3}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#18181b",
+                          border: "1px solid #27272a",
+                          borderRadius: "12px",
+                          fontSize: "12px",
+                        }}
+                        itemStyle={{ fontWeight: 800 }}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
 
               <div className="mt-6 flex justify-around p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                <div className="text-center">
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">
-                    Top Skill
-                  </p>
-                  <p className="text-sm font-black text-[#bef264]">
-                    {avgScore > 0
-                      ? skillMatrix.reduce((a, b) =>
-                        a.Interview + a.GD > b.Interview + b.GD ? a : b,
-                      ).subject
-                      : "Pending"}
-                  </p>
-                </div>
-                <div className="w-px h-8 bg-white/5"></div>
-                <div className="text-center">
-                  <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">
-                    Status
-                  </p>
-                  <p className="text-sm font-black text-white">
-                    {totalSessions > 5
-                      ? "Stable"
-                      : totalSessions > 0
-                        ? "Building"
-                        : "Incomplete"}
-                  </p>
-                </div>
+                {loading ? (
+                  <Skeleton className="w-full h-12" />
+                ) : (
+                  <>
+                    <div className="text-center">
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">
+                        Top Skill
+                      </p>
+                      <p className="text-sm font-black text-[#bef264]">
+                        {avgScore > 0
+                          ? skillMatrix.reduce((a, b) =>
+                            a.Interview + a.GD > b.Interview + b.GD ? a : b,
+                          ).subject
+                          : "Pending"}
+                      </p>
+                    </div>
+                    <div className="w-px h-8 bg-white/5"></div>
+                    <div className="text-center">
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">
+                        Status
+                      </p>
+                      <p className="text-sm font-black text-white">
+                        {totalSessions > 5
+                          ? "Stable"
+                          : totalSessions > 0
+                            ? "Building"
+                            : "Incomplete"}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -663,88 +684,102 @@ const DashboardOverview = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-sm">
-                  {[...completedInterviews, ...completedGDs]
-                    .sort(
-                      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-                    )
-                    .slice(0, 5)
-                    .map((session, idx) => (
-                      <tr
-                        key={session._id || idx}
-                        className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
-                        onClick={() =>
-                          navigate(
-                            session.interviewType
-                              ? `/interview/result/${session._id}`
-                              : `/gd/result/${session._id}`,
-                          )
-                        }
-                      >
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center ${session.interviewType ? "bg-[#bef264]/10 text-[#bef264]" : "bg-amber-500/10 text-amber-500"}`}
-                            >
-                              {session.interviewType ? (
-                                <FiVideo size={14} />
-                              ) : (
-                                <FiUsers size={14} />
-                              )}
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
-                              {session.interviewType ? "Interview" : "GD"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className="font-bold text-white group-hover:text-[#bef264] transition-colors line-clamp-1">
-                            {session.interviewType
-                              ? session.metadata?.role || "Interview"
-                              : session.topic}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className="px-2 py-1 rounded bg-[#bef264]/10 text-[#bef264] border border-[#bef264]/20 text-[9px] font-black uppercase tracking-[0.1em]">
-                            Done
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                          {differenceInHours(
-                            new Date(),
-                            new Date(session.createdAt),
-                          ) < 12
-                            ? formatDistanceToNow(new Date(session.createdAt), {
-                              addSuffix: true,
-                            })
-                            : format(
-                              new Date(session.createdAt),
-                              "MMM d, yyyy",
-                            )}
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className="text-base font-black text-white group-hover:text-[#bef264] transition-colors">
-                            {session.report?.overallScore || "-"}
-                            <span className="text-[10px] text-zinc-500 ml-1">
-                              %
-                            </span>
-                          </span>
-                        </td>
-                        <td className="px-5 py-3">
-                          <button className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-[#bef264] transition-colors flex items-center gap-1">
-                            Review <FiChevronRight size={12} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  {interviews.length === 0 && gds.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-5 py-10 text-center text-zinc-500 font-bold uppercase tracking-widest text-xs"
-                      >
-                        No sessions completed yet.
-                      </td>
-                    </tr>
+                  {loading ? (
+                    Array(3)
+                      .fill(0)
+                      .map((_, i) => (
+                        <tr key={i}>
+                          <td colSpan={6} className="px-5 py-4">
+                            <Skeleton className="h-8 w-full" />
+                          </td>
+                        </tr>
+                      ))
+                  ) : (
+                    <>
+                      {[...completedInterviews, ...completedGDs]
+                        .sort(
+                          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+                        )
+                        .slice(0, 5)
+                        .map((session, idx) => (
+                          <tr
+                            key={session._id || idx}
+                            className="hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                            onClick={() =>
+                              navigate(
+                                session.interviewType
+                                  ? `/interview/result/${session._id}`
+                                  : `/gd/result/${session._id}`,
+                              )
+                            }
+                          >
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${session.interviewType ? "bg-[#bef264]/10 text-[#bef264]" : "bg-amber-500/10 text-amber-500"}`}
+                                >
+                                  {session.interviewType ? (
+                                    <FiVideo size={14} />
+                                  ) : (
+                                    <FiUsers size={14} />
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
+                                  {session.interviewType ? "Interview" : "GD"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className="font-bold text-white group-hover:text-[#bef264] transition-colors line-clamp-1">
+                                {session.interviewType
+                                  ? session.metadata?.role || "Interview"
+                                  : session.topic}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className="px-2 py-1 rounded bg-[#bef264]/10 text-[#bef264] border border-[#bef264]/20 text-[9px] font-black uppercase tracking-[0.1em]">
+                                Done
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                              {differenceInHours(
+                                new Date(),
+                                new Date(session.createdAt),
+                              ) < 12
+                                ? formatDistanceToNow(new Date(session.createdAt), {
+                                  addSuffix: true,
+                                })
+                                : format(
+                                  new Date(session.createdAt),
+                                  "MMM d, yyyy",
+                                )}
+                            </td>
+                            <td className="px-5 py-3">
+                              <span className="text-base font-black text-white group-hover:text-[#bef264] transition-colors">
+                                {session.report?.overallScore || "-"}
+                                <span className="text-[10px] text-zinc-500 ml-1">
+                                  %
+                                </span>
+                              </span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <button className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-[#bef264] transition-colors flex items-center gap-1">
+                                Review <FiChevronRight size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      {interviews.length === 0 && gds.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-5 py-10 text-center text-zinc-500 font-bold uppercase tracking-widest text-xs"
+                          >
+                            No sessions completed yet.
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   )}
                 </tbody>
               </table>

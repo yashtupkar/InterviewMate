@@ -40,7 +40,6 @@ import Contact from "./pages/Contact";
 import QuestionBankDashboard from "./pages/QuestionBank/QuestionBankDashboard";
 import QuestionBankList from "./pages/QuestionBank/QuestionBankList";
 import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
-import QuestionBankLayout from "./layout/QuestionBankLayout";
 import AdminRoute from "./components/AdminRoute";
 import SeedQuestions from "./pages/adminScreens/SeedQuestions";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
@@ -228,27 +227,27 @@ function App() {
         <Route
           path="/questions"
           element={
-            <QuestionBankLayout>
+            <Layout>
               <QuestionBankDashboard />
-            </QuestionBankLayout>
+            </Layout>
           }
         />
 
         <Route
           path="/questions/list"
           element={
-            <QuestionBankLayout>
+            <Layout>
               <QuestionBankList />
-            </QuestionBankLayout>
+            </Layout>
           }
         />
 
         <Route
           path="/questions/:id"
           element={
-            <QuestionBankLayout>
+            <Layout>
               <QuestionDetail />
-            </QuestionBankLayout>
+            </Layout>
           }
         />
 
@@ -257,9 +256,9 @@ function App() {
            <Route 
              path="/admin/seed-questions" 
              element={
-               <QuestionBankLayout>
+               <Layout>
                  <SeedQuestions />
-               </QuestionBankLayout>
+               </Layout>
              } 
            />
         </Route>
