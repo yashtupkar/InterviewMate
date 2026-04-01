@@ -42,7 +42,7 @@ const WaitlistSection = () => {
     };
 
     return (
-        <section className="py-32 px-6 max-w-7xl mx-auto relative overflow-hidden">
+        <section id="waitlist" className="py-32 px-6 max-w-7xl mx-auto relative overflow-hidden">
        
             <div className="relative overflow-hidden text-center">
             
@@ -99,7 +99,7 @@ const WaitlistSection = () => {
                                             <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                                         ) : (
                                             <div className='flex items-center gap-2 w-fit'>
-                                                Join Waitlist
+                                                Join <span className='hidden md:block'>Waitlist</span>
                                                 <ChevronRight size={14} strokeWidth={3} />
                                             </div>
                                         )}

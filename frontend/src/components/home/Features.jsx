@@ -58,13 +58,14 @@ const featuresList = [
       "Role-specific behavioral question sets."
     ],
     icon: BookOpen,
+    videoSrc: "/assets/featuresVideo/question-bank.mp4",
     reverse: false
   }
 ];
 
 const Features = () => {
   return (
-    <section id="features" className="py-20 px-6 max-w-7xl mx-auto flex flex-col items-center relative overflow-hidden">
+    <section id="features" className="py-10 px-4 max-w-7xl mx-auto flex flex-col items-center relative overflow-hidden">
       {/* Decorative background element */}
 
       <div className="flex flex-col items-center mb-24 text-center">
@@ -79,7 +80,7 @@ const Features = () => {
         </p>
       </div>
 
-      <div className="w-full space-y-32">
+      <div className="w-full space-y-16  md:space-y-32">
         {featuresList.map((feature, index) => (
           <div key={index} className={`flex flex-col lg:flex-row items-center gap-12 lg:gap-24 ${feature.reverse ? 'lg:flex-row-reverse' : ''}`}>
             
@@ -103,11 +104,11 @@ const Features = () => {
             </div>
 
             {/* Video Box Half */}
-            <div className="flex-[1.2] lg:flex-[1.4] w-full relative group">
+            <div className="flex-[1.4] lg:flex-[1.4] w-full relative group">
               {/* Neo-brutalist "under-layer" for 3D depth */}
-              <div className="absolute inset-0 bg-zinc-700 rounded-xl translate-x-3 translate-y-3 group-hover:translate-x-4 group-hover:translate-y-4 transition-transform duration-300"></div>
+              <div className="absolute inset-0 bg-zinc-700 rounded-sm md:rounded-xl translate-x-3 translate-y-3 group-hover:translate-x-4 group-hover:translate-y-4 transition-transform duration-300"></div>
               
-              <div className="aspect-[4/3] md:aspect-video bg-[#0d0d12] border border-zinc-700  rounded-xl flex items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1">
+              <div className="aspect-video bg-[#0d0d12] border border-zinc-700  rounded-sm md:rounded-xl flex items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-300 group-hover:-translate-x-1 group-hover:-translate-y-1">
                 {feature.videoSrc ? (
                   <video 
                     src={feature.videoSrc}

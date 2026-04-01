@@ -63,6 +63,17 @@ const Layout = ({ children }) => {
     { label: "LinkedIn Optimizer", to: "/dashboard/linkedin", icon: <FiLinkedin size={15} />, desc: "Optimize your LinkedIn profile", isProtected: true },
   ];
 
+  const scrollToWaitlist = () => {
+    setIsToolsOpen(false);
+    setIsMobileMenuOpen(false);
+    const el = document.getElementById('waitlist');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/#waitlist');
+    }
+  };
+
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + "/");
 
   return (
@@ -106,11 +117,20 @@ const Layout = ({ children }) => {
 
               {isToolsOpen && (
                 <div className="absolute z-50 top-10 left-1/2 -translate-x-1/2 w-64 bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-xl">
-                  {toolsMenuItems.map((item) => (
+                  {toolsMenuItems.map((item) => {
+                    const handleToolClick = (e) => {
+                      if (item.isProtected && !user) {
+                        e.preventDefault();
+                        scrollToWaitlist();
+                      } else {
+                        setIsToolsOpen(false);
+                      }
+                    };
+                    return (
                     <Link
                       key={item.label}
-                      to={item.isProtected ? (user ? item.to : `/signin?redirect_url=${encodeURIComponent(item.to)}`) : item.to}
-                      onClick={() => setIsToolsOpen(false)}
+                      to={item.isProtected && !user ? '#' : item.to}
+                      onClick={handleToolClick}
                       className="flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-[#bef264]/10 text-[#bef264] flex items-center justify-center shrink-0 group-hover:bg-[#bef264]/20 transition-colors">
@@ -121,7 +141,8 @@ const Layout = ({ children }) => {
                         <p className="text-[11px] text-zinc-500">{item.desc}</p>
                       </div>
                     </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -145,11 +166,19 @@ const Layout = ({ children }) => {
 
           <div className="flex gap-4 items-center">
             <SignedOut>
-              <Link to="/signin" className="hidden md:block">
-                <button className="bg-[#bef264] text-black px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm">
-                  Sign In
-                </button>
-              </Link>
+              <button
+                onClick={() => {
+                  const el = document.getElementById('waitlist');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    navigate('/#waitlist');
+                  }
+                }}
+                className="hidden md:block bg-[#bef264] text-black px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm"
+              >
+                Join Waitlist
+              </button>
             </SignedOut>
             <SignedIn>
               <Link to="/dashboard" className="hidden md:block">
@@ -252,27 +281,39 @@ const Layout = ({ children }) => {
               <FiBook size={16} className="text-[#bef264]/60" />
               Question Bank
             </Link>
-            <Link
-              to={user ? "/resume-builder" : `/signin?redirect_url=${encodeURIComponent("/resume-builder")}`}
-              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
-            >
-              <FiFileText size={16} className="text-[#bef264]/60" />
-              Resume Builder
-            </Link>
-            <Link
-              to={user ? "/ats-scorer" : `/signin?redirect_url=${encodeURIComponent("/ats-scorer")}`}
-              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
-            >
-              <FiCheckSquare size={16} className="text-[#bef264]/60" />
-              ATS Scorer
-            </Link>
-            <Link
-              to={user ? "/dashboard/linkedin" : `/signin?redirect_url=${encodeURIComponent("/dashboard/linkedin")}`}
-              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
-            >
-              <FiLinkedin size={16} className="text-[#bef264]/60" />
-              LinkedIn Optimizer
-            </Link>
+            {user ? (
+              <Link to="/resume-builder" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5">
+                <FiFileText size={16} className="text-[#bef264]/60" />
+                Resume Builder
+              </Link>
+            ) : (
+              <button onClick={scrollToWaitlist} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left">
+                <FiFileText size={16} className="text-[#bef264]/60" />
+                Resume Builder
+              </button>
+            )}
+            {user ? (
+              <Link to="/ats-scorer" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5">
+                <FiCheckSquare size={16} className="text-[#bef264]/60" />
+                ATS Scorer
+              </Link>
+            ) : (
+              <button onClick={scrollToWaitlist} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left">
+                <FiCheckSquare size={16} className="text-[#bef264]/60" />
+                ATS Scorer
+              </button>
+            )}
+            {user ? (
+              <Link to="/dashboard/linkedin" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5">
+                <FiLinkedin size={16} className="text-[#bef264]/60" />
+                LinkedIn Optimizer
+              </Link>
+            ) : (
+              <button onClick={scrollToWaitlist} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left">
+                <FiLinkedin size={16} className="text-[#bef264]/60" />
+                LinkedIn Optimizer
+              </button>
+            )}
           </nav>
 
           <div className="h-px bg-white/5" />
@@ -316,18 +357,20 @@ const Layout = ({ children }) => {
               </button>
             </SignedIn>
             <SignedOut>
-              <Link
-                to="/signin"
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  const el = document.getElementById('waitlist');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    navigate('/#waitlist');
+                  }
+                }}
                 className="text-black bg-[#bef264] px-4 py-2.5 rounded-xl text-sm text-center transition-all font-bold"
               >
-                Sign In
-              </Link>
-              <Link
-                to="/signup"
-                className="text-white text-sm text-center hover:text-[#bef264] bg-zinc-800 px-4 py-2.5 rounded-xl transition-all font-semibold border border-white/5"
-              >
-                Create Account
-              </Link>
+                Join Waitlist
+              </button>
             </SignedOut>
           </div>
         </div>

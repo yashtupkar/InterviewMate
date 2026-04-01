@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FiSearch, FiCode, FiLayers, FiDatabase, FiCpu, FiUsers, FiClock, FiStar, FiArrowRight, FiZap } from 'react-icons/fi';
+import { FiSearch, FiCode, FiLayers, FiDatabase, FiCpu, FiUsers, FiClock, FiStar, FiArrowRight, FiZap, FiChevronDown } from 'react-icons/fi';
 import GoogleAdsBlock from '../../components/common/GoogleAdsBlock';
 import Skeleton from '../../components/common/Skeleton';
 import CTA from '../../components/home/CTA';
@@ -14,6 +14,8 @@ const QuestionBankDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [searchTab, setSearchTab] = useState("Topics"); // Topics | Companies | Roles
+  const [visibleSkills, setVisibleSkills] = useState(8);
+  const [visibleCompanies, setVisibleCompanies] = useState(8);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -74,7 +76,7 @@ const QuestionBankDashboard = () => {
     if (n.includes('docker')) return 'logos:docker-icon';
     if (n.includes('kubernetes')) return 'logos:kubernetes';
     if (n.includes('aws')) return 'logos:aws';
-    if (n.includes('sql') || n.includes('db')) return 'logos:mysql';
+    if (n.includes('sql')) return 'logos:mysql';
     if (n.includes('mongodb')) return 'logos:mongodb-icon';
     if (n.includes('tailwind')) return 'logos:tailwindcss-icon';
     if (n.includes('figma')) return 'logos:figma';
@@ -231,9 +233,7 @@ const QuestionBankDashboard = () => {
             </h2>
             <p className="text-zinc-500 text-sm font-medium mt-1">Practice patterns from top-tier tech giants</p>
           </div>
-          <button onClick={() => navigate('/questions/list')} className="text-zinc-500 text-xs font-black flex items-center gap-2 hover:text-white transition-all uppercase tracking-widest">
-            EXPLORE ALL <FiArrowRight />
-          </button>
+          <span className="text-zinc-600 text-xs font-bold">{filteredSkills.length} tracks</span>
         </div>
 
         {loading ? (
@@ -249,7 +249,7 @@ const QuestionBankDashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredSkills.slice(0, 8).map((skill) => (
+            {filteredSkills.slice(0, visibleSkills).map((skill) => (
               <div
                 key={skill.name}
                 onClick={() => handleCardClick('skill', skill.name)}
@@ -289,6 +289,18 @@ const QuestionBankDashboard = () => {
             ))}
           </div>
         )}
+
+        {!loading && filteredSkills.length > visibleSkills && (
+          <div className="flex justify-center mt-10">
+            <button
+              onClick={() => setVisibleSkills(prev => prev + 8)}
+              className="group flex items-center gap-3 px-8 py-3 bg-zinc-900 border border-white/10 rounded-2xl text-sm font-bold text-zinc-400 hover:text-white hover:border-[#bef264]/30 hover:bg-zinc-800 transition-all active:scale-95"
+            >
+              Load More
+              <FiChevronDown className="group-hover:translate-y-0.5 transition-transform" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* --- MIDDLE AD --- */}
@@ -306,9 +318,7 @@ const QuestionBankDashboard = () => {
             </h2>
             <p className="text-zinc-500 text-sm font-medium mt-1">Practice patterns from top-tier tech giants</p>
           </div>
-          <button onClick={() => navigate('/questions/list')} className="text-zinc-500 text-xs font-black flex items-center gap-2 hover:text-white transition-all uppercase tracking-widest">
-            EXPLORE ALL <FiArrowRight />
-          </button>
+          <span className="text-zinc-600 text-xs font-bold">{stats.companies.length} companies</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -317,7 +327,7 @@ const QuestionBankDashboard = () => {
               <Skeleton key={i} className="h-72 w-full rounded-[32px]" />
             ))
           ) : (
-            stats.companies.slice(0, 8).map(company => (
+            stats.companies.slice(0, visibleCompanies).map(company => (
               <div
                 key={company.name}
                 onClick={() => handleCardClick('company', company.name)}
@@ -363,6 +373,18 @@ const QuestionBankDashboard = () => {
             ))
           )}
         </div>
+
+        {!loading && stats.companies.length > visibleCompanies && (
+          <div className="flex justify-center mt-10">
+            <button
+              onClick={() => setVisibleCompanies(prev => prev + 8)}
+              className="group flex items-center gap-3 px-8 py-3 bg-zinc-900 border border-white/10 rounded-2xl text-sm font-bold text-zinc-400 hover:text-white hover:border-blue-500/30 hover:bg-zinc-800 transition-all active:scale-95"
+            >
+              Load More
+              <FiChevronDown className="group-hover:translate-y-0.5 transition-transform" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* --- BEHAVIORAL MASTERY --- */}

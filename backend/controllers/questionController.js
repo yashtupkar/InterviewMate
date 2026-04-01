@@ -114,14 +114,14 @@ exports.getAggregatedStats = async (req, res) => {
       Question.aggregate([
         { $match: defaultQuery },
         { $unwind: "$skills" },
-        { $unwind: { path: "$domains", preserveNullAndEmptyArrays: true } }, // Associate skills with their domains (if any)
         { 
           $group: {
-            _id: { skill: "$skills", domain: "$domains" },
+            _id: "$skills",
             totalQuestions: { $sum: 1 },
             codingQuestions: {
               $sum: { $cond: [{ $eq: ["$type", "coding"] }, 1, 0] }
-            }
+            },
+            domains: { $addToSet: { $arrayElemAt: ["$domains", 0] } }
           }
         },
         { $sort: { "totalQuestions": -1 } }
@@ -156,8 +156,8 @@ exports.getAggregatedStats = async (req, res) => {
       success: true,
       data: {
         skills: skillsAgg.map(s => ({
-          name: s._id.skill,
-          domain: s._id.domain,
+          name: s._id,
+          domain: (s.domains || []).filter(Boolean)[0] || null,
           totalQuestions: s.totalQuestions,
           codingQuestions: s.codingQuestions
         })),
