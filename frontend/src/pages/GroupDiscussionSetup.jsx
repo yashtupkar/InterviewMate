@@ -15,6 +15,7 @@ import {
   FiMessageSquare,
   FiShuffle,
   FiCreditCard,
+  FiEdit,
 } from "react-icons/fi";
 import { AppContext } from "../context/AppContext";
 
@@ -73,6 +74,7 @@ const GroupDiscussionSetup = () => {
   const [prepTime, setPrepTime] = useState(false);
   const [micReady, setMicReady] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [customTopic, setCustomTopic] = useState("");
   const { backend_URL } = useContext(AppContext);
   const { getToken } = useAuth();
   const navigate = useNavigate();
@@ -142,7 +144,8 @@ const GroupDiscussionSetup = () => {
         `${backend_URL}/api/group-discussion/start`,
         {
           category: selectedCategory,
-          topicIndex: selectedTopicIdx,
+          topicIndex: selectedTopicIdx === "custom" ? null : selectedTopicIdx,
+          customTopic: selectedTopicIdx === "custom" ? customTopic : null,
           timeLimit: timeLimit * 60, // convert to seconds
           prepTime,
         },
@@ -419,6 +422,40 @@ const GroupDiscussionSetup = () => {
                         }
                       />
                     </button>
+
+                    {/* Custom Topic Option */}
+                    <button
+                      onClick={() => setSelectedTopicIdx("custom")}
+                      className={`w-full text-left px-4 py-3 rounded-xl transition-all mb-1 flex items-center justify-between group ${
+                        selectedTopicIdx === "custom"
+                          ? "bg-[#bef264] text-black font-black"
+                          : "text-zinc-400 bg-zinc-800 hover:bg-zinc-900 hover:text-white font-bold"
+                      }`}
+                    >
+                      <span className="text-[12px] font-black uppercase tracking-widest">
+                        Custom Topic
+                      </span>
+                      <FiEdit
+                        size={14}
+                        className={
+                          selectedTopicIdx === "custom"
+                            ? "text-black"
+                            : "text-[#bef264] opacity-50"
+                        }
+                      />
+                    </button>
+
+                    {selectedTopicIdx === "custom" && (
+                      <div className="p-3 animate-fade-in">
+                        <textarea
+                          value={customTopic}
+                          onChange={(e) => setCustomTopic(e.target.value)}
+                          placeholder="Type your custom topic here..."
+                          className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded-xl text-white text-[12px] focus:ring-1 focus:ring-[#bef264] outline-none resize-none"
+                          rows="3"
+                        />
+                      </div>
+                    )}
 
                     <div className="h-px bg-zinc-800 mx-2 my-1" />
 

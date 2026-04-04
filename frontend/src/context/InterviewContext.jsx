@@ -5,7 +5,7 @@ const InterviewContext = createContext();
 export const InterviewProvider = ({ children }) => {
   const [interviewData, setInterviewData] = useState({
     interviewType: "technical",
-    role: "Software Engineer",
+    role: "",
     level: "Junior",
     content: "",
     agentName: "",

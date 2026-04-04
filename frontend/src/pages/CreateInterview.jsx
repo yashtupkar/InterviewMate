@@ -11,6 +11,8 @@ import {
   FiLoader,
   FiShield,
   FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
   FiZap,
   FiArrowRight,
   FiCreditCard,
@@ -21,6 +23,19 @@ import { useInterview } from "../context/InterviewContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
 
 import { interviewAgents } from "../constants/agents";
+
+const jobTitles = [
+  "Frontend Developer",
+  "Backend Developer",
+  "Fullstack Developer",
+  "Data Analyst",
+  "Data Scientist",
+  "DevOps Engineer",
+  "Product Manager",
+  "UI/UX Designer",
+  "Mobile Developer",
+  "Software Engineer",
+];
 
 const CreateInterview = () => {
   const {
@@ -99,6 +114,7 @@ const CreateInterview = () => {
 
   const localVideoRef = useRef(null);
   const experienceDropdownRef = useRef(null);
+  const jobTitleSliderRef = useRef(null);
   const navigate = useNavigate();
 
   const [subscription, setSubscription] = useState(null);
@@ -248,6 +264,17 @@ const CreateInterview = () => {
     }
   };
 
+  const scrollSlider = (direction) => {
+    if (jobTitleSliderRef.current) {
+      const scrollAmount = 200;
+      jobTitleSliderRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+
   const toggleVideo = () => setIsCameraEnabled(!isCameraEnabled);
 
   return (
@@ -377,6 +404,44 @@ const CreateInterview = () => {
                   placeholder="e.g. Frontend Developer"
                   className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none text-[13px] font-bold placeholder-gray-600 shadow-sm"
                 />
+                
+                {/* Job Title Suggestions Slider */}
+                <div className="relative group/slider">
+                  <div 
+                    ref={jobTitleSliderRef}
+                    className="flex gap-2 overflow-x-auto mx-4 scrollbar-none no-scrollbar snap-x snap-mandatory"
+                  >
+                    {jobTitles.map((title) => (
+                      <button
+                        key={title}
+                        onClick={() => handleInputChange({ target: { name: "role", value: title } })}
+                        className={`whitespace-nowrap px-4 py-2 rounded-full border text-[11px] font-bold transition-all cursor-pointer snap-start ${
+                          interviewData.role === title
+                            ? "bg-[#bef264]/10 border-[#bef264] text-[#bef264] shadow-[0_0_15px_-3px_rgba(190,242,100,0.2)]"
+                            : "bg-zinc-800 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-zinc-300"
+                        }`}
+                      >
+                        {title}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Left Scroll Button */}
+                  <button
+                    onClick={() => scrollSlider("left")}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-7 h-7  rounded-full flex items-center justify-center  text-[#bef264] bg-zinc-800 border border-[#bef264] transition-all   z-10 shadow-xl"
+                  >
+                    <FiChevronLeft size={16} />
+                  </button>
+                  
+                  {/* Right Scroll Button */}
+                  <button
+                    onClick={() => scrollSlider("right")}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 w-7 h-7  rounded-full flex items-center justify-center  text-[#bef264] bg-zinc-800 border border-[#bef264] transition-all  z-10 shadow-xl"
+                  >
+                    <FiChevronRight size={16} />
+                  </button>
+                </div>
               </div>
 
               <hr className="dark:border-white/5 border-black/5" />

@@ -162,7 +162,7 @@ function pickNextAgent(agents, lastSpeakerName) {
  */
 const startGDSession = async (req, res) => {
   try {
-    const { category = "general", topicIndex, timeLimit = 600, prepTime = false } = req.body;
+    const { category = "general", topicIndex, customTopic, timeLimit = 600, prepTime = false } = req.body;
     const userId = req.user?._id;
     if (!userId) return res.status(401).json({ message: "User not authenticated" });
 
@@ -179,17 +179,25 @@ const startGDSession = async (req, res) => {
     // User successfully paid 8 credits to enter
     const hasBalance = true; // Legacy variable bypass
 
-    const topicPool = GD_TOPICS[category] || GD_TOPICS.general;
-    const selectedTopic =
-      topicIndex !== null && topicIndex !== undefined
-        ? topicPool[topicIndex] || topicPool[Math.floor(Math.random() * topicPool.length)]
-        : topicPool[Math.floor(Math.random() * topicPool.length)];
+    let topicText, topicDescription;
+    if (customTopic && customTopic.trim()) {
+      topicText = customTopic.trim();
+      topicDescription = "Custom user-provided topic";
+    } else {
+      const topicPool = GD_TOPICS[category] || GD_TOPICS.general;
+      const selectedTopic =
+        topicIndex !== null && topicIndex !== undefined
+          ? topicPool[topicIndex] || topicPool[Math.floor(Math.random() * topicPool.length)]
+          : topicPool[Math.floor(Math.random() * topicPool.length)];
+      topicText = selectedTopic.topic;
+      topicDescription = selectedTopic.description;
+    }
 
     const agents = pickAgents(4);
 
     const session = new GDSession({
       userId,
-      topic: selectedTopic.topic,
+      topic: topicText,
       category,
       agents,
       status: "active",
@@ -202,8 +210,8 @@ const startGDSession = async (req, res) => {
 
     res.status(200).json({
       sessionId: session._id,
-      topic: selectedTopic.topic,
-      description: selectedTopic.description,
+      topic: topicText,
+      description: topicDescription,
       category,
       agents,
       prepTime,
