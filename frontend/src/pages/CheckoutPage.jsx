@@ -70,10 +70,16 @@ const CheckoutPage = () => {
 
     const getTierName = (id) => {
         if (!id) return 'Premium';
+        const topupMap = {
+            'quick_boost': 'Quick Boost',
+            'power_pack': 'Power Pack',
+            'pro_master': 'Pro Master',
+            'student_test': 'Test Pack'
+        };
+        if (topupMap[id]) return topupMap[id];
         if (id.includes('student_flash')) return 'Student Flash';
         if (id.includes('placement_pro')) return 'Placement Pro';
         if (id.includes('infinite_elite')) return 'Infinite Elite';
-        if (['quick_boost', 'power_pack', 'pro_master', 'student_test'].includes(id)) return 'Credit Topup';
         return 'Premium Plan';
     };
 

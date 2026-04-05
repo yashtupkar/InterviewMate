@@ -32,14 +32,29 @@ const CreditService = {
         amount = 5; // Flat 5 credits for Resume/LinkedIn
       }
 
-      if (sub.credits < amount) {
-        return { success: false, message: "Insufficient credits", needed: amount, available: sub.credits };
+      const totalAvailable = (sub.credits || 0) + (sub.topupCredits || 0);
+
+      if (totalAvailable < amount) {
+        return { success: false, message: "Insufficient credits", needed: amount, available: totalAvailable };
       }
 
-      sub.credits -= amount;
+      // Deduct from main credits first
+      if (sub.credits >= amount) {
+        sub.credits -= amount;
+      } else {
+        const remainder = amount - sub.credits;
+        sub.credits = 0;
+        sub.topupCredits = (sub.topupCredits || 0) - remainder;
+      }
+
       await sub.save();
 
-      return { success: true, amount, remaining: sub.credits };
+      return { 
+        success: true, 
+        amount, 
+        remaining: sub.credits, 
+        topupRemaining: sub.topupCredits 
+      };
     } catch (error) {
       console.error("CreditService Error:", error);
       return { success: false, message: error.message };
@@ -56,11 +71,12 @@ const CreditService = {
     if (user.subscription.tier === "Infinite Elite" && service !== "tools") return true;
 
     let minAmount = 0;
-    if (service === "mock_interview") minAmount = minMinutes * 0.5;
-    else if (service === "gd_session") minAmount = minMinutes * 0.3;
-    else if (service === "tools") minAmount = 2;
+    if (service === "mock_interview") minAmount = 10; // Flat costs match deduct logic
+    else if (service === "gd_session") minAmount = 8;
+    else if (service === "tools") minAmount = 5;
 
-    return user.subscription.credits >= minAmount;
+    const totalAvailable = (user.subscription.credits || 0) + (user.subscription.topupCredits || 0);
+    return totalAvailable >= minAmount;
   }
 };
 

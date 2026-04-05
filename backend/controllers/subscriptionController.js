@@ -115,6 +115,7 @@ const getSubscriptionStatus = async (req, res) => {
         res.json({
             tier: subscription.tier,
             credits: subscription.credits,
+            topupCredits: subscription.topupCredits || 0,
             role: user.role, // Added role
             limits: TIER_LIMITS[subscription.tier] || TIER_LIMITS.Free,
             planExpiry: subscription.planExpiry,
@@ -290,6 +291,7 @@ const verifyPayment = async (req, res) => {
         res.json({
             success: true,
             tier: subscription.tier,
+            planName: plan.planName, // Return the actual plan name for UI/Invoices
             credits: subscription.credits,
             planExpiry: subscription.planExpiry,
             planId: order.planId,
@@ -535,22 +537,39 @@ const internalDeductCredits = async (clerkId, amount, service) => {
     // Custom Logic for ATS Scanner
     if (service === 'ats_scanner') {
         if (subscription.tier === 'Placement Pro' || subscription.tier === 'Infinite Elite') {
-            return { success: true, message: 'ATS Scan included in your plan', credits: subscription.credits };
+            return { success: true, message: 'ATS Scan included in your plan', credits: subscription.credits, topupCredits: subscription.topupCredits };
         }
         finalAmount = 5; // Fixed cost for Free/Flash
     }
 
     if (subscription.tier === 'Infinite Elite' && service !== 'tools' && service !== 'ats_scanner') {
-        return { success: true, message: `Unlimited credits for ${service} on Infinite Elite`, credits: subscription.credits };
+        return { success: true, message: `Unlimited credits for ${service} on Infinite Elite`, credits: subscription.credits, topupCredits: subscription.topupCredits };
     }
 
-    if (subscription.credits < finalAmount) {
-        throw Object.assign(new Error(`Insufficient credits for ${service}. Need ${finalAmount}, have ${subscription.credits.toFixed(1)}`), { statusCode: 400 });
+    const totalAvailable = (subscription.credits || 0) + (subscription.topupCredits || 0);
+
+    if (totalAvailable < finalAmount) {
+        throw Object.assign(new Error(`Insufficient credits for ${service}. Need ${finalAmount}, have ${totalAvailable.toFixed(1)}`), { statusCode: 400 });
     }
 
-    subscription.credits -= finalAmount;
+    // Deduct from main credits first
+    if (subscription.credits >= finalAmount) {
+        subscription.credits -= finalAmount;
+    } else {
+        // Use all main credits and deduct remainder from topup credits
+        const remainder = finalAmount - subscription.credits;
+        subscription.credits = 0;
+        subscription.topupCredits -= remainder;
+    }
+
     await subscription.save();
-    return { success: true, message: 'Credits deducted', credits: subscription.credits, deducted: finalAmount };
+    return { 
+        success: true, 
+        message: 'Credits deducted', 
+        credits: subscription.credits, 
+        topupCredits: subscription.topupCredits,
+        deducted: finalAmount 
+    };
 };
 
 // ─── POST /subscription/cancel ───────────────────────────────────────────────
@@ -609,6 +628,7 @@ const cancelSubscription = async (req, res) => {
             subscription.tier = 'Free';
             subscription.credits = (subscription.leftoverFreeCredits > 0) ? subscription.leftoverFreeCredits : 25;
             subscription.leftoverFreeCredits = 0;
+            subscription.topupCredits = 0; // Remove top-ups on cancellation
             subscription.planExpiry = null;
             subscription.billingCycle = null;
             
@@ -650,8 +670,8 @@ const deductCredits = async (req, res) => {
 // ─── Internal helper: apply plan config to subscription ───────────────────────
 async function applyPlanToSubscription(subscription, plan) {
     if (plan.isTopup) {
-        // Top-ups: add delta credits, don't change tier
-        subscription.credits += plan.creditDelta;
+        // Top-ups: add to separate pool, don't change tier
+        subscription.topupCredits = (subscription.topupCredits || 0) + plan.creditDelta;
     } else {
         // Plan purchase: set tier + reset credits + set expiry
         

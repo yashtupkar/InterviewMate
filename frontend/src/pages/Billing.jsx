@@ -11,6 +11,7 @@ import {
   FiLoader, 
   FiMail, 
   FiArrowRight, 
+  FiArrowLeft,
   FiAlertCircle, 
   FiRotateCcw, 
   FiPrinter, 
@@ -36,7 +37,10 @@ const Billing = () => {
     const [cancelling, setCancelling] = useState(false);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     
-    // Status State
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil((subscription?.paymentHistory?.length || 0) / itemsPerPage);
     
     // ── Fetch subscription status ──────────────────────────────────────────────
     const fetchSubscription = useCallback(async () => {
@@ -178,8 +182,41 @@ const Billing = () => {
                            </div>
                         </div>
 
-                        {/* RIGHT CARD: Action Card */}
-                        <div className="bg-zinc-900 border border-white/5 rounded-3xl p-6 flex flex-col group hover:border-white/10 transition-all duration-300">
+                        {/* TOP-UP CARD (Conditional) */}
+                        {subscription?.topupCredits > 0 && (
+                            <div className="bg-zinc-800 border-2 border-[#bef264]/20 rounded-3xl p-6 flex flex-col justify-between group hover:border-[#bef264]/40 transition-all duration-300 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 px-4 py-1 bg-[#bef264] text-black text-[8px] font-black uppercase tracking-widest rounded-bl-xl"> Active Top-up </div>
+                                <div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="text-xl font-bold">Active Top-up Pack</h3>
+                                        <div className="p-2 bg-[#bef264]/10 rounded-xl text-[#bef264]">
+                                            <FiPlus className="w-5 h-5" />
+                                        </div>
+                                    </div>
+                                    <p className="text-zinc-500 text-sm mb-8">
+                                        Extra credits pool for your interview prep. No expiry.
+                                    </p>
+
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center text-xs font-bold">
+                                            <span className="text-white uppercase tracking-wider">{Math.round(subscription?.topupCredits)} Credits Available</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-[#bef264] rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(190,242,100,0.4)]"
+                                                style={{ width: '100%' }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-8 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                    <FiActivity className="w-3 h-3 text-[#bef264]" /> Ready to use
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ACTION CARD: Buy/Upgrade */}
+                        <div className={`bg-zinc-900 border border-white/5 rounded-3xl p-6 flex flex-col group hover:border-white/10 transition-all duration-300 ${subscription?.topupCredits > 0 ? 'lg:col-span-2' : ''}`}>
                             {subscription?.tier === 'Free' ? (
                                 <>
                                     <h3 className="text-xl font-bold mb-2">Upgrade to Premium</h3>
@@ -247,9 +284,7 @@ const Billing = () => {
                                 <h2 className="text-2xl font-black tracking-tight mb-2">Invoices</h2>
                                 <p className="text-zinc-500 text-sm font-medium">Access and download all your previous transactions.</p>
                             </div>
-                            <button className="flex items-center gap-2 px-5 py-2.5 bg-transparent border border-white/10 hover:border-white/30 rounded-xl text-xs font-bold transition-all">
-                                <FiDownload className="w-4 h-4" /> Download All
-                            </button>
+                          
                         </div>
 
                         <div className="bg-zinc-900 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
@@ -267,7 +302,9 @@ const Billing = () => {
                                     </thead>
                                     <tbody className="text-sm font-medium">
                                         {subscription?.paymentHistory?.length > 0 ? (
-                                            subscription.paymentHistory.map((order, idx) => (
+                                            subscription.paymentHistory
+                                                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                                                .map((order, idx) => (
                                                 <tr key={idx} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                                                     <td className="px-8 py-6">
                                                         <div className="flex items-center gap-3">
@@ -311,6 +348,31 @@ const Billing = () => {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination Controls */}
+                            {totalPages > 1 && (
+                                <div className="px-8 py-5 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                                    <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                                        Page {currentPage} of {totalPages}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            disabled={currentPage === 1}
+                                            onClick={() => setCurrentPage(prev => prev - 1)}
+                                            className="p-2 bg-white/5 border border-white/5 rounded-lg text-zinc-400 hover:text-white hover:border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            <FiArrowLeft className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            disabled={currentPage === totalPages}
+                                            onClick={() => setCurrentPage(prev => prev + 1)}
+                                            className="p-2 bg-white/5 border border-white/5 rounded-lg text-zinc-400 hover:text-white hover:border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                                        >
+                                            <FiArrowRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -351,7 +413,7 @@ const Billing = () => {
                 description={
                     subscription?.refundEligible 
                         ? "You are within the 24-hour refund window. By cancelling, you will receive a full refund and your account will revert to the Free tier immediately."
-                        : `Your ${subscription?.tier} plan will end immediately. You will lose access to premium AI features and unused credits.`
+                        : `Your ${subscription?.tier} plan will end immediately. You will lose access to premium AI features and any unused credits${subscription?.topupCredits > 0 ? ' (including active top-up packs)' : ''}.`
                 }
                 maxWidth="max-w-md"
             >
@@ -364,7 +426,9 @@ const Billing = () => {
                                 <p className="text-zinc-500 text-[11px] font-medium leading-relaxed">
                                     {subscription?.refundEligible 
                                         ? "Refunds typically take 5-7 business days to reflect in your source account. No further charges will occur."
-                                        : "This action is immediate. We recommend using your remaining credits before cancelling your plan."}
+                                        : subscription?.topupCredits > 0 
+                                            ? `Cancellation will result in the immediate forfeiture of ${Math.round(subscription.topupCredits)} top-up credits. We recommend using them first.`
+                                            : "This action is immediate. We recommend using your remaining credits before cancelling your plan."}
                                 </p>
                             </div>
                         </div>

@@ -55,7 +55,7 @@ const PaymentStatusContent = ({
             // Amount in paise for the generator
             amount: resultData?.amount || (planId?.includes('student_flash') ? 19900 : planId?.includes('placement_pro') ? 49900 : planId?.includes('infinite_elite') ? 89900 : 4900),
             planId: planId,
-            planName: tier || (planId?.includes('boost') ? 'Quick Boost' : 'Premium Plan'),
+            planName: resultData?.planName || tier || (planId?.includes('boost') ? 'Quick Boost' : 'Premium Plan'),
             currency: 'INR'
         };
         return base;

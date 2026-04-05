@@ -23,6 +23,10 @@ const subscriptionSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    topupCredits: {
+        type: Number,
+        default: 0
+    },
     billingCycle: {
         type: String,
         enum: ['monthly', 'yearly', null],
