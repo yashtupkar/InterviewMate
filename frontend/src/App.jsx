@@ -42,6 +42,7 @@ import QuestionBankList from "./pages/QuestionBank/QuestionBankList";
 import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
 import AdminRoute from "./components/AdminRoute";
 import SeedQuestions from "./pages/adminScreens/SeedQuestions";
+import CheckoutPage from "./pages/CheckoutPage";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -331,6 +332,8 @@ function App() {
           <Route path="/billing" element={<InterviewLayout />}>
             <Route index element={<Billing />} />
           </Route>
+
+          <Route path="/checkout" element={<CheckoutPage />} />
 
           <Route path="/referrals" element={<InterviewLayout />}>
             <Route index element={<Referrals />} />

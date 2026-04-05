@@ -1,6 +1,9 @@
 const Resume = require("../models/Resume");
 const ApiError = require("../utils/ApiError");
 const mongoose = require("mongoose");
+const User = require("../models/User");
+const Subscription = require("../models/Subscription");
+const { TIER_LIMITS } = require("./subscriptionController");
 
 exports.getAllResumes = async (req, res, next) => {
   try {
@@ -72,7 +75,18 @@ exports.saveResume = async (req, res, next) => {
         { returnDocument: "after", runValidators: true, context: "query" },
       );
     } else {
-      // Create new resume
+      // Create new resume - Check Limit First
+      const user = await User.findOne({ clerkId }).populate('subscription');
+      if (!user) return next(new ApiError(404, "User not found."));
+      
+      const tier = user.subscription?.tier || 'Free';
+      const limit = TIER_LIMITS[tier]?.resumeLimit || 1;
+      
+      const count = await Resume.countDocuments({ clerkId });
+      if (count >= limit) {
+        return next(new ApiError(400, `Resume limit reached for ${tier} tier (${limit}). Please upgrade for more.`));
+      }
+
       resume = await Resume.create({ clerkId, ...updateData });
     }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import axios from 'axios';
@@ -28,6 +28,7 @@ import { FiCheck, FiZap, FiStar, FiPlus, FiLoader } from "react-icons/fi";
 // Components that are still needed as external (modal)
 import useRazorpay from '../hooks/useRazorpay';
 import PaymentStatusModal from '../components/modals/PaymentStatusModal';
+import PaymentStatusContent from '../components/common/PaymentStatusContent';
 import Background from '../components/common/Background';
 import WaitlistSection from '../components/home/WaitlistSection';
 
@@ -60,12 +61,7 @@ const LandingHome = ({ backendStatus }) => {
   // Pricing Logic
   const [billingCycle, setBillingCycle] = useState("monthly");
   const [currentTier, setCurrentTier] = useState(null);
-  const [statusModal, setStatusModal] = useState({ 
-      isOpen: false, 
-      tier: '', 
-      status: 'success',
-      planId: null
-  });
+  const [loadingPlanId, setLoadingPlanId] = useState(null);
 
   const fetchTier = useCallback(async () => {
       if (!isSignedIn) return;
@@ -82,22 +78,12 @@ const LandingHome = ({ backendStatus }) => {
 
   useEffect(() => { fetchTier(); }, [fetchTier]);
 
-  const { initiatePayment, isLoading: paymentLoading } = useRazorpay({
-      onPaymentSuccess: (data) => {
-          fetchTier();
-          setStatusModal({ 
-              isOpen: true, 
-              status: 'success', 
-              tier: data?.tier || 'Pro', 
-              planId: data?.planId 
-          });
-      },
-      onPaymentFailure: () => {
-           setStatusModal({ isOpen: true, status: 'failure', tier: '', planId: null });
-      }
-  });
+  const { isLoading: paymentLoading } = useRazorpay();
 
-  const onPlanSelect = isSignedIn ? initiatePayment : null;
+  const onPlanSelect = isSignedIn ? (planId) => {
+    setLoadingPlanId(planId);
+    navigate(`/checkout?planId=${planId}&redirectBack=${window.location.pathname}`);
+  } : null;
 
   useEffect(() => {
     if (location.hash === "#pricing") {
@@ -355,14 +341,6 @@ const LandingHome = ({ backendStatus }) => {
         <title>PlaceMateAI | Single Page Home</title>
       </Helmet>
       
-      <PaymentStatusModal 
-          isOpen={statusModal.isOpen} 
-          onClose={() => setStatusModal({ ...statusModal, isOpen: false })}
-          tier={statusModal.tier}
-          status={statusModal.status}
-          planId={statusModal.planId}
-      />
-
       <div className="min-h-screen overflow-x-hidden selection:bg-indigo-500/30 text-white font-sans bg-[#080808]">
         
         {/* Background Component */}
@@ -611,7 +589,7 @@ const LandingHome = ({ backendStatus }) => {
                   {isSignedIn ? (
                     <button
                       onClick={() => handlePlanClick(plan)}
-                      disabled={paymentLoading || isCurrentPlan(plan)}
+                      disabled={loadingPlanId === getPlanId(plan) || isCurrentPlan(plan)}
                       className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2 ${
                         isCurrentPlan(plan)
                         ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
@@ -620,7 +598,7 @@ const LandingHome = ({ backendStatus }) => {
                         : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
                       } disabled:opacity-60`}
                     >
-                      {paymentLoading && !isCurrentPlan(plan) ? (
+                      {loadingPlanId === getPlanId(plan) ? (
                         <FiLoader className="animate-spin w-4 h-4" />
                       ) : null}
                       {getButtonLabel(plan)}

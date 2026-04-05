@@ -2,10 +2,11 @@ const pdfParse = require('pdf-parse');
 const AtsScore = require('../models/AtsScore');
 const { scoreResumeWithAI } = require('../services/atsService');
 const ApiError = require('../utils/ApiError');
+const { internalDeductCredits } = require('./subscriptionController');
 
 exports.scoreResume = async (req, res, next) => {
     try {
-        const { clerkId } = req.body; // or req.user.clerkId if auth middleware is used
+        const clerkId = req.user?.clerkId;
         const { jobDescription } = req.body;
         const file = req.file;
 
@@ -28,6 +29,15 @@ exports.scoreResume = async (req, res, next) => {
 
         if (!resumeText || resumeText.trim().length === 0) {
             return next(new ApiError(400, "No text could be extracted from the PDF."));
+        }
+
+        // 1.5 Deduct Credits (if clerkId provided)
+        if (clerkId) {
+            try {
+                await internalDeductCredits(clerkId, 5, 'ats_scanner');
+            } catch (error) {
+                return next(new ApiError(error.statusCode || 400, error.message));
+            }
         }
 
         // 2. Analyze with AI (OpenRouter)

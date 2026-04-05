@@ -14,10 +14,14 @@ const subscriptionSchema = new mongoose.Schema({
     },
     credits: {
         type: Number,
-        default: 25
+        default: 30
     },
     planExpiry: {
         type: Date
+    },
+    leftoverFreeCredits: {
+        type: Number,
+        default: 0
     },
     billingCycle: {
         type: String,

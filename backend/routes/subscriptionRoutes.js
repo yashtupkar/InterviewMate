@@ -7,9 +7,8 @@ const {
     createOrder,
     verifyPayment,
     requestRefund,
-    deductInterviewCredit,
-    deductGdCredit,
     deductCredits,
+    cancelSubscription,
 } = require('../controllers/subscriptionController');
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
@@ -54,9 +53,8 @@ router.get('/status', ClerkExpressRequireAuth(), getSubscriptionStatus);
 router.post('/create-order',    ClerkExpressRequireAuth(), createOrder);
 router.post('/verify-payment',  ClerkExpressRequireAuth(), verifyPayment);
 router.post('/request-refund',  ClerkExpressRequireAuth(), requestRefund);
+router.post('/cancel',          ClerkExpressRequireAuth(), cancelSubscription);
 
-router.post('/deduct-interview', ClerkExpressRequireAuth(), deductInterviewCredit);
-router.post('/deduct-gd',        ClerkExpressRequireAuth(), deductGdCredit);
 router.post('/deduct-credits',   ClerkExpressRequireAuth(), deductCredits);
 
 module.exports = router;

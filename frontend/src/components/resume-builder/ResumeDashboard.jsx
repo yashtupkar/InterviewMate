@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
+import axios from "axios";
 import { useResume, TEMPLATE_THEMES } from "../../context/ResumeContext";
 import UniversalPopup from "../common/UniversalPopup";
 import {
@@ -20,7 +22,7 @@ import { Link } from "react-router-dom";
 import { FiPlusCircle } from "react-icons/fi";
 import { Download, Edit2, MoreVertical, Trash2 } from "lucide-react";
 
-const UpgradeModal = ({ isOpen, onClose }) => {
+const UpgradeModal = ({ isOpen, onClose, limit, tier }) => {
   return (
     <UniversalPopup
       isOpen={isOpen}
@@ -39,18 +41,18 @@ const UpgradeModal = ({ isOpen, onClose }) => {
 
       <div className="flex flex-col items-start p-2 pr-12">
         <h2 className="text-2xl font-black text-white mb-4 tracking-tight leading-tight">
-          Need more than <br /> two resume?
+          Reached your <br /> {tier} limit?
         </h2>
 
         <p className="text-zinc-400 text-sm font-medium mb-10 leading-relaxed pr-4">
-          Your free plan includes only two resume. Upgrade to create another.
+          Your {tier} plan allows up to {limit} {limit === 1 ? 'resume' : 'resumes'}. Upgrade to create more.
         </p>
 
         <button
           className="bg-[#bef264] hover:bg-[#d9ff96] text-black px-4 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-3 shadow-lg shadow-lime-400/10 active:scale-[0.98]"
           onClick={() => (window.location.href = "/pricing")}
         >
-          Discover our plans <span className="transform -rotate-12">🚀</span>
+          Upgrade Plan <span className="transform -rotate-12">🚀</span>
         </button>
       </div>
     </UniversalPopup>
@@ -101,10 +103,30 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
 
 const ResumeDashboard = ({ onNew, onEdit }) => {
   const { resumes, isLoading, deleteResume } = useResume();
-  const [view, setView] = React.useState("dashboard"); // 'dashboard' or 'templates'
-  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
-  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
-  const [deletingId, setDeletingId] = React.useState(null);
+  const [view, setView] = useState("dashboard"); // 'dashboard' or 'templates'
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [userTier, setUserTier] = useState({ tier: 'Free', limit: 1 });
+  const { getToken, isSignedIn } = useAuth();
+
+  useEffect(() => {
+    const fetchTier = async () => {
+      if (!isSignedIn) return;
+      try {
+        const token = await getToken();
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const tier = res.data.tier;
+        const limit = res.data.limits?.resumeLimit || 1;
+        setUserTier({ tier, limit });
+      } catch (err) {
+        console.error("Failed to fetch tier:", err);
+      }
+    };
+    fetchTier();
+  }, [getToken, isSignedIn]);
 
   if (isLoading && resumes.length === 0) {
     return (
@@ -204,9 +226,9 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
             <span className="text-[#bef264] italic">ATS Friendly</span> Resumes
           </h1>
           <p className="text-zinc-500 font-medium text-md mt-4">
-            Your first resume is free forever. Need more than two resume?{" "}
-            <Link to={"/pricing"} className="text-lime-400 hover:underline">
-              Upgrade your plan
+            Create professional, ATS-optimized resumes in minutes. Current Tier: <span className="text-white font-bold">{userTier.tier}</span> ({resumes.length}/{userTier.limit} Used)
+            <Link to={"/pricing"} className="text-lime-400 hover:underline ml-2">
+              Upgrade plan
             </Link>
           </p>
         </header>
@@ -215,7 +237,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
           {/* New Resume Card (Matches image style) */}
           <button
             onClick={() => {
-              if (resumes.length >= 2) {
+              if (resumes.length >= userTier.limit) {
                 setShowUpgradeModal(true);
               } else {
                 setView("templates");
@@ -300,6 +322,8 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
+        tier={userTier.tier}
+        limit={userTier.limit}
       />
 
       <DeleteConfirmationModal

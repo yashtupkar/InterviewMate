@@ -7,8 +7,27 @@ const {
     verifyPaymentSignature,
     verifyWebhookSignature,
     issueRefund,
+    fetchPaymentDetails,
 } = require('../services/razorpayService');
 const mongoose = require('mongoose');
+
+// ─── Helper: check and handle plan expiry ─────────────────────────────────────
+const checkSubscriptionExpiry = async (subscription) => {
+    if (subscription.tier !== 'Free' && subscription.planExpiry && new Date() > new Date(subscription.planExpiry)) {
+        console.log(`[Subscription] Plan expired for user ${subscription.user}. Reverting to Free tier.`);
+        
+        // Restore leftover free credits or default to 30
+        subscription.credits = subscription.leftoverFreeCredits > 0 ? subscription.leftoverFreeCredits : 30;
+        subscription.leftoverFreeCredits = 0; // Reset after restoration
+        
+        subscription.tier = 'Free';
+        subscription.planExpiry = null;
+        subscription.billingCycle = null;
+        await subscription.save();
+        return true; // Expired and updated
+    }
+    return false; // Not expired
+};
 
 // ─── Helper: ensure user + subscription exist ─────────────────────────────────
 const ensureSubscription = async (clerkId) => {
@@ -22,30 +41,31 @@ const ensureSubscription = async (clerkId) => {
         await user.save();
     }
 
-    // Migration Handler: Convert legacy credit object to unified credits
-    // Mongoose might return NaN or skip the field if type mismatch (Object vs Number)
-    if (subscription.credits === undefined || isNaN(subscription.credits) || typeof subscription.credits !== 'number') {
-        const rawSub = await mongoose.connection.db.collection('subscriptions').findOne({ _id: subscription._id });
-        if (rawSub && rawSub.credits && typeof rawSub.credits === 'object') {
-            const old = rawSub.credits;
-            // Generous conversion: 1 Interview = 10 Cr, 1 GD = 8 Cr, 1 min TalkTime = 0.5 Cr
-            const migratedCredits = (old.interviews || 0) * 10 + (old.gdSessions || 0) * 6 + (old.talkTime || 0) * 0.5;
-            subscription.credits = Math.max(migratedCredits, 25);
-            await subscription.save();
-        } else if (subscription.credits === undefined || isNaN(subscription.credits)) {
-            subscription.credits = 25;
-            await subscription.save();
-        }
-    }
+    // Check for plan expiry whenever subscription is accessed
+    await checkSubscriptionExpiry(subscription);
 
     return { user, subscription };
 };
 
 const TIER_LIMITS = {
-    Free: { credits: 25 },
-    'Student Flash': { credits: 200 },
-    'Placement Pro': { credits: 600 },
-    'Infinite Elite': { credits: 1200 },
+    Free: { credits: 30, resumeLimit: 1 },
+    'Student Flash': { credits: 200, resumeLimit: 4 },
+    'Placement Pro': { credits: 600, resumeLimit: Infinity },
+    'Infinite Elite': { credits: 1200, resumeLimit: Infinity },
+};
+
+// ─── Helper: extract payment metadata ─────────────────────────────────────────
+const extractPaymentDetails = (payment) => {
+    if (!payment) return null;
+    const details = { method: payment.method };
+    if (payment.method === 'card' && payment.card) {
+        details.cardNetwork = payment.card.network;
+        details.cardLast4 = payment.card.last4;
+        details.cardExpiry = `${String(payment.card.expiry_month).padStart(2, '0')}/${payment.card.expiry_year}`;
+    } else if (payment.method === 'upi') {
+        details.vpa = payment.vpa;
+    }
+    return details;
 };
 
 // ─── GET /subscription/status ─────────────────────────────────────────────────
@@ -74,16 +94,37 @@ const getSubscriptionStatus = async (req, res) => {
             }
         }
 
+        // Calculate current plan price from PLAN_CONFIG
+        let planKey = Object.keys(PLAN_CONFIG).find(key => 
+            PLAN_CONFIG[key].tier === subscription.tier && 
+            PLAN_CONFIG[key].billingCycle === subscription.billingCycle
+        );
+
+        // Fallback: If billingCycle is null, find the first matching tier
+        if (!planKey && subscription.tier !== 'Free') {
+            planKey = Object.keys(PLAN_CONFIG).find(key => PLAN_CONFIG[key].tier === subscription.tier);
+            // Repair the data if found
+            if (planKey) {
+                subscription.billingCycle = PLAN_CONFIG[planKey].billingCycle;
+                await subscription.save();
+            }
+        }
+
+        const currentPlanAmount = planKey ? PLAN_CONFIG[planKey].amountPaise / 100 : 0;
+
         res.json({
             tier: subscription.tier,
             credits: subscription.credits,
+            role: user.role, // Added role
             limits: TIER_LIMITS[subscription.tier] || TIER_LIMITS.Free,
             planExpiry: subscription.planExpiry,
             billingCycle: subscription.billingCycle,
             lastPaymentAt: subscription.lastPaymentAt,
             paymentHistory: subscription.paymentHistory,
+            currentPaymentMethod: subscription.paymentHistory?.find(o => o.status === 'paid')?.paymentDetails || null,
             refundEligible,
             refundEligibleUntil,
+            currentPlanAmount, // Added currentPlanAmount
         });
     } catch (error) {
         const status = error.statusCode || 500;
@@ -233,7 +274,15 @@ const verifyPayment = async (req, res) => {
         if (!subscription.paymentHistory.includes(order._id)) {
             subscription.paymentHistory.push(order._id);
         }
+
+        // ── Fetch & Store Payment Details ──
+        const payment = await fetchPaymentDetails(razorpayPaymentId);
+        if (payment) {
+            order.paymentDetails = extractPaymentDetails(payment);
+        }
+
         await subscription.save({ session });
+        await order.save({ session });
 
         await session.commitTransaction();
         console.log(`[Payment] Verified + subscription upgraded: user=${user._id} plan=${order.planId}`);
@@ -243,7 +292,9 @@ const verifyPayment = async (req, res) => {
             tier: subscription.tier,
             credits: subscription.credits,
             planExpiry: subscription.planExpiry,
-            planId: order.planId, // included for UI personalization
+            planId: order.planId,
+            razorpayOrderId: order.razorpayOrderId,
+            razorpayPaymentId: order.razorpayPaymentId,
         });
     } catch (error) {
         await session.abortTransaction();
@@ -310,6 +361,13 @@ const handleRazorpayWebhook = async (req, res) => {
                 order.razorpayPaymentId = order.razorpayPaymentId || razorpayPaymentId;
                 order.status = 'paid';
                 order.webhookVerified = true;
+
+                // ── Fetch & Store Payment Details ──
+                const paymentDetails = await fetchPaymentDetails(razorpayPaymentId);
+                if (paymentDetails) {
+                    order.paymentDetails = extractPaymentDetails(paymentDetails);
+                }
+
                 await order.save({ session });
 
                 // If verifyPayment hasn't run yet, upgrade the subscription here!
@@ -469,43 +527,124 @@ const requestRefund = async (req, res) => {
 };
 
 // ─── POST /subscription/deduct-credits ────────────────────────────────────────
-const deductCredits = async (req, res) => {
+// ─── Helper: perform actual deduction ─────────────────────────────────────────
+const internalDeductCredits = async (clerkId, amount, service) => {
+    const { subscription } = await ensureSubscription(clerkId);
+    let finalAmount = amount;
+
+    // Custom Logic for ATS Scanner
+    if (service === 'ats_scanner') {
+        if (subscription.tier === 'Placement Pro' || subscription.tier === 'Infinite Elite') {
+            return { success: true, message: 'ATS Scan included in your plan', credits: subscription.credits };
+        }
+        finalAmount = 5; // Fixed cost for Free/Flash
+    }
+
+    if (subscription.tier === 'Infinite Elite' && service !== 'tools' && service !== 'ats_scanner') {
+        return { success: true, message: `Unlimited credits for ${service} on Infinite Elite`, credits: subscription.credits };
+    }
+
+    if (subscription.credits < finalAmount) {
+        throw Object.assign(new Error(`Insufficient credits for ${service}. Need ${finalAmount}, have ${subscription.credits.toFixed(1)}`), { statusCode: 400 });
+    }
+
+    subscription.credits -= finalAmount;
+    await subscription.save();
+    return { success: true, message: 'Credits deducted', credits: subscription.credits, deducted: finalAmount };
+};
+
+// ─── POST /subscription/cancel ───────────────────────────────────────────────
+// Handles both refund (if eligible) and manual cancellation (revert to Free).
+const cancelSubscription = async (req, res) => {
     try {
-        const { amount, service } = req.body;
-        const { subscription } = await ensureSubscription(req.auth.userId);
+        const { user, subscription } = await ensureSubscription(req.auth.userId);
 
-        if (subscription.tier === 'Infinite Elite' && service !== 'tools') {
-            return res.json({ message: `Unlimited credits for ${service} on Infinite Elite`, credits: subscription.credits });
+        if (subscription.tier === 'Free') {
+            return res.status(400).json({ message: 'You are already on the Free tier.' });
         }
 
-        if (subscription.credits < amount) {
-            return res.status(400).json({ message: `Insufficient credits for ${service}. Need ${amount}, have ${subscription.credits.toFixed(1)}` });
+        // 1. Check for refund eligibility (Same logic as status)
+        await subscription.populate({
+            path: 'paymentHistory',
+            match: { status: 'paid', billingCycle: { $ne: 'one_time' } },
+            options: { sort: { createdAt: -1 }, limit: 1 }
+        });
+
+        const latestPaidOrder = subscription.paymentHistory?.[0];
+        let refundEligible = false;
+        
+        if (latestPaidOrder) {
+            const hoursSincePurchase = (Date.now() - new Date(latestPaidOrder.createdAt).getTime()) / (1000 * 60 * 60);
+            const tierLimits = TIER_LIMITS[subscription.tier] || TIER_LIMITS.Free;
+            const usagePercent = ((tierLimits.credits - subscription.credits) / tierLimits.credits) * 100;
+            refundEligible = hoursSincePurchase < 24 && usagePercent < 10 && !latestPaidOrder.refund?.razorpayRefundId;
         }
 
-        subscription.credits -= amount;
-        await subscription.save();
-        res.json({ message: 'Credits deducted', credits: subscription.credits, deducted: amount });
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            if (refundEligible && latestPaidOrder.razorpayPaymentId) {
+                // Trigger real refund via Razorpay
+                const rzpRefund = await issueRefund(latestPaidOrder.razorpayPaymentId, latestPaidOrder.amount, {
+                    reason: 'user_cancelation',
+                    userId: user._id.toString(),
+                    orderId: latestPaidOrder._id.toString(),
+                });
+
+                latestPaidOrder.status = 'refunded';
+                latestPaidOrder.refund = {
+                    razorpayRefundId: rzpRefund.id,
+                    amount: rzpRefund.amount,
+                    initiatedAt: new Date(),
+                    reason: 'user_cancelation',
+                    status: 'pending',
+                };
+                await latestPaidOrder.save({ session });
+                console.log(`[Cancel] Refund initiated for order ${latestPaidOrder._id}`);
+            }
+
+            // Immediately Downgrade to Free
+            const priorTier = subscription.tier;
+            subscription.tier = 'Free';
+            subscription.credits = (subscription.leftoverFreeCredits > 0) ? subscription.leftoverFreeCredits : 25;
+            subscription.leftoverFreeCredits = 0;
+            subscription.planExpiry = null;
+            subscription.billingCycle = null;
+            
+            await subscription.save({ session });
+            await session.commitTransaction();
+
+            console.log(`[Cancel] User ${user._id} manually cancelled ${priorTier} tier. Refunded: ${refundEligible}`);
+
+            res.json({
+                success: true,
+                refunded: refundEligible,
+                message: refundEligible 
+                    ? 'Subscription cancelled and refund initiated successfully.' 
+                    : 'Subscription cancelled and account reverted to Free tier.'
+            });
+        } catch (e) {
+            await session.abortTransaction();
+            throw e;
+        } finally {
+            session.endSession();
+        }
     } catch (error) {
-        res.status(error.statusCode || 500).json({ message: error.message });
+        console.error('[Cancel] Error:', error);
+        res.status(error.statusCode || 500).json({ message: error.message || 'Failed to cancel subscription.' });
     }
 };
 
-// ─── Legacy Wrappers (Optional but usually good for backward compat) ──────────
-const deductInterviewCredit = async (req, res) => {
-    // Default to 20 min session (10 credits) if duration not provided
-    const { duration = 20 } = req.body;
-    const amount = duration * 0.5;
-    req.body.amount = amount;
-    req.body.service = 'mock_interview';
-    return deductCredits(req, res);
-};
-
-const deductGdCredit = async (req, res) => {
-    const { duration = 20 } = req.body;
-    const amount = duration * 0.3;
-    req.body.amount = amount;
-    req.body.service = 'gd_session';
-    return deductCredits(req, res);
+// ─── POST /subscription/deduct-credits ────────────────────────────────────────
+const deductCredits = async (req, res) => {
+    try {
+        const { amount, service } = req.body;
+        const result = await internalDeductCredits(req.auth.userId, amount, service);
+        res.json(result);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ message: error.message });
+    }
 };
 
 // ─── Internal helper: apply plan config to subscription ───────────────────────
@@ -515,10 +654,15 @@ async function applyPlanToSubscription(subscription, plan) {
         subscription.credits += plan.creditDelta;
     } else {
         // Plan purchase: set tier + reset credits + set expiry
+        
+        // If upgrading from Free, store current credits as leftover
+        if (subscription.tier === 'Free') {
+            subscription.leftoverFreeCredits = subscription.credits || 0;
+        }
+        
         subscription.tier = plan.tier;
-        // Logic: if they have credits left, we add them to the new plan credits?
-        // Or reset? pricing.md implies "Credits Provided". Let's ADD for better UX.
-        subscription.credits = (subscription.credits || 0) + plan.credits;
+        // Set credits exactly to new plan allowance (don't add old credits)
+        subscription.credits = plan.credits;
 
         const currentExpiry = subscription.planExpiry && subscription.planExpiry > new Date()
             ? subscription.planExpiry
@@ -533,7 +677,8 @@ module.exports = {
     verifyPayment,
     handleRazorpayWebhook,
     requestRefund,
-    deductInterviewCredit,
-    deductGdCredit,
+    cancelSubscription,
     deductCredits,
+    internalDeductCredits, // Exported for other controllers
+    TIER_LIMITS, // Exported for other controllers
 };

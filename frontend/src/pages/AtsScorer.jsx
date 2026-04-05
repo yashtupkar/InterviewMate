@@ -9,6 +9,7 @@ import { Briefcase } from 'lucide-react';
 import { FiArrowRight, FiShield, FiShare2 } from 'react-icons/fi';
 import { Helmet } from 'react-helmet-async';
 import { BsFillCloudUploadFill } from 'react-icons/bs';
+import { IoSparkles } from 'react-icons/io5';
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -143,6 +144,15 @@ const AtsScorer = () => {
                       </div>
 
                       <hr className="border-white/5" />
+
+                      {/* Credit Cost Info */}
+                      <div className="flex items-center justify-between px-2">
+                        <span className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest">Scanning Cost</span>
+                        <div className="flex items-center gap-1.5 bg-[#bef264]/10 px-3 py-1 rounded-full border border-[#bef264]/20">
+                          <IoSparkles className="text-[#bef264] text-xs" />
+                          <span className="text-[#bef264] text-[10px] font-black uppercase tracking-wider">5 Credits</span>
+                        </div>
+                      </div>
 
                       {/* Submit Button */}
                       <div className="pt-2">

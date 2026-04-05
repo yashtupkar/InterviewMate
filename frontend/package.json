@@ -19,6 +19,8 @@
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.14.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.577.0",
     "ogl": "^1.0.11",

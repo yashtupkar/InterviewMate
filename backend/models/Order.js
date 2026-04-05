@@ -92,6 +92,14 @@ const orderSchema = new mongoose.Schema({
         default: false
     },
 
+    // Metadata for frontend display (Masked card info, etc.)
+    paymentDetails: {
+        method: { type: String },         // card, upi, netbanking, etc.
+        cardNetwork: { type: String },    // Visa, Mastercard, etc.
+        cardLast4: { type: String },      // 1234
+        cardExpiry: { type: String },     // 05/2026
+    },
+
     // Prevents duplicate order creation for same user + plan in short window
     idempotencyKey: {
         type: String,

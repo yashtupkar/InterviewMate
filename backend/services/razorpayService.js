@@ -173,10 +173,24 @@ const issueRefund = async (razorpayPaymentId, amountPaise, notes = {}) => {
     return refund;
 };
 
+// ─── Fetch Payment Details ───────────────────────────────────────────────────
+// Fetches full payment entity from Razorpay API to extract card/upi metadata
+const fetchPaymentDetails = async (paymentId) => {
+    try {
+        const rzp = getRazorpay();
+        const payment = await rzp.payments.fetch(paymentId);
+        return payment;
+    } catch (err) {
+        console.error(`[Razorpay] Fetch payment ${paymentId} failed:`, err);
+        return null;
+    }
+};
+
 module.exports = {
     PLAN_CONFIG,
     createRazorpayOrder,
     verifyPaymentSignature,
     verifyWebhookSignature,
     issueRefund,
+    fetchPaymentDetails,
 };

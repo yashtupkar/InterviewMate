@@ -4,7 +4,94 @@ import { FiCheck, FiZap, FiStar, FiPlus, FiLoader } from "react-icons/fi";
 import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import useRazorpay from '../../hooks/useRazorpay';
-import PaymentStatusModal from '../modals/PaymentStatusModal';
+
+export const plans = [
+  {
+    name: "Student Flash",
+    monthlyPlanId: "student_flash_monthly",
+    yearlyPlanId: "student_flash_yearly",
+    monthlyPrice: "199",
+    yearlyPrice: "1,999",
+    credits: "200 Credits",
+    description: "Perfect for a quick preparation boost.",
+    features: [
+     
+      "Mock Interviews (10 Credits)",
+      "GD Sessions (8 Credits)",
+      "ATS Scanner (5 Credits)",
+      "Resume Builder (4 Resumes)",
+      "Expert AI Feedback",
+      "Practice Coding Problems",
+      "24/7 AI Mentor Access",
+    ],
+    recommended: false,
+  },
+  {
+    name: "Placement Pro",
+    monthlyPlanId: "placement_pro_monthly",
+    yearlyPlanId: "placement_pro_yearly",
+    monthlyPrice: "499",
+    yearlyPrice: "4,999",
+    credits: "600 Credits",
+    description: "Complete package for serious job seekers.",
+    features: [
+    
+      "Mock Interviews (10 Credits)",
+      "GD Sessions (8 Credits)",
+      "Unlimited ATS & Resumes",
+      "Expert AI Feedback",
+      "LinkedIn & Resume Tools",
+      "Priority AI Processing",
+      "Career Analytics Pro",
+      "Advanced Flash 2.0 AI",
+    ],
+    recommended: true,
+  },
+  {
+    name: "Infinite Elite",
+    monthlyPlanId: "infinite_elite_monthly",
+    yearlyPlanId: "infinite_elite_yearly",
+    monthlyPrice: "899",
+    yearlyPrice: "8,999",
+    credits: "1,200 Credits",
+    description: "The ultimate unlimited preparation experience.",
+    features: [
+   
+      "Mock Interviews (10 Credits)",
+      "GD Sessions (8 Credits)",
+      "Unlimited ATS & Resumes",
+      "LinkedIn & Resume Pro",
+      "WhatsApp Career Support",
+      "Early Access to Features",
+      "Expert AI Mock Reviews",
+    ],
+    recommended: false,
+  },
+  {
+    name: "Free",
+    monthlyPlanId: null,
+    yearlyPlanId: null,
+    monthlyPrice: "0",
+    yearlyPrice: "0",
+    credits: "30 Credits",
+    description: "Get started with PlaceMateAI.",
+    features: [
+      "Mock Interviews (10 Credits)", 
+      "GD Sessions (8 Credits)", 
+      "ATS Scanner (5 Credits)",
+      "Resume Builder (1 Resume)",
+      "Basic Feedback", 
+      "Practice Coding Problems"
+    ],
+    recommended: false,
+  },
+];
+
+export const topUps = [
+  { planId: "quick_boost", name: "Quick Boost", price: "29", credits: "30" },
+  { planId: "power_pack", name: "Power Pack", price: "49", credits: "70" },
+  { planId: "pro_master", name: "Pro Master", price: "99", credits: "200" },
+];
 
 /**
  * PricingSection
@@ -18,16 +105,12 @@ const PricingSection = ({
   showTopUps = false,
 }) => {
   const [billingCycle, setBillingCycle] = useState("monthly");
-  
+  const navigate = useNavigate();
+
   const { getToken, isSignedIn } = useAuth();
   const [currentTier, setCurrentTier] = useState(null);
-  const [statusModal, setStatusModal] = useState({ 
-      isOpen: false, 
-      tier: '', 
-      status: 'success',
-      planId: null
-  });
-
+  const [loadingPlanId, setLoadingPlanId] = useState(null);
+  
   const fetchTier = useCallback(async () => {
       if (!isSignedIn) return;
       try {
@@ -43,105 +126,9 @@ const PricingSection = ({
 
   useEffect(() => { fetchTier(); }, [fetchTier]);
 
-  const { initiatePayment, isLoading: paymentLoading } = useRazorpay({
-      onPaymentSuccess: (data) => {
-          fetchTier();
-          setStatusModal({ 
-              isOpen: true, 
-              status: 'success', 
-              tier: data?.tier || 'Pro', 
-              planId: data?.planId 
-          });
-      },
-      onPaymentFailure: () => {
-           setStatusModal({ isOpen: true, status: 'failure', tier: '', planId: null });
-      }
-  });
-
-  const onPlanSelect = isSignedIn ? initiatePayment : null;
-  const onTopUpSelect = isSignedIn ? initiatePayment : null;
-
-  const plans = [
-    {
-      name: "Student Flash",
-      monthlyPlanId: "student_flash_monthly",
-      yearlyPlanId: "student_flash_yearly",
-      monthlyPrice: "199",
-      yearlyPrice: "1,999",
-      credits: "200 Credits",
-      description: "Perfect for a quick preparation boost.",
-      features: [
-       
-        "Mock Interviews (10 Credits)",
-        "GD Sessions (8 Credits)",
-        "Expert AI Feedback",
-        "Practice Coding Problems",
-        "24/7 AI Mentor Access",
-      ],
-      recommended: false,
-    },
-    {
-      name: "Placement Pro",
-      monthlyPlanId: "placement_pro_monthly",
-      yearlyPlanId: "placement_pro_yearly",
-      monthlyPrice: "499",
-      yearlyPrice: "4,999",
-      credits: "600 Credits",
-      description: "Complete package for serious job seekers.",
-      features: [
-      
-        "Mock Interviews (10 Credits)",
-        "GD Sessions (8 Credits)",
-        "Expert AI Feedback",
-        "LinkedIn & Resume Tools",
-        "Priority AI Processing",
-        "Career Analytics Pro",
-        "Advanced Flash 2.0 AI",
-      ],
-      recommended: true,
-    },
-    {
-      name: "Infinite Elite",
-      monthlyPlanId: "infinite_elite_monthly",
-      yearlyPlanId: "infinite_elite_yearly",
-      monthlyPrice: "899",
-      yearlyPrice: "8,999",
-      credits: "1,200 Credits",
-      description: "The ultimate unlimited preparation experience.",
-      features: [
-     
-        "Mock Interviews (10 Credits)",
-        "GD Sessions (8 Credits)",
-        "LinkedIn & Resume Pro",
-        "WhatsApp Career Support",
-        "Early Access to Features",
-        "Expert AI Mock Reviews",
-      ],
-      recommended: false,
-    },
-    {
-      name: "Free",
-      monthlyPlanId: null,
-      yearlyPlanId: null,
-      monthlyPrice: "0",
-      yearlyPrice: "0",
-      credits: "30 Credits",
-      description: "Get started with PlaceMateAI.",
-      features: [
-        "Mock Interviews (10 Credits)", 
-        "GD Sessions (8 Credits)", 
-        "Basic Feedback", 
-        "Practice Coding Problems"
-      ],
-      recommended: false,
-    },
-  ];
-
-  const topUps = [
-    { planId: "quick_boost", name: "Quick Boost", price: "₹29", credits: "30 Credits" },
-    { planId: "power_pack", name: "Power Pack", price: "₹49", credits: "70 Credits" },
-    { planId: "pro_master", name: "Pro Master", price: "₹99", credits: "200 Credits" },
-  ];
+  // We still keep the hook for top-ups if needed, or we just redirect them as well.
+  // The user wants the popup on another route, so we'll redirect for EVERYTHING.
+  const { isLoading: paymentLoading } = useRazorpay();
 
   const getPlanId = (plan) =>
     billingCycle === "yearly" ? plan.yearlyPlanId : plan.monthlyPlanId;
@@ -158,20 +145,21 @@ const PricingSection = ({
   const handlePlanClick = (plan) => {
     const planId = getPlanId(plan);
     if (!planId || isFree(plan)) return;
-    if (onPlanSelect) {
-      onPlanSelect(planId);
-    }
+    
+    setLoadingPlanId(planId);
+    // Redirect to checkout route
+    const redirectBack = window.location.pathname;
+    navigate(`/checkout?planId=${planId}&redirectBack=${redirectBack}`);
+  };
+
+  const handleTopUpClick = (planId) => {
+      setLoadingPlanId(planId);
+      const redirectBack = window.location.pathname;
+      navigate(`/checkout?planId=${planId}&redirectBack=${redirectBack}`);
   };
 
   return (
     <section id="pricing" className="py-16 relative overflow-hidden">
-      <PaymentStatusModal 
-          isOpen={statusModal.isOpen} 
-          onClose={() => setStatusModal({ ...statusModal, isOpen: false })}
-          tier={statusModal.tier}
-          status={statusModal.status}
-          planId={statusModal.planId}
-      />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {showHeader && (
           <div className="text-center mb-12">
@@ -186,131 +174,124 @@ const PricingSection = ({
             </p>
 
             <div className="flex items-center justify-center gap-4 mb-8">
-              <button
-                onClick={() => setBillingCycle("monthly")}
-                className={`text-xs font-bold uppercase tracking-widest transition-colors ${billingCycle === "monthly" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingCycle(billingCycle === "monthly" ? "yearly" : "monthly")}
-                className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-zinc-800 ring-1 ring-white/10"
-                role="switch"
-                aria-checked={billingCycle === "yearly"}
-              >
-                <span
-                  style={{ transform: billingCycle === "yearly" ? "translateX(20px)" : "translateX(0px)" }}
-                  className="pointer-events-none inline-block h-5 w-5 rounded-full bg-[#bef264] shadow ring-0 transition-transform duration-200 ease-in-out"
-                />
-              </button>
-              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setBillingCycle("yearly")}
-                  className={`text-xs font-bold uppercase tracking-widest transition-colors ${billingCycle === "yearly" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+                    onClick={() => setBillingCycle("monthly")}
+                    className={`text-xs font-bold uppercase tracking-widest transition-colors ${billingCycle === "monthly" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
                 >
-                  Yearly
+                    Monthly
                 </button>
-                <span 
-                  onClick={() => setBillingCycle("yearly")}
-                  className="bg-[#bef264]/10 text-[#bef264] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter border border-[#bef264]/20 animate-pulse cursor-pointer"
+                <button
+                    type="button"
+                    onClick={() => setBillingCycle(billingCycle === "monthly" ? "yearly" : "monthly")}
+                    className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-zinc-800 ring-1 ring-white/10"
+                    role="switch"
+                    aria-checked={billingCycle === "yearly"}
                 >
-                  Save 20%
-                </span>
-              </div>
+                    <span
+                    style={{ transform: billingCycle === "yearly" ? "translateX(20px)" : "translateX(0px)" }}
+                    className="pointer-events-none inline-block h-5 w-5 rounded-full bg-[#bef264] shadow ring-0 transition-transform duration-200 ease-in-out"
+                    />
+                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                    onClick={() => setBillingCycle("yearly")}
+                    className={`text-xs font-bold uppercase tracking-widest transition-colors ${billingCycle === "yearly" ? "text-white" : "text-zinc-500 hover:text-zinc-300"}`}
+                    >
+                    Yearly
+                    </button>
+                    <span 
+                    onClick={() => setBillingCycle("yearly")}
+                    className="bg-[#bef264]/10 text-[#bef264] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter border border-[#bef264]/20 animate-pulse cursor-pointer"
+                    >
+                    Save 20%
+                    </span>
+                </div>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`relative p-6 rounded-[1.5rem] flex flex-col w-full max-w-[20rem] mx-auto md:mx-0 md:max-w-none ${plan.name === "Free" && "col-span-3 md:col-span-1 hidden"} transition-all duration-300 hover:translate-y-[-4px] ${plan.recommended
-                  ? "bg-[#121214] border-2 border-[#bef264] shadow-[0_0_40px_rgba(190,242,100,0.1)] scale-105 z-20"
-                  : "bg-[#121214] border border-white/5 shadow-xl"
-              }`}
-            >
-              {plan.name === "Free" && <span className="hidden"></span>}
-              {plan.name !== "Free" && (
-                <>
-                {plan.recommended && (
-                    <div className="absolute top-4 right-4">
-                    <span className="bg-[#bef264] text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        Recommended
-                    </span>
-                    </div>
-                )}
-                {/* {isCurrentPlan(plan) && (
-                    <div className="absolute top-4 left-4">
-                    <span className="bg-zinc-700 text-zinc-300 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        Current
-                    </span>
-                    </div>
-                )} */}
-
-                <div className="mb-6">
-                    <h4 className="text-lg font-bold text-white mb-1">{plan.name}</h4>
-                    <p className="text-zinc-400 text-xs h-10 leading-relaxed">{plan.description}</p>
-                </div>
-
-                <div className="mb-6">
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black text-white">
-                        ₹{billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+            {plans.map((plan) => (
+                <div
+                key={plan.name}
+                className={`relative p-6 rounded-[1.5rem] flex flex-col w-full max-w-[20rem] mx-auto md:mx-0 md:max-w-none ${plan.name === "Free" && "col-span-3 md:col-span-1 hidden"} transition-all duration-300 hover:translate-y-[-4px] ${plan.recommended
+                    ? "bg-[#121214] border-2 border-[#bef264] shadow-[0_0_40px_rgba(190,242,100,0.1)] scale-105 z-20"
+                    : "bg-[#121214] border border-white/5 shadow-xl"
+                }`}
+                >
+                {plan.name === "Free" && <span className="hidden"></span>}
+                {plan.name !== "Free" && (
+                    <>
+                    {plan.recommended && (
+                        <div className="absolute top-4 right-4">
+                        <span className="bg-[#bef264] text-black text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Recommended
                         </span>
-                        <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-                        /{billingCycle === "monthly" ? "mo" : "yr"}
-                        </span>
-                    </div>
-                    <div className="mt-1 text-[#bef264] text-[11px] font-black uppercase tracking-[0.1em] px-2 py-0.5 bg-[#bef264]/10 rounded-md w-fit">
-                        {plan.credits}
-                    </div>
-                </div>
+                        </div>
+                    )}
 
-                {onPlanSelect ? (
-                    <button
-                    onClick={() => handlePlanClick(plan)}
-                    disabled={paymentLoading || isCurrentPlan(plan)}
-                    className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2 ${
-                        isCurrentPlan(plan)
-                        ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
-                        : plan.recommended
-                        ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
-                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                    } disabled:opacity-60`}
-                    >
-                    {paymentLoading && !isCurrentPlan(plan) ? (
-                        <FiLoader className="animate-spin w-4 h-4" />
-                    ) : null}
-                    {getButtonLabel(plan)}
-                    </button>
-                ) : (
-                    <Link
-                    to="/sign-up"
-                    className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm ${
-                        plan.recommended
-                        ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
-                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                    }`}
-                    >
-                    Get {plan.name}
-                    </Link>
+                    <div className="mb-6">
+                        <h4 className="text-lg font-bold text-white mb-1">{plan.name}</h4>
+                        <p className="text-zinc-400 text-xs h-10 leading-relaxed">{plan.description}</p>
+                    </div>
+
+                    <div className="mb-6">
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-black text-white">
+                            ₹{billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                            </span>
+                            <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+                            /{billingCycle === "monthly" ? "mo" : "yr"}
+                            </span>
+                        </div>
+                        <div className="mt-1 text-[#bef264] text-[11px] font-black uppercase tracking-[0.1em] px-2 py-0.5 bg-[#bef264]/10 rounded-md w-fit">
+                            {plan.credits}
+                        </div>
+                    </div>
+
+                    {isSignedIn ? (
+                        <button
+                        onClick={() => handlePlanClick(plan)}
+                        disabled={loadingPlanId === getPlanId(plan) || isCurrentPlan(plan)}
+                        className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2 ${
+                            isCurrentPlan(plan)
+                            ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+                            : plan.recommended
+                            ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
+                            : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                        } disabled:opacity-60`}
+                        >
+                        {loadingPlanId === getPlanId(plan) ? (
+                            <FiLoader className="animate-spin w-4 h-4" />
+                        ) : null}
+                        {getButtonLabel(plan)}
+                        </button>
+                    ) : (
+                        <Link
+                        to="/sign-up"
+                        className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm ${
+                            plan.recommended
+                            ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
+                            : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                        }`}
+                        >
+                        Get {plan.name}
+                        </Link>
+                    )}
+
+                    <ul className="space-y-3 flex-grow">
+                        {plan.features.map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-3 text-zinc-400">
+                            <FiCheck className="w-4 h-4 text-[#bef264] flex-shrink-0" />
+                            <span className="text-xs font-medium">{feature}</span>
+                        </li>
+                        ))}
+                    </ul>
+                    </>
                 )}
-
-                <ul className="space-y-3 flex-grow">
-                    {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center gap-3 text-zinc-400">
-                        <FiCheck className="w-4 h-4 text-[#bef264] flex-shrink-0" />
-                        <span className="text-xs font-medium">{feature}</span>
-                    </li>
-                    ))}
-                </ul>
-                </>
-              )}
+                </div>
+            ))}
             </div>
-          ))}
-        </div>
 
         {showTopUps && (
           <div className="max-w-3xl mx-auto p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 text-center">
@@ -324,17 +305,18 @@ const PricingSection = ({
 
             <div className="flex flex-wrap justify-center gap-3">
               {topUps.map((item) =>
-                onTopUpSelect ? (
+                isSignedIn ? (
                   <button
                     key={item.planId}
-                    onClick={() => onTopUpSelect(item.planId)}
-                    disabled={paymentLoading}
-                    className="px-6 py-3 rounded-2xl bg-zinc-800/30 border border-white/5 hover:border-[#bef264]/30 transition-all cursor-pointer group/item flex flex-col items-center"
+                    onClick={() => handleTopUpClick(item.planId)}
+                    disabled={loadingPlanId === item.planId}
+                    className="px-6 py-3 rounded-2xl bg-zinc-800/30 border border-white/5 hover:border-[#bef264]/30 transition-all cursor-pointer group/item flex flex-col items-center disabled:opacity-50"
                   >
                     <div className="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-1 group-hover/item:text-zinc-400">
                       {item.name}
                     </div>
-                    <div className="text-[10px] font-black text-[#bef264]">
+                    <div className="text-[10px] font-black text-[#bef264] flex items-center gap-2">
+                      {loadingPlanId === item.planId && <FiLoader className="animate-spin w-3 h-3" />}
                       {item.price}
                     </div>
                     <div className="text-[8px] font-bold text-zinc-400 mt-1">
@@ -365,3 +347,4 @@ const PricingSection = ({
 };
 
 export default PricingSection;
+
