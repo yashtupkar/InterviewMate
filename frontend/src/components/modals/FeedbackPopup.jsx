@@ -1,36 +1,67 @@
 import React, { useState } from 'react';
 import UniversalPopup from '../common/UniversalPopup';
-import { FiStar, FiSend } from 'react-icons/fi';
+import { FiStar, FiSend, FiLoader } from 'react-icons/fi';
+import { useAuth } from '@clerk/clerk-react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
 /**
  * Example usage of UniversalPopup for a Feedback Form
  */
 const FeedbackPopup = ({ isOpen, onClose }) => {
+    const { getToken } = useAuth();
     const [rating, setRating] = useState(0);
     const [hover, setHover] = useState(0);
     const [feedback, setFeedback] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async () => {
+        if (rating === 0) return;
+        
+        setIsSubmitting(true);
+        try {
+            const token = await getToken();
+            await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/feedback`, 
+                { rating, feedback },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            
+            toast.success('Thank you for your feedback!');
+            onClose();
+            // Reset form
+            setRating(0);
+            setFeedback('');
+        } catch (error) {
+            console.error('Error submitting feedback:', error);
+            toast.error(error.response?.data?.message || 'Failed to submit feedback. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const footer = (
         <>
             <button 
                 onClick={onClose}
-                className="px-6 py-3 text-xs font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-white transition-all transform hover:scale-105 active:scale-95"
+                disabled={isSubmitting}
+                className="px-6 py-3 text-xs font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-white transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50"
             >
                 Cancel
             </button>
             <button 
-                onClick={() => {
-                    console.log('Sending feedback:', { rating, feedback });
-                    onClose();
-                }}
+                onClick={handleSubmit}
                 className={`px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_10px_20px_rgba(190,242,100,0.15)]
-                    ${rating > 0 
+                    ${rating > 0 && !isSubmitting
                         ? 'bg-[#bef264] text-black hover:bg-[#d9ff96]' 
                         : 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'}`}
-                disabled={rating === 0}
+                disabled={rating === 0 || isSubmitting}
             >
-                <FiSend className="w-4 h-4" />
-                Send
+                {isSubmitting ? (
+                    <FiLoader className="w-4 h-4 animate-spin" />
+                ) : (
+                    <FiSend className="w-4 h-4" />
+                )}
+                {isSubmitting ? 'Sending...' : 'Send'}
             </button>
         </>
     );

@@ -6,6 +6,7 @@ import FAQ from '../components/home/FAQ';
 import CTA from '../components/home/CTA';
 import toast from 'react-hot-toast';
 import SocialLinks from '../components/common/SocialLinks';
+import axios from 'axios';
 
 const Contact = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -25,12 +26,19 @@ const Contact = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/contact`, formData);
+      
       toast.success("Message sent successfully! We'll get back to you soon.");
       setFormData({
         name: '',
@@ -39,8 +47,12 @@ const Contact = () => {
         phone: '',
         message: ''
       });
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      toast.error(error.response?.data?.message || 'Failed to send message. Please try again later.');
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   const contactInfo = [

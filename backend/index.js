@@ -16,6 +16,8 @@ const atsRoutes = require('./routes/ats.route');
 const resumeRoutes = require('./routes/resume.route');
 const waitlistRoutes = require('./routes/waitlistRoutes');
 const questionRoutes = require('./routes/questionRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 
 // Connect to Database
 connectDB();
@@ -45,6 +47,8 @@ app.use('/api/ats', atsRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/waitlist', waitlistRoutes);
 app.use('/api/questions', questionRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

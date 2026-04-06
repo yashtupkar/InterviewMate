@@ -211,7 +211,7 @@ const QuestionBankDashboard = () => {
         </div>
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-           {["DSA", "System Design", "Machine Learning", "Behavioral"].map(topic => (
+           {["Frontend", "System-Design", "Machine-Learning", "Behavioral"].map(topic => (
              <button 
                key={topic}
                onClick={() => navigate(`/questions/list?domain=${topic.toLowerCase()}`)}
