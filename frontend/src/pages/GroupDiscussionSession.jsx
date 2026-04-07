@@ -5,7 +5,12 @@ import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 import {
-  FiMic, FiMicOff, FiPhoneOff, FiUser, FiMessageSquare, FiClock,
+  FiMic,
+  FiMicOff,
+  FiPhoneOff,
+  FiUser,
+  FiMessageSquare,
+  FiClock,
   FiInfo,
   FiLoader,
   FiArrowRight,
@@ -13,6 +18,7 @@ import {
 } from "react-icons/fi";
 import { AppContext } from "../context/AppContext";
 import { interviewAgents } from "../constants/agents";
+import usePollyTTS from "../hooks/usePollyTTS";
 
 const AGENT_COLORS = interviewAgents.reduce((acc, agent) => {
   acc[agent.name] = `#${agent.bg}`;
@@ -26,57 +32,75 @@ const AGENT_IMAGES = interviewAgents.reduce((acc, agent) => {
 
 const FALLBACK_MAX_GD_TIME = 600; // 10 minutes
 
-// ─── TTS helper ──────────────────────────────────────────────────────────────
-function speakText(text, agentName, onDone) {
+// ─── TTS helper: Uses AWS Polly with optional pre-fetched audio ───────────────
+function speakText(
+  text,
+  agentName,
+  onDone,
+  backend_URL,
+  prefetchedAudioBase64 = null,
+) {
   return new Promise((resolve) => {
-    if (!window.speechSynthesis) { onDone?.(); resolve(); return; }
+    if (!text || !text.trim()) {
+      onDone?.();
+      resolve();
+      return;
+    }
 
-    window.speechSynthesis.cancel();
+    (async () => {
+      try {
+        let audioBase64 = prefetchedAudioBase64;
 
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.volume = 1;
+        // If no pre-fetched audio, generate it now
+        if (!audioBase64) {
+          const response = await axios.post(
+            `${backend_URL}/api/tts/generate`,
+            {
+              text: text.trim(),
+              voiceId: agentName,
+              engine: "neural",
+            },
+            { timeout: 30000 },
+          );
 
-    const go = () => {
-      const voices = window.speechSynthesis.getVoices();
-      
-      const agent = interviewAgents.find(a => a.name === agentName) || interviewAgents.find(a => a.name === "Sophia");
-      const config = agent.browserVoiceConfig;
+          if (!response.data.success) {
+            throw new Error(response.data.message || "TTS generation failed");
+          }
+          audioBase64 = response.data.audioBase64;
+        }
 
-      if (!config) {
+        // Create audio element and play
+        const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+        audio.volume = 1.0;
+
+        // Return Promise that resolves when audio finishes
+        return new Promise((resolveAudio) => {
+          audio.onended = () => {
+            onDone?.();
+            resolveAudio();
+            resolve();
+          };
+
+          audio.onerror = (err) => {
+            console.error("Audio playback error:", err);
+            onDone?.();
+            resolveAudio();
+            resolve();
+          };
+
+          audio.play().catch((err) => {
+            console.error("Failed to start audio playback:", err);
+            onDone?.();
+            resolveAudio();
+            resolve();
+          });
+        });
+      } catch (error) {
+        console.error("TTS error:", error);
         onDone?.();
         resolve();
-        return;
       }
-
-      // Find best matching voice from config keywords
-      let voice = null;
-      for (const kw of config.keywords) {
-        voice = voices.find(v => v.name.includes(kw) && v.lang.includes("en"));
-        if (voice) break;
-      }
-
-      // Final Fallback by gender
-      if (!voice) {
-        voice = voices.find(v => (config.gender === 'female' ? (v.name.includes("Female") || v.name.includes("Zira")) : (v.name.includes("Male") || v.name.includes("David"))) && v.lang.includes("en"));
-      }
-
-      if (!voice) voice = voices.find(v => v.lang.includes("en"));
-
-      if (voice) utter.voice = voice;
-
-      const variance = (Math.random() * 0.04) - 0.02;
-      utter.rate = config.rate + variance;
-      utter.pitch = config.pitch + variance;
-
-      utter.onend = utter.onerror = () => { onDone?.(); resolve(); };
-      window.speechSynthesis.speak(utter);
-    };
-
-    if (window.speechSynthesis.getVoices().length > 0) {
-      go();
-    } else {
-      window.speechSynthesis.onvoiceschanged = go;
-    }
+    })();
   });
 }
 
@@ -111,36 +135,42 @@ export default function GroupDiscussionSession() {
   const [isEnding, setIsEnding] = useState(false);
   const [liveText, setLiveText] = useState("");
   const [isConcludingPhase, setIsConcludingPhase] = useState(false);
-  const [invigilatorMessage, setInvigilatorMessage] = useState(`Your GD topic is "${topic}". Let's start now.`);
+  const [invigilatorMessage, setInvigilatorMessage] = useState(
+    `Your GD topic is "${topic}". Let's start now.`,
+  );
   const [invigilatorStatus, setInvigilatorStatus] = useState("start"); // start, active, concluding
   const [invTimer, setInvTimer] = useState(45); // countdown for conclusion
   const [prepCountdown, setPrepCountdown] = useState(60); // 1 minute prep
   const [showPrepModal, setShowPrepModal] = useState(meta.prepTime || false);
 
   // ── Stable refs (never trigger re-renders, always fresh in callbacks) ─────
-  const aliveRef = useRef(true);   // session still running
-  const busyRef = useRef(false);  // agent is thinking or speaking (API call + TTS)
+  const aliveRef = useRef(true); // session still running
+  const busyRef = useRef(false); // agent is thinking or speaking (API call + TTS)
   const agentSpeakingRef = useRef(false); // TRUE ONLY during actual TTS
-  const userSpeakingRef = useRef(false);  // mirror of isUserSpeaking state
-  const lastUserSpeechRef = useRef(0);    // timestamp of last user activity
+  const userSpeakingRef = useRef(false); // mirror of isUserSpeaking state
+  const lastUserSpeechRef = useRef(0); // timestamp of last user activity
   const mutedRef = useRef(false);
-  const lastSpkRef = useRef(null);   // last agent name who spoke
-  const recRef = useRef(null);   // SpeechRecognition instance
-  const recognitionRef = recRef;         // alias for clarity
-  const proTimRef = useRef(null);   // proactive timer
-  const silTimRef = useRef(null);   // user-silence timer
-  const openedRef = useRef(false);  // opening turn fired
+  const lastSpkRef = useRef(null); // last agent name who spoke
+  const recRef = useRef(null); // SpeechRecognition instance
+  const recognitionRef = recRef; // alias for clarity
+  const proTimRef = useRef(null); // proactive timer
+  const silTimRef = useRef(null); // user-silence timer
+  const openedRef = useRef(false); // opening turn fired
   const concludedRef = useRef(false); // conclusion triggered
-  const transcriptRef = useRef([]);     // mirror of transcript for closures
+  const transcriptRef = useRef([]); // mirror of transcript for closures
   const prefetchedTurnRef = useRef(null); // stores { agent, text } pre-fetched
-  const endRef = useRef(null);   // scroll anchor
+  const endRef = useRef(null); // scroll anchor
   const conclusionPendingRef = useRef(false); // track wrap-up if user speaks while busy
   const prepTimerRef = useRef(null);
   const openTimerRef = useRef(null); // Ref for AI opening timer
+  const openingAudioReadyRef = useRef(false); // Audio for opening turn is pre-generated and ready
+  const prefetchedAudioRef = useRef(null); // stores pre-generated audio base64 for next turn
 
   // get a fresh auth token inside callbacks
   const getTokenRef = useRef(getToken);
-  useEffect(() => { getTokenRef.current = getToken; }, [getToken]);
+  useEffect(() => {
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -155,7 +185,9 @@ export default function GroupDiscussionSession() {
               console.log("🕒 Time limit reached. Triggering auto-conclusion.");
               runAgentTurnRef.current({ endpoint: "conclude" });
             } else {
-              console.log("🕒 Time limit reached but AI is busy. Queuing auto-conclusion.");
+              console.log(
+                "🕒 Time limit reached but AI is busy. Queuing auto-conclusion.",
+              );
               conclusionPendingRef.current = true;
             }
           }
@@ -185,6 +217,7 @@ export default function GroupDiscussionSession() {
     setInvTimer(45);
     // CRITICAL: Clear pre-fetched regular turns so they don't block the conclusion!
     prefetchedTurnRef.current = null;
+    prefetchedAudioRef.current = null; // Clear stale audio
     // START pre-fetching the conclusion immediately so it's ready for silence detection
     prefetchNextTurn(lastSpkRef.current);
   };
@@ -200,15 +233,23 @@ export default function GroupDiscussionSession() {
   // ── Core: run one agent turn ──────────────────────────────────────────────
   // This is a plain async function stored in a ref — no stale-closure issues.
   const runAgentTurnRef = useRef(null);
-  runAgentTurnRef.current = async ({ endpoint = "next-turn", body = {} } = {}) => {
+  runAgentTurnRef.current = async ({
+    endpoint = "next-turn",
+    body = {},
+  } = {}) => {
     if (!aliveRef.current) return;
     if (concludedRef.current && endpoint !== "conclude") return;
 
     // HARD OVERRIDE: If we are in the concluding phase, force the endpoint to "conclude"
     // to prevent agents from adding follow-up points after the warning.
     let finalEndpoint = endpoint;
-    if (isConcludingPhase && (endpoint === "next-turn" || endpoint === "proactive")) {
-      console.log("🎯 Overriding regular turn to 'conclude' during warning phase.");
+    if (
+      isConcludingPhase &&
+      (endpoint === "next-turn" || endpoint === "proactive")
+    ) {
+      console.log(
+        "🎯 Overriding regular turn to 'conclude' during warning phase.",
+      );
       finalEndpoint = "conclude";
     }
 
@@ -233,13 +274,18 @@ export default function GroupDiscussionSession() {
     let turnData = null;
 
     // 1. Check if we have a pre-fetched turn
-    if (endpoint === "next-turn" && body.proactive && prefetchedTurnRef.current) {
+    if (
+      (endpoint === "next-turn" || endpoint === "opening") &&
+      prefetchedTurnRef.current
+    ) {
       // If we are concluding, verify it's a conclusion turn (usually shouldn't be here)
-      if (isConcludingPhase) {
-        console.log("🚫 Concluding phase: Discarding pre-fetched regular turn for wrap-up priority.");
+      if (isConcludingPhase && endpoint === "next-turn") {
+        console.log(
+          "🚫 Concluding phase: Discarding pre-fetched regular turn for wrap-up priority.",
+        );
         prefetchedTurnRef.current = null;
+        prefetchedAudioRef.current = null; // Clear stale audio for old turn
       } else {
-        console.log("⚡ Found pre-fetched turn! Consuming instantly.");
         turnData = prefetchedTurnRef.current;
         prefetchedTurnRef.current = null;
       }
@@ -253,7 +299,7 @@ export default function GroupDiscussionSession() {
         await axios.post(
           `${backend_URL}/api/group-discussion/add-user-message`,
           { sessionId, text: body.userMessage },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
       } catch (err) {
         console.warn("Failed to manual-save user message:", err.message);
@@ -267,8 +313,13 @@ export default function GroupDiscussionSession() {
         const token = await getTokenRef.current();
         const res = await axios.post(
           `${backend_URL}/api/group-discussion/${finalEndpoint}`,
-          { sessionId, lastSpeaker: lastSpkRef.current, skipSave: true, ...body },
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            sessionId,
+            lastSpeaker: lastSpkRef.current,
+            skipSave: true,
+            ...body,
+          },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         turnData = res.data;
 
@@ -276,7 +327,9 @@ export default function GroupDiscussionSession() {
         // If the invigilator warning started while we were thinking about a normal point,
         // discard this result so we can trigger a proper conclusion turn instead.
         if (isConcludingPhase && finalEndpoint !== "conclude") {
-          console.log("🛑 Phase changed to concluding during thinking. Aborting regular turn.");
+          console.log(
+            "🛑 Phase changed to concluding during thinking. Aborting regular turn.",
+          );
           setIsThinking(false);
           busyRef.current = false;
           scheduleProactive(500); // Trigger a fresh turn (which will now be a conclusion)
@@ -286,7 +339,10 @@ export default function GroupDiscussionSession() {
         // ── SECOND INTERRUPTION CHECK ──
         // If the user started speaking while we were fetching the data, ABORT this turn!
         if (userSpeakingRef.current && !body.userMessage) {
-          console.log("🛑 User interrupted agent thinking. Discarding fetched turn.");
+          console.log(
+            "🛑 User interrupted agent thinking. Discarding fetched turn.",
+          );
+          prefetchedAudioRef.current = null; // Clear stale audio since we're aborting
           setIsThinking(false);
           busyRef.current = false;
           scheduleProactive(4000);
@@ -298,21 +354,28 @@ export default function GroupDiscussionSession() {
         setSpeakingAgent(null);
         busyRef.current = false;
         if (aliveRef.current && !mutedRef.current && recRef.current) {
-          try { recRef.current.start(); } catch (_) { }
+          try {
+            recRef.current.start();
+          } catch (_) {}
         }
         scheduleProactive(12000);
         return;
       }
     }
 
-    if (!aliveRef.current || !turnData) { busyRef.current = false; return; }
+    if (!aliveRef.current || !turnData) {
+      busyRef.current = false;
+      return;
+    }
 
     const { agent, text } = turnData;
     lastSpkRef.current = agent.name;
 
     const entry = {
-      id: Date.now(), speaker: agent.name,
-      role: "agent", text,
+      id: Date.now(),
+      speaker: agent.name,
+      role: "agent",
+      text,
       color: agent.color || AGENT_COLORS[agent.name] || "#6366f1",
     };
 
@@ -328,7 +391,7 @@ export default function GroupDiscussionSession() {
       await axios.post(
         `${backend_URL}/api/group-discussion/add-agent-message`,
         { sessionId, name: agent.name, text, personality: agent.personality },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
     } catch (err) {
       console.warn("Failed to save agent turn to DB:", err.message);
@@ -338,7 +401,9 @@ export default function GroupDiscussionSession() {
 
     // pause mic during TTS
     if (recRef.current && !mutedRef.current) {
-      try { recRef.current.stop(); } catch (_) { }
+      try {
+        recRef.current.stop();
+      } catch (_) {}
     }
 
     setSpeakingAgent(agent.name);
@@ -349,7 +414,11 @@ export default function GroupDiscussionSession() {
       prefetchNextTurn(agent.name);
     }
 
-    await speakText(text, agent.name, null);
+    // Get the pre-fetched audio (if available) to eliminate latency
+    const cachedAudio = prefetchedAudioRef.current;
+    prefetchedAudioRef.current = null; // Clear after using
+
+    await speakText(text, agent.name, null, backend_URL, cachedAudio);
 
     setSpeakingAgent(null);
     agentSpeakingRef.current = false;
@@ -357,7 +426,9 @@ export default function GroupDiscussionSession() {
 
     // resume mic
     if (aliveRef.current && !mutedRef.current && recRef.current) {
-      try { recRef.current.start(); } catch (_) { }
+      try {
+        recRef.current.start();
+      } catch (_) {}
     }
 
     // schedule next proactive turn unless we just concluded
@@ -375,27 +446,70 @@ export default function GroupDiscussionSession() {
     }
   };
 
-  // ── Background Pre-fetching ───────────────────────────────────────────────
+  // ── Background Pre-fetching with Audio Generation ───────────────────────────
+  async function prefetchAudio(text, agentName, isOpeningTurn = false) {
+    if (!text || !agentName) return;
+    try {
+      const response = await axios.post(
+        `${backend_URL}/api/tts/generate`,
+        {
+          text: text.trim(),
+          voiceId: agentName,
+          engine: "neural",
+        },
+        { timeout: 30000 },
+      );
+      if (response.data.success && aliveRef.current) {
+        prefetchedAudioRef.current = response.data.audioBase64;
+        // Mark opening audio as ready if this is the opening turn
+        if (isOpeningTurn) {
+          openingAudioReadyRef.current = true;
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `Failed pre-generating audio for ${agentName}:`,
+        err.message,
+      );
+      // Still mark opening as ready - let it fail gracefully
+      if (isOpeningTurn) {
+        openingAudioReadyRef.current = true;
+      }
+    }
+  }
+
   async function prefetchNextTurn(currentSpeaker) {
     if (prefetchedTurnRef.current || concludedRef.current) return;
 
     // During conclusion phase, we pre-fetch the "conclude" endpoint
     const endpoint = isConcludingPhase ? "conclude" : "next-turn";
 
-    console.log(`🔍 Pre-fetching ${endpoint} for next agent to follow ${currentSpeaker}...`);
+    console.log(
+      `🔍 Pre-fetching ${endpoint} for next agent to follow ${currentSpeaker}...`,
+    );
     try {
       const token = await getTokenRef.current();
       const res = await axios.post(
         `${backend_URL}/api/group-discussion/${endpoint}`,
-        { sessionId, lastSpeaker: currentSpeaker, proactive: true, skipSave: true },
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          sessionId,
+          lastSpeaker: currentSpeaker,
+          proactive: true,
+          skipSave: true,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (aliveRef.current) {
         prefetchedTurnRef.current = res.data;
-        console.log(`✅ Pre-fetch (${endpoint}) ready:`, res.data.agent.name);
+        // IMMEDIATELY start pre-generating audio for this turn
+        // This runs in parallel while current agent still speaks
+        prefetchAudio(res.data.text, res.data.agent.name).catch(() => {});
       }
     } catch (err) {
-      console.warn("Pre-fetch failed (will retry normally if needed):", err.message);
+      console.warn(
+        "Pre-fetch failed (will retry normally if needed):",
+        err.message,
+      );
     }
   }
 
@@ -408,9 +522,11 @@ export default function GroupDiscussionSession() {
     // Even if we have a response ready, give the user space
     const hasPre = !!prefetchedTurnRef.current;
 
-    // User floor protection: if pre-fetched, wait 2s - 3s. 
+    // User floor protection: if pre-fetched, wait 2s - 3s.
     // If concluding phase, we want to be more proactive to wrap up.
-    let d = delay ?? (hasPre ? 2000 + Math.random() * 1000 : 6000 + Math.random() * 5000);
+    let d =
+      delay ??
+      (hasPre ? 2000 + Math.random() * 1000 : 6000 + Math.random() * 5000);
 
     if (isConcludingPhase && !delay) {
       // If we have a pre-fetched conclusion, don't wait too long for the user.
@@ -418,10 +534,15 @@ export default function GroupDiscussionSession() {
       d = hasPre ? 3000 + Math.random() * 2000 : 6000 + Math.random() * 3000;
     }
 
-    console.log(`⏱ Scheduling turn in ${Math.round(d)}ms (${hasPre ? "Pre-fetched" : "Gap"}) ${isConcludingPhase ? "(Concluding Phase)" : ""}`);
+    console.log(
+      `⏱ Scheduling turn in ${Math.round(d)}ms (${hasPre ? "Pre-fetched" : "Gap"}) ${isConcludingPhase ? "(Concluding Phase)" : ""}`,
+    );
     proTimRef.current = setTimeout(() => {
       if (aliveRef.current && !busyRef.current && !userSpeakingRef.current) {
-        runAgentTurnRef.current({ endpoint: "next-turn", body: { proactive: true } });
+        runAgentTurnRef.current({
+          endpoint: "next-turn",
+          body: { proactive: true },
+        });
       } else if (userSpeakingRef.current) {
         // if user is speaking when timer fires, reschedule
         scheduleProactive(3000);
@@ -466,15 +587,19 @@ export default function GroupDiscussionSession() {
 
         // ── USER SPOKE: Cancel opening if it hasn't fired ──
         if (openTimerRef.current) {
-          console.log("🛑 User spoke before AI opener. Cancelling opening turn.");
+          console.log(
+            "🛑 User spoke before AI opener. Cancelling opening turn.",
+          );
           clearTimeout(openTimerRef.current);
           openTimerRef.current = null;
         }
 
-        // ── USER SPOKE: Invalidate pre-fetch ──
+        // ── USER SPOKE: Invalidate pre-fetch & clear stale audio ──
         if (prefetchedTurnRef.current) {
-          console.log("🚫 User spoke, invalidating pre-fetched turn.");
           prefetchedTurnRef.current = null;
+        }
+        if (prefetchedAudioRef.current) {
+          prefetchedAudioRef.current = null;
         }
 
         if (proTimRef.current) clearTimeout(proTimRef.current);
@@ -508,19 +633,30 @@ export default function GroupDiscussionSession() {
 
           if (spoken) {
             const userEntry = {
-              id: Date.now(), speaker: "You",
-              role: "user", text: spoken,
+              id: Date.now(),
+              speaker: "You",
+              role: "user",
+              text: spoken,
               color: "#22c55e",
             };
 
             // ── CHECK FOR USER CONCLUSION ──
             const lower = spoken.toLowerCase();
             const keywords = [
-              "conclusion", "conclude", "concluding", "wrap up", "wrapping up",
-              "final point", "thank you everyone", "that is all from my side",
-              "my conclusion", "summarize", "summarizing", "end the discussion"
+              "conclusion",
+              "conclude",
+              "concluding",
+              "wrap up",
+              "wrapping up",
+              "final point",
+              "thank you everyone",
+              "that is all from my side",
+              "my conclusion",
+              "summarize",
+              "summarizing",
+              "end the discussion",
             ];
-            const isUserConcluding = keywords.some(k => lower.includes(k));
+            const isUserConcluding = keywords.some((k) => lower.includes(k));
 
             if (isUserConcluding && !concludedRef.current) {
               concludedRef.current = true;
@@ -542,7 +678,7 @@ export default function GroupDiscussionSession() {
                   await axios.post(
                     `${backend_URL}/api/group-discussion/add-user-message`,
                     { sessionId, text: spoken },
-                    { headers: { Authorization: `Bearer ${token}` } }
+                    { headers: { Authorization: `Bearer ${token}` } },
                   );
                 } catch (err) {
                   console.error("Failed to save final message:", err);
@@ -577,7 +713,9 @@ export default function GroupDiscussionSession() {
 
       recognition.onend = () => {
         if (aliveRef.current && !mutedRef.current && !busyRef.current) {
-          try { recognition.start(); } catch (_) { }
+          try {
+            recognition.start();
+          } catch (_) {}
         }
       };
 
@@ -590,25 +728,75 @@ export default function GroupDiscussionSession() {
       }
     }
 
-    // ── Opening agent turn after 5s ──
+    // ── PRE-FETCH OPENING TURN IMMEDIATELY ON MOUNT ──
+    // This runs in parallel while we wait for the 1.5s timer
+    (async () => {
+      try {
+        const token = await getTokenRef.current();
+        const res = await axios.post(
+          `${backend_URL}/api/group-discussion/opening`,
+          { sessionId, skipSave: true },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (aliveRef.current && res.data) {
+          // Store it so runAgentTurn will use it instantly
+          prefetchedTurnRef.current = res.data;
+          // IMMEDIATELY start generating audio for the opening (mark as opening turn)
+          if (res.data.text && res.data.agent?.name) {
+            prefetchAudio(res.data.text, res.data.agent.name, true).catch(
+              () => {},
+            );
+          }
+        }
+      } catch (err) {
+        console.warn(
+          "Opening pre-fetch failed (will retry normally):",
+          err.message,
+        );
+        // Mark opening audio as ready even if pre-fetch failed
+        openingAudioReadyRef.current = true;
+      }
+    })();
+
+    // ── Opening agent turn after 1.5s ──
     openTimerRef.current = setTimeout(() => {
       if (!aliveRef.current || openedRef.current) return;
 
       // If preparation mode is on, don't start yet
       if (meta.prepTime) {
-        console.log("⏳ Prep mode active: delaying opening turn.");
         return;
       }
 
       openedRef.current = true;
       openTimerRef.current = null;
-      runAgentTurnRef.current({ endpoint: "opening", body: { skipSave: true } });
+
+      // ── WAIT for audio to be ready before playing ──
+      // If audio is still generating, wait a bit for it
+      const attemptPlay = async () => {
+        let waitAttempts = 0;
+        while (!openingAudioReadyRef.current && waitAttempts < 50) {
+          // Wait max 5s for audio (50 * 100ms)
+          await new Promise((r) => setTimeout(r, 100));
+          waitAttempts++;
+        }
+
+        if (!aliveRef.current) return;
+
+        runAgentTurnRef.current({
+          endpoint: "opening",
+          body: { skipSave: true },
+        });
+      };
+
+      attemptPlay().catch((err) => console.error("Opening turn error:", err));
 
       // After opening starts, transition invigilator status to "analyzing" after 10s
       setTimeout(() => {
         if (aliveRef.current && !isConcludingPhase) {
           setInvigilatorStatus("active");
-          setInvigilatorMessage("AI Invigilator is analyzing the discussion flow...");
+          setInvigilatorMessage(
+            "AI Invigilator is analyzing the discussion flow...",
+          );
         }
       }, 10000);
     }, 1500);
@@ -619,9 +807,11 @@ export default function GroupDiscussionSession() {
       if (prepTimerRef.current) clearInterval(prepTimerRef.current);
       if (proTimRef.current) clearTimeout(proTimRef.current);
       if (silTimRef.current) clearTimeout(silTimRef.current);
-      window.speechSynthesis?.cancel();
+      // TTS is now handled by AWS Polly (no need to cancel native speechSynthesis)
       if (recRef.current) {
-        try { recRef.current.stop(); } catch (_) { }
+        try {
+          recRef.current.stop();
+        } catch (_) {}
         recRef.current = null;
       }
     };
@@ -635,9 +825,13 @@ export default function GroupDiscussionSession() {
     setIsMuted(next);
     if (recRef.current) {
       if (next) {
-        try { recRef.current.stop(); } catch (_) { }
+        try {
+          recRef.current.stop();
+        } catch (_) {}
       } else {
-        try { recRef.current.start(); } catch (_) { }
+        try {
+          recRef.current.start();
+        } catch (_) {}
       }
     }
   };
@@ -649,7 +843,7 @@ export default function GroupDiscussionSession() {
         setPrepCountdown((prev) => {
           if (prev === 5) {
             // Trigger voice at 56s (4s remaining)
-            speakText("Start GD now", "Rohan", null);
+            speakText("Start GD now", "Rohan", null, backend_URL);
           }
           if (prev <= 1) {
             clearInterval(prepTimerRef.current);
@@ -673,12 +867,17 @@ export default function GroupDiscussionSession() {
     // 3. Start GD
     if (aliveRef.current && !openedRef.current) {
       openedRef.current = true;
-      runAgentTurnRef.current({ endpoint: "opening", body: { skipSave: true } });
+      runAgentTurnRef.current({
+        endpoint: "opening",
+        body: { skipSave: true },
+      });
 
       setTimeout(() => {
         if (aliveRef.current && !isConcludingPhase) {
           setInvigilatorStatus("active");
-          setInvigilatorMessage("AI Invigilator is analyzing the discussion flow...");
+          setInvigilatorMessage(
+            "AI Invigilator is analyzing the discussion flow...",
+          );
         }
       }, 10000);
     }
@@ -698,11 +897,13 @@ export default function GroupDiscussionSession() {
             </div>
 
             <h2 className="text-2xl md:text-4xl font-black text-white mb-4 tracking-tight leading-loose">
-              Prepare for: <span className="text-[#bef264] italic">"{topic}"</span>
+              Prepare for:{" "}
+              <span className="text-[#bef264] italic">"{topic}"</span>
             </h2>
 
             <p className="text-zinc-400 text-sm mb-12 font-medium leading-relaxed max-w-md mx-auto">
-              You have 1 minute to collect your thoughts and prepare your points. The GD will start automatically when the timer ends.
+              You have 1 minute to collect your thoughts and prepare your
+              points. The GD will start automatically when the timer ends.
             </p>
 
             <div className="relative w-48 h-48 mx-auto mb-10">
@@ -731,9 +932,11 @@ export default function GroupDiscussionSession() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-5xl font-black text-white tabular-nums">
-                  0:{String(prepCountdown).padStart(2, '0')}
+                  0:{String(prepCountdown).padStart(2, "0")}
                 </span>
-                <span className="text-[10px] font-black text-[#bef264] uppercase tracking-widest mt-1">Seconds Left</span>
+                <span className="text-[10px] font-black text-[#bef264] uppercase tracking-widest mt-1">
+                  Seconds Left
+                </span>
               </div>
             </div>
 
@@ -757,9 +960,11 @@ export default function GroupDiscussionSession() {
 
     if (proTimRef.current) clearTimeout(proTimRef.current);
     if (silTimRef.current) clearTimeout(silTimRef.current);
-    window.speechSynthesis?.cancel();
+    // TTS is now handled by AWS Polly (no need to cancel native speechSynthesis)
     if (recRef.current) {
-      try { recRef.current.stop(); } catch (_) { }
+      try {
+        recRef.current.stop();
+      } catch (_) {}
       recRef.current = null;
     }
 
@@ -768,7 +973,7 @@ export default function GroupDiscussionSession() {
       await axios.post(
         `${backend_URL}/api/group-discussion/generate-report`,
         { sessionId, duration },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setSessionEnded(true);
       setIsEnding(false);
@@ -784,8 +989,13 @@ export default function GroupDiscussionSession() {
     const on = speakingAgent === agent.name;
     const color = agent.color || AGENT_COLORS[agent.name] || "#6366f1";
     return (
-      <div className={`relative flex flex-col items-center gap-2 p-5 rounded-2xl border transition-all duration-500 overflow-hidden bg-zinc-900 backdrop-blur-md ${on ? "border-white/20 ring-1 ring-white/10 scale-[1.05] z-10 shadow-2xl" : "border-white/5 "
-        }`}>
+      <div
+        className={`relative flex flex-col items-center gap-2 p-5 rounded-2xl border transition-all duration-500 overflow-hidden bg-zinc-900 backdrop-blur-md ${
+          on
+            ? "border-white/20 ring-1 ring-white/10 scale-[1.05] z-10 shadow-2xl"
+            : "border-white/5 "
+        }`}
+      >
         {on && (
           <div className="absolute inset-x-0 bottom-0 h-1 flex items-end justify-center gap-[2px] px-4 pb-2">
             {[...Array(12)].map((_, i) => (
@@ -795,46 +1005,72 @@ export default function GroupDiscussionSession() {
                 style={{
                   height: `${20 + Math.random() * 80}%`,
                   animationDuration: `${0.4 + Math.random() * 0.6}s`,
-                  background: color
+                  background: color,
                 }}
               />
             ))}
           </div>
         )}
 
-        <div className="relative w-16 h-16 rounded-full flex items-center justify-center font-black text-white z-10 text-xl transition-all duration-500 overflow-hidden"
+        <div
+          className="relative w-16 h-16 rounded-full flex items-center justify-center font-black text-white z-10 text-xl transition-all duration-500 overflow-hidden"
           style={{
             background: on ? `${color}44` : `${color}11`,
             border: `3px solid ${on ? color : color + "22"}`,
             boxShadow: on ? `0 0 30px ${color}66` : "none",
-            transform: on ? "translateY(-5px)" : "none"
-          }}>
+            transform: on ? "translateY(-5px)" : "none",
+          }}
+        >
           {AGENT_IMAGES[agent.name] ? (
-            <img src={AGENT_IMAGES[agent.name]} alt={agent.name} className="w-full h-full object-cover" />
+            <img
+              src={AGENT_IMAGES[agent.name]}
+              alt={agent.name}
+              className="w-full h-full object-cover"
+            />
           ) : (
             agent.name[0]
           )}
           {on && (
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-zinc-900 flex items-center justify-center shadow-lg"
-              style={{ background: color }}>
+            <div
+              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-zinc-900 flex items-center justify-center shadow-lg"
+              style={{ background: color }}
+            >
               <FiMic size={10} className="text-white" />
             </div>
           )}
         </div>
 
         <div className="text-center z-10 mt-1">
-          <p className="text-xs font-bold text-white tracking-wide">{agent.name}</p>
+          <p className="text-xs font-bold text-white tracking-wide">
+            {agent.name}
+          </p>
           <div className="h-4 flex items-center justify-center">
             {on ? (
-              <span style={{ color }} className="text-[10px] uppercase font-black animate-pulse tracking-tighter">Speaking</span>
+              <span
+                style={{ color }}
+                className="text-[10px] uppercase font-black animate-pulse tracking-tighter"
+              >
+                Speaking
+              </span>
             ) : isThinking ? (
               <div className="flex gap-1">
-                <div className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0s' }} />
-                <div className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div
+                  className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce"
+                  style={{ animationDelay: "0s" }}
+                />
+                <div
+                  className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce"
+                  style={{ animationDelay: "0.1s" }}
+                />
+                <div
+                  className="w-1 h-1 rounded-full bg-indigo-500 animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                />
               </div>
             ) : (
-              <span className="text-zinc-600 text-[10px] uppercase font-bold tracking-tighter">Quiet</span>
+              <span className="text-zinc-600 text-[10px] uppercase font-bold tracking-tighter">
+                Quiet
+              </span>
             )}
           </div>
         </div>
@@ -843,36 +1079,72 @@ export default function GroupDiscussionSession() {
   };
 
   const UserTile = () => {
-    // Floor is open even if an agent is "thinking" (API call), 
+    // Floor is open even if an agent is "thinking" (API call),
     // because user can still interrupt the thinking process.
     const isFloorOpen = !speakingAgent && !isMuted && !sessionEnded;
 
     return (
-      <div className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all duration-300 ${isUserSpeaking ? "border-emerald-500/40 bg-zinc-800/80 scale-[1.03]" : isFloorOpen ? "border-[#bef264]/40 bg-zinc-900/60 ring-2 ring-[#bef264]/20" : "border-white/5 bg-zinc-900/60"
-        }`}>
-        {isUserSpeaking && <div className="absolute inset-0 rounded-2xl animate-pulse opacity-10 bg-emerald-500" />}
+      <div
+        className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all duration-300 ${
+          isUserSpeaking
+            ? "border-emerald-500/40 bg-zinc-800/80 scale-[1.03]"
+            : isFloorOpen
+              ? "border-[#bef264]/40 bg-zinc-900/60 ring-2 ring-[#bef264]/20"
+              : "border-white/5 bg-zinc-900/60"
+        }`}
+      >
+        {isUserSpeaking && (
+          <div className="absolute inset-0 rounded-2xl animate-pulse opacity-10 bg-emerald-500" />
+        )}
         {isFloorOpen && !isUserSpeaking && (
-          <div className={`absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-2 rounded-xl text-black text-[10px] font-black uppercase tracking-widest animate-bounce shadow-xl z-20 ${!openedRef.current ? "bg-emerald-500 shadow-emerald-500/20" : isConcludingPhase ? "bg-orange-500 shadow-orange-500/20" : "bg-[#bef264] shadow-[#bef264]/20"
-            }`}>
+          <div
+            className={`absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-2 rounded-xl text-black text-[10px] font-black uppercase tracking-widest animate-bounce shadow-xl z-20 ${
+              !openedRef.current
+                ? "bg-emerald-500 shadow-emerald-500/20"
+                : isConcludingPhase
+                  ? "bg-orange-500 shadow-orange-500/20"
+                  : "bg-[#bef264] shadow-[#bef264]/20"
+            }`}
+          >
             {!openedRef.current
               ? "Initiate the discussion!"
               : isConcludingPhase
                 ? "Conclude the discussion!"
-                : "Give your opinion!"
-            }
-            <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 ${!openedRef.current ? "bg-emerald-500" : isConcludingPhase ? "bg-orange-500" : "bg-[#bef264]"
-              }`} />
+                : "Give your opinion!"}
+            <div
+              className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 ${
+                !openedRef.current
+                  ? "bg-emerald-500"
+                  : isConcludingPhase
+                    ? "bg-orange-500"
+                    : "bg-[#bef264]"
+              }`}
+            />
           </div>
         )}
-        <div className="relative w-12 h-12 rounded-full flex items-center justify-center z-10"
+        <div
+          className="relative w-12 h-12 rounded-full flex items-center justify-center z-10"
           style={{
             background: isFloorOpen ? `${AGENT_COLORS.Marcus}22` : "#22c55e22",
             border: `2px solid ${isUserSpeaking ? "#22c55e" : isFloorOpen ? (!openedRef.current ? "#10b981" : isConcludingPhase ? "#f97316" : "var(--[#bef264])") : "#22c55e44"}`,
-            boxShadow: isUserSpeaking ? "0 0 16px #22c55e44" : isFloorOpen ? (isConcludingPhase ? "0 0 20px rgba(249,115,22,0.3)" : "0 0 20px var(--[#bef264]-glow)") : "none"
-          }}>
-          {user?.imageUrl
-            ? <img src={user.imageUrl} alt="You" className="w-full h-full rounded-full object-cover" />
-            : <FiUser className="text-emerald-400" size={20} />}
+            boxShadow: isUserSpeaking
+              ? "0 0 16px #22c55e44"
+              : isFloorOpen
+                ? isConcludingPhase
+                  ? "0 0 20px rgba(249,115,22,0.3)"
+                  : "0 0 20px var(--[#bef264]-glow)"
+                : "none",
+          }}
+        >
+          {user?.imageUrl ? (
+            <img
+              src={user.imageUrl}
+              alt="You"
+              className="w-full h-full rounded-full object-cover"
+            />
+          ) : (
+            <FiUser className="text-emerald-400" size={20} />
+          )}
           {isUserSpeaking && (
             <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-zinc-900 bg-emerald-400 flex items-center justify-center">
               <FiMic size={7} className="text-zinc-900" />
@@ -882,16 +1154,31 @@ export default function GroupDiscussionSession() {
         <div className="text-center z-10">
           <p className="text-xs font-bold text-zinc-200">You</p>
           <p className="text-[10px]">
-            {isMuted
-              ? <span className="text-red-400 font-semibold">Muted</span>
-              : isUserSpeaking
-                ? <span className="text-emerald-400 font-semibold animate-pulse">Speaking...</span>
-                : isFloorOpen
-                  ? <span className={`font-black animate-pulse uppercase tracking-tighter ${!openedRef.current ? "text-emerald-400" : isConcludingPhase ? "text-orange-400" : "text-[#bef264]"
-                    }`}>
-                    {!openedRef.current ? "Init GD" : isConcludingPhase ? "Wrap Up" : "Open Floor"}
-                  </span>
-                  : <span className="text-zinc-500 font-semibold">Ready</span>}
+            {isMuted ? (
+              <span className="text-red-400 font-semibold">Muted</span>
+            ) : isUserSpeaking ? (
+              <span className="text-emerald-400 font-semibold animate-pulse">
+                Speaking...
+              </span>
+            ) : isFloorOpen ? (
+              <span
+                className={`font-black animate-pulse uppercase tracking-tighter ${
+                  !openedRef.current
+                    ? "text-emerald-400"
+                    : isConcludingPhase
+                      ? "text-orange-400"
+                      : "text-[#bef264]"
+                }`}
+              >
+                {!openedRef.current
+                  ? "Init GD"
+                  : isConcludingPhase
+                    ? "Wrap Up"
+                    : "Open Floor"}
+              </span>
+            ) : (
+              <span className="text-zinc-500 font-semibold">Ready</span>
+            )}
           </p>
         </div>
       </div>
@@ -904,7 +1191,7 @@ export default function GroupDiscussionSession() {
       <Helmet>
         <title>Group Discussion Session | PlaceMateAI</title>
       </Helmet>
-      <div className="h-screen flex flex-col h-screen bg-background overflow-hidden selection:bg-indigo-500/30 text-zinc-100">
+      <div className="h-screen flex flex-col bg-background overflow-hidden selection:bg-indigo-500/30 text-zinc-100">
         <PrepModal />
         <div className="h-full flex flex-col">
           {/* Header */}
@@ -931,7 +1218,11 @@ export default function GroupDiscussionSession() {
                 </span>
               </div>
               <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full dark:bg-zinc-900 bg-gray-50 border dark:border-white/5 border-black/5 text-[10px] font-semibold dark:text-zinc-300 text-gray-700">
-                {isMuted ? <FiMicOff size={12} className="text-red-400" /> : <FiMic size={12} className="text-emerald-400" />}
+                {isMuted ? (
+                  <FiMicOff size={12} className="text-red-400" />
+                ) : (
+                  <FiMic size={12} className="text-emerald-400" />
+                )}
                 <span>{isMuted ? "Mic Off" : "Mic On"}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 font-bold text-[10px] dark:bg-zinc-900 bg-gray-50 dark:text-zinc-300 text-gray-700 rounded-lg border dark:border-white/5 border-black/5">
@@ -949,12 +1240,18 @@ export default function GroupDiscussionSession() {
                 <div className="w-20 h-20 rounded-3xl bg-[#bef264]/10 border border-[#bef264]/20 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#bef264]/5">
                   <FiCheckCircle className="text-[#bef264]" size={32} />
                 </div>
-                <h2 className="text-3xl font-black text-white mb-3 tracking-tight">GD is <span className="text-[#bef264] italic">Concluded!</span></h2>
+                <h2 className="text-3xl font-black text-white mb-3 tracking-tight">
+                  GD is{" "}
+                  <span className="text-[#bef264] italic">Concluded!</span>
+                </h2>
                 <p className="text-zinc-500 text-sm mb-8 font-medium leading-relaxed">
-                  The discussion has concluded successfully. We're finalizing your contribution report with AI analysis.
+                  The discussion has concluded successfully. We're finalizing
+                  your contribution report with AI analysis.
                 </p>
-                <button onClick={() => navigate(`/gd/result/${sessionId}`)}
-                  className="w-full bg-[#bef264] hover:bg-[#bef264]-hover text-black font-black py-4 rounded-2xl transition-all text-sm shadow-xl shadow-[#bef264]/10 active:scale-95 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => navigate(`/gd/result/${sessionId}`)}
+                  className="w-full bg-[#bef264] hover:bg-[#bef264]-hover text-black font-black py-4 rounded-2xl transition-all text-sm shadow-xl shadow-[#bef264]/10 active:scale-95 flex items-center justify-center gap-2"
+                >
                   View Performance Analysis
                   <FiArrowRight size={18} />
                 </button>
@@ -970,25 +1267,37 @@ export default function GroupDiscussionSession() {
                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-zinc-950/80 to-transparent pointer-events-none" />
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 h-full">
-                  {initAgents.map((a) => <AgentTile key={a.name} agent={a} />)}
+                  {initAgents.map((a) => (
+                    <AgentTile key={a.name} agent={a} />
+                  ))}
                   <UserTile />
                 </div>
               </div>
 
               {/* Integrated Controls Bar */}
               <div className="flex items-center justify-center gap-4 bg-zinc-900/60 backdrop-blur-2xl p-2 rounded-[2rem] border border-white/5 shadow-2xl">
-                <button onClick={toggleMute}
+                <button
+                  onClick={toggleMute}
                   className={`p-3 rounded-xl transition-all cursor-pointer flex items-center gap-3 ${isMuted ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
                 >
-                  {isMuted ? <FiMicOff className="text-sm" /> : <FiMic className="text-xl" />}
-                  <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">{isMuted ? "Unmute" : "Mute"}</span>
+                  {isMuted ? (
+                    <FiMicOff className="text-sm" />
+                  ) : (
+                    <FiMic className="text-xl" />
+                  )}
+                  <span className="text-xs font-bold uppercase tracking-widest hidden sm:inline">
+                    {isMuted ? "Unmute" : "Mute"}
+                  </span>
                 </button>
 
-                <button onClick={endSession} disabled={isEnding}
-                  className={`flex items-center gap-3 px-6 py-3 rounded-xl transition-all active:scale-95 shadow-xl font-bold ${isConcludingPhase
+                <button
+                  onClick={endSession}
+                  disabled={isEnding}
+                  className={`flex items-center gap-3 px-6 py-3 rounded-xl transition-all active:scale-95 shadow-xl font-bold ${
+                    isConcludingPhase
                       ? "bg-red-600 text-white shadow-red-600/40 animate-pulse border-2 border-white/20"
                       : "bg-[#bef264] hover:bg-[#bef264]-hover text-black shadow-[#bef264]/20"
-                    }`}
+                  }`}
                 >
                   <FiPhoneOff className="text-sm" />
                   <span className="text-xs font-black  tracking-widest">
@@ -1004,8 +1313,12 @@ export default function GroupDiscussionSession() {
                     <FiMic className="text-emerald-400" size={18} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Live Voice Processing</p>
-                    <p className="text-sm dark:text-zinc-200 text-gray-800 italic font-medium leading-snug">"{liveText}"</p>
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">
+                      Live Voice Processing
+                    </p>
+                    <p className="text-sm dark:text-zinc-200 text-gray-800 italic font-medium leading-snug">
+                      "{liveText}"
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1013,57 +1326,93 @@ export default function GroupDiscussionSession() {
               {/* Description Card */}
               <div className="hidden lg:block dark:bg-[#1a1a1a] bg-white p-6 rounded-[2rem] border dark:border-white/5 border-gray-100 shadow-xl">
                 <h3 className="text-xs font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
-                  <FiInfo className="mr-3 text-[#bef264] text-lg" /> Topic Context
+                  <FiInfo className="mr-3 text-[#bef264] text-lg" /> Topic
+                  Context
                 </h3>
                 <p className="text-[13px] dark:text-zinc-400 text-gray-500 leading-relaxed font-medium">
-                  {description || "Contribute your points precisely. agents will react to your tone and logic. The session will automatically conclude after 6 minutes or when you signal a wrap-up."}
+                  {description ||
+                    "Contribute your points precisely. agents will react to your tone and logic. The session will automatically conclude after 6 minutes or when you signal a wrap-up."}
                 </p>
               </div>
             </div>
 
             {/* Right Column: Invigilator + Transcript */}
             <div className="flex flex-col h-[600px] xl:h-[calc(100vh-160px)] min-h-0 gap-3">
-
               {/* STANDALONE INVIGILATOR SECTION */}
-              <div className={`p-1 rounded-[2rem] transition-all duration-700 ${invigilatorStatus === "concluding"
-                  ? "bg-gradient-to-r from-red-600 to-orange-600 shadow-[0_0_40px_rgba(220,38,38,0.3)] scale-[1.02]"
-                  : invigilatorStatus === "active"
-                    ? "bg-zinc-800/80 border border-white/5"
-                    : "bg-indigo-600/20 border border-indigo-500/30"
-                }`}>
-                <div className={`px-6 py-4 rounded-[1.8rem] flex items-center gap-4 relative overflow-hidden ${invigilatorStatus === "concluding" ? "bg-zinc-950/40" : "bg-transparent"
-                  }`}>
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${invigilatorStatus === "concluding" ? "bg-white text-red-600 animate-pulse" :
-                      invigilatorStatus === "active" ? "bg-emerald-500 text-white" :
-                        "bg-indigo-500 text-white"
-                    }`}>
+              <div
+                className={`p-1 rounded-[2rem] transition-all duration-700 ${
+                  invigilatorStatus === "concluding"
+                    ? "bg-gradient-to-r from-red-600 to-orange-600 shadow-[0_0_40px_rgba(220,38,38,0.3)] scale-[1.02]"
+                    : invigilatorStatus === "active"
+                      ? "bg-zinc-800/80 border border-white/5"
+                      : "bg-indigo-600/20 border border-indigo-500/30"
+                }`}
+              >
+                <div
+                  className={`px-6 py-4 rounded-[1.8rem] flex items-center gap-4 relative overflow-hidden ${
+                    invigilatorStatus === "concluding"
+                      ? "bg-zinc-950/40"
+                      : "bg-transparent"
+                  }`}
+                >
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+                      invigilatorStatus === "concluding"
+                        ? "bg-white text-red-600 animate-pulse"
+                        : invigilatorStatus === "active"
+                          ? "bg-emerald-500 text-white"
+                          : "bg-indigo-500 text-white"
+                    }`}
+                  >
                     <FiInfo size={24} />
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full ${invigilatorStatus === "concluding" ? "bg-red-500 text-white" :
-                          invigilatorStatus === "active" ? "bg-emerald-500/20 text-emerald-400" :
-                            "bg-indigo-500/20 text-indigo-400"
-                        }`}>
-                        {invigilatorStatus === "start" ? "Session Guide" : invigilatorStatus === "active" ? "Live Monitoring" : "URGENT NOTICE"}
+                      <span
+                        className={`text-[10px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full ${
+                          invigilatorStatus === "concluding"
+                            ? "bg-red-500 text-white"
+                            : invigilatorStatus === "active"
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-indigo-500/20 text-indigo-400"
+                        }`}
+                      >
+                        {invigilatorStatus === "start"
+                          ? "Session Guide"
+                          : invigilatorStatus === "active"
+                            ? "Live Monitoring"
+                            : "URGENT NOTICE"}
                       </span>
                     </div>
-                    <h2 className={`text-sm md:text-base font-black leading-tight truncate ${invigilatorStatus === "concluding" ? "text-white" : "text-zinc-100"
-                      }`}>
+                    <h2
+                      className={`text-sm md:text-base font-black leading-tight truncate ${
+                        invigilatorStatus === "concluding"
+                          ? "text-white"
+                          : "text-zinc-100"
+                      }`}
+                    >
                       {invigilatorMessage}
                     </h2>
                   </div>
 
                   {invigilatorStatus === "concluding" ? (
                     <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
-                      <span className="text-[10px] font-black text-white/60 uppercase">Ends In</span>
-                      <span className="text-xl font-black text-white tabular-nums">00:{String(invTimer).padStart(2, '0')}</span>
+                      <span className="text-[10px] font-black text-white/60 uppercase">
+                        Ends In
+                      </span>
+                      <span className="text-xl font-black text-white tabular-nums">
+                        00:{String(invTimer).padStart(2, "0")}
+                      </span>
                     </div>
                   ) : invigilatorStatus === "active" ? (
                     <div className="flex gap-1.5 px-3 py-4">
                       {[...Array(4)].map((_, i) => (
-                        <div key={i} className="w-1.5 h-6 bg-emerald-500/40 rounded-full animate-sound-bar" style={{ animationDelay: `${i * 0.15}s` }} />
+                        <div
+                          key={i}
+                          className="w-1.5 h-6 bg-emerald-500/40 rounded-full animate-sound-bar"
+                          style={{ animationDelay: `${i * 0.15}s` }}
+                        />
                       ))}
                     </div>
                   ) : null}
@@ -1083,14 +1432,22 @@ export default function GroupDiscussionSession() {
                 <div className="px-6 py-4 border-b dark:border-white/5 border-black/5 flex items-center justify-between dark:bg-zinc-900/50 bg-gray-100/50 shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-full bg-[#bef264] animate-pulse shadow-[0_0_10px_var(--[#bef264])]" />
-                    <p className="text-xs font-black text-white uppercase tracking-widest">Discussion Log</p>
+                    <p className="text-xs font-black text-white uppercase tracking-widest">
+                      Discussion Log
+                    </p>
                   </div>
                   {isThinking && (
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-bold text-zinc-500 uppercase mr-2 tracking-tighter">AI Processing</span>
+                      <span className="text-[9px] font-bold text-zinc-500 uppercase mr-2 tracking-tighter">
+                        AI Processing
+                      </span>
                       <div className="flex gap-0.5">
                         {[1, 2, 3].map((i) => (
-                          <div key={i} className="w-1 h-3 bg-[#bef264]/40 rounded-full animate-sound-bar" style={{ animationDelay: `${i * 0.15}s` }} />
+                          <div
+                            key={i}
+                            className="w-1 h-3 bg-[#bef264]/40 rounded-full animate-sound-bar"
+                            style={{ animationDelay: `${i * 0.15}s` }}
+                          />
                         ))}
                       </div>
                     </div>
@@ -1101,31 +1458,70 @@ export default function GroupDiscussionSession() {
                 <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar min-h-0">
                   {transcript.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                      <FiMessageSquare size={40} className="mb-4 text-zinc-600" />
-                      <p className="text-xs font-bold uppercase tracking-widest">Floor initializing...</p>
+                      <FiMessageSquare
+                        size={40}
+                        className="mb-4 text-zinc-600"
+                      />
+                      <p className="text-xs font-bold uppercase tracking-widest">
+                        Floor initializing...
+                      </p>
                     </div>
                   ) : (
                     transcript.map((entry) => {
                       const isUser = entry.role === "user";
                       const color = isUser ? "#22c55e" : entry.color;
                       return (
-                        <div key={entry.id} className={`flex gap-3 animate-fade-in-up ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-                          <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-xs font-black text-white shadow-lg overflow-hidden"
-                            style={{ background: `${color}33`, border: `2px solid ${color}44` }}>
-                            {isUser
-                              ? user?.imageUrl
-                                ? <img src={user.imageUrl} alt="You" className="w-full h-full object-cover" />
-                                : <FiUser size={16} />
-                              : AGENT_IMAGES[entry.speaker] ? (
-                                <img src={AGENT_IMAGES[entry.speaker]} alt={entry.speaker} className="w-full h-full object-cover" />
+                        <div
+                          key={entry.id}
+                          className={`flex gap-3 animate-fade-in-up ${isUser ? "flex-row-reverse" : "flex-row"}`}
+                        >
+                          <div
+                            className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-xs font-black text-white shadow-lg overflow-hidden"
+                            style={{
+                              background: `${color}33`,
+                              border: `2px solid ${color}44`,
+                            }}
+                          >
+                            {isUser ? (
+                              user?.imageUrl ? (
+                                <img
+                                  src={user.imageUrl}
+                                  alt="You"
+                                  className="w-full h-full object-cover"
+                                />
                               ) : (
-                                entry.speaker[0]
-                              )}
+                                <FiUser size={16} />
+                              )
+                            ) : AGENT_IMAGES[entry.speaker] ? (
+                              <img
+                                src={AGENT_IMAGES[entry.speaker]}
+                                alt={entry.speaker}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              entry.speaker[0]
+                            )}
                           </div>
-                          <div className={`flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"} max-w-[85%]`}>
-                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">{entry.speaker}</span>
-                            <div className={`px-5 py-3 rounded-2xl text-[13px] leading-relaxed shadow-lg ${isUser ? "rounded-tr-sm bg-zinc-800 text-zinc-100" : "rounded-tl-sm text-zinc-200"}`}
-                              style={!isUser ? { background: `${color}15`, border: `1px solid ${color}40` } : { border: "1px solid rgba(255,255,255,0.05)" }}>
+                          <div
+                            className={`flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"} max-w-[85%]`}
+                          >
+                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-1">
+                              {entry.speaker}
+                            </span>
+                            <div
+                              className={`px-5 py-3 rounded-2xl text-[13px] leading-relaxed shadow-lg ${isUser ? "rounded-tr-sm bg-zinc-800 text-zinc-100" : "rounded-tl-sm text-zinc-200"}`}
+                              style={
+                                !isUser
+                                  ? {
+                                      background: `${color}15`,
+                                      border: `1px solid ${color}40`,
+                                    }
+                                  : {
+                                      border:
+                                        "1px solid rgba(255,255,255,0.05)",
+                                    }
+                              }
+                            >
                               {entry.text}
                             </div>
                           </div>
@@ -1137,7 +1533,10 @@ export default function GroupDiscussionSession() {
                   {isThinking && (
                     <div className="flex gap-3 animate-pulse">
                       <div className="w-10 h-10 rounded-xl bg-[#bef264]/10 border-2 border-[#bef264]/20 flex items-center justify-center">
-                        <FiLoader className="animate-spin text-[#bef264]" size={16} />
+                        <FiLoader
+                          className="animate-spin text-[#bef264]"
+                          size={16}
+                        />
                       </div>
                       <div className="px-5 py-4 rounded-2xl bg-white/5 border border-white/10 rounded-tl-sm w-16 flex items-center justify-center">
                         <div className="flex gap-1">
