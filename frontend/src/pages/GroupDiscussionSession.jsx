@@ -32,78 +32,6 @@ const AGENT_IMAGES = interviewAgents.reduce((acc, agent) => {
 
 const FALLBACK_MAX_GD_TIME = 600; // 10 minutes
 
-// ─── TTS helper: Uses AWS Polly with optional pre-fetched audio ───────────────
-function speakText(
-  text,
-  agentName,
-  onDone,
-  backend_URL,
-  prefetchedAudioBase64 = null,
-) {
-  return new Promise((resolve) => {
-    if (!text || !text.trim()) {
-      onDone?.();
-      resolve();
-      return;
-    }
-
-    (async () => {
-      try {
-        let audioBase64 = prefetchedAudioBase64;
-
-        // If no pre-fetched audio, generate it now
-        if (!audioBase64) {
-          const response = await axios.post(
-            `${backend_URL}/api/tts/generate`,
-            {
-              text: text.trim(),
-              voiceId: agentName,
-              engine: "neural",
-            },
-            { timeout: 30000 },
-          );
-
-          if (!response.data.success) {
-            throw new Error(response.data.message || "TTS generation failed");
-          }
-          audioBase64 = response.data.audioBase64;
-        }
-
-        // Create audio element and play
-        const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
-        audio.volume = 1.0;
-
-        // Return Promise that resolves when audio finishes
-        return new Promise((resolveAudio) => {
-          audio.onended = () => {
-            onDone?.();
-            resolveAudio();
-            resolve();
-          };
-
-          audio.onerror = (err) => {
-            console.error("Audio playback error:", err);
-            onDone?.();
-            resolveAudio();
-            resolve();
-          };
-
-          audio.play().catch((err) => {
-            console.error("Failed to start audio playback:", err);
-            onDone?.();
-            resolveAudio();
-            resolve();
-          });
-        });
-      } catch (error) {
-        console.error("TTS error:", error);
-        onDone?.();
-        resolve();
-      }
-    })();
-  });
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function GroupDiscussionSession() {
   const { sessionId } = useParams();
@@ -153,6 +81,7 @@ export default function GroupDiscussionSession() {
   const lastSpkRef = useRef(null); // last agent name who spoke
   const recRef = useRef(null); // SpeechRecognition instance
   const recognitionRef = recRef; // alias for clarity
+  const recognitionStoppedByUsRef = useRef(false); // track if we manually stopped it
   const proTimRef = useRef(null); // proactive timer
   const silTimRef = useRef(null); // user-silence timer
   const openedRef = useRef(false); // opening turn fired
@@ -163,14 +92,17 @@ export default function GroupDiscussionSession() {
   const conclusionPendingRef = useRef(false); // track wrap-up if user speaks while busy
   const prepTimerRef = useRef(null);
   const openTimerRef = useRef(null); // Ref for AI opening timer
-  const openingAudioReadyRef = useRef(false); // Audio for opening turn is pre-generated and ready
-  const prefetchedAudioRef = useRef(null); // stores pre-generated audio base64 for next turn
+  const userInitiatedRef = useRef(false); // User spoke during 5s initiation window
+  const aiOpeningFiredRef = useRef(false); // Opening turn has started
 
   // get a fresh auth token inside callbacks
   const getTokenRef = useRef(getToken);
   useEffect(() => {
     getTokenRef.current = getToken;
   }, [getToken]);
+
+  // ── Hybrid TTS (Chrome native vs AWS Polly) ───────────────────────────────
+  const { speakText: hookSpeakText } = usePollyTTS();
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -217,7 +149,6 @@ export default function GroupDiscussionSession() {
     setInvTimer(45);
     // CRITICAL: Clear pre-fetched regular turns so they don't block the conclusion!
     prefetchedTurnRef.current = null;
-    prefetchedAudioRef.current = null; // Clear stale audio
     // START pre-fetching the conclusion immediately so it's ready for silence detection
     prefetchNextTurn(lastSpkRef.current);
   };
@@ -284,10 +215,14 @@ export default function GroupDiscussionSession() {
           "🚫 Concluding phase: Discarding pre-fetched regular turn for wrap-up priority.",
         );
         prefetchedTurnRef.current = null;
-        prefetchedAudioRef.current = null; // Clear stale audio for old turn
       } else {
         turnData = prefetchedTurnRef.current;
+        // CRITICAL: Clear prefetch immediately to prevent reuse
+        const wasFromOpening = endpoint === "opening";
         prefetchedTurnRef.current = null;
+        console.log(
+          `✅ Using pre-fetched turn [${wasFromOpening ? "OPENING" : endpoint}]: "${turnData.agent.name}"`
+        );
       }
     }
 
@@ -306,8 +241,50 @@ export default function GroupDiscussionSession() {
       }
     }
 
+    // ── OPENING TURN SPECIAL HANDLING ──
+    // For opening turns, WAIT for prefetch instead of making a fresh API call
+    // This prevents duplicate opening messages
+    if (!turnData && endpoint === "opening") {
+      console.log(
+        "⏳ Opening turn detected but prefetch not ready yet. Waiting up to 5s..."
+      );
+      setIsThinking(true);
+
+      let waitAttempts = 0;
+      while (!prefetchedTurnRef.current && waitAttempts < 50) {
+        // Wait max 5s (50 * 100ms)
+        await new Promise((r) => setTimeout(r, 100));
+        waitAttempts++;
+      }
+
+      if (prefetchedTurnRef.current) {
+        console.log(
+          `✅ Opening prefetch arrived after ${waitAttempts * 100}ms. Using it now.`
+        );
+        turnData = prefetchedTurnRef.current;
+        prefetchedTurnRef.current = null;
+      } else {
+        console.warn(
+          "⚠️ Opening prefetch timed out after 5s. Will fetch fresh (shouldn't happen)."
+        );
+      }
+
+      setIsThinking(false);
+    }
+
     if (!turnData) {
-      // 2. Otherwise, fetch it now
+      // CRITICAL: Opening turns should NEVER make fresh API calls
+      // They must use prefetch or wait for it
+      if (endpoint === "opening") {
+        console.error(
+          "🚨 CRITICAL: Opening turn has no prefetch! This should not happen. Aborting to prevent duplicates."
+        );
+        busyRef.current = false;
+        scheduleProactive(1000);
+        return;
+      }
+
+      // 2. Otherwise, fetch it now (for non-opening endpoints)
       setIsThinking(true);
       try {
         const token = await getTokenRef.current();
@@ -322,6 +299,10 @@ export default function GroupDiscussionSession() {
           { headers: { Authorization: `Bearer ${token}` } },
         );
         turnData = res.data;
+
+        console.log(
+          `🎙 Fetched "${finalEndpoint}" turn: ${turnData.agent.name} says...`
+        );
 
         // ── PHASE TRANSITION CHECK ──
         // If the invigilator warning started while we were thinking about a normal point,
@@ -342,7 +323,6 @@ export default function GroupDiscussionSession() {
           console.log(
             "🛑 User interrupted agent thinking. Discarding fetched turn.",
           );
-          prefetchedAudioRef.current = null; // Clear stale audio since we're aborting
           setIsThinking(false);
           busyRef.current = false;
           scheduleProactive(4000);
@@ -399,11 +379,15 @@ export default function GroupDiscussionSession() {
 
     setIsThinking(false);
 
-    // pause mic during TTS
+    // pause mic during TTS - only if not already muted
     if (recRef.current && !mutedRef.current) {
       try {
+        console.log("⏸️ Pausing microphone during TTS");
         recRef.current.stop();
-      } catch (_) {}
+        recognitionStoppedByUsRef.current = true;
+      } catch (err) {
+        console.warn("Failed to pause mic:", err.message);
+      }
     }
 
     setSpeakingAgent(agent.name);
@@ -414,21 +398,39 @@ export default function GroupDiscussionSession() {
       prefetchNextTurn(agent.name);
     }
 
-    // Get the pre-fetched audio (if available) to eliminate latency
-    const cachedAudio = prefetchedAudioRef.current;
-    prefetchedAudioRef.current = null; // Clear after using
-
-    await speakText(text, agent.name, null, backend_URL, cachedAudio);
+    // Use hybrid TTS (Chrome native or AWS Polly) via the hook
+    await hookSpeakText(text, agent.name, {
+      onComplete: () => {
+        console.log("✅ TTS playback complete");
+      },
+      onError: (err) => console.error("TTS error:", err),
+    });
 
     setSpeakingAgent(null);
     agentSpeakingRef.current = false;
     busyRef.current = false;
 
-    // resume mic
-    if (aliveRef.current && !mutedRef.current && recRef.current) {
-      try {
-        recRef.current.start();
-      } catch (_) {}
+    // resume mic only if we manually stopped it
+    if (aliveRef.current && !mutedRef.current && recognitionStoppedByUsRef.current && recRef.current) {
+      recognitionStoppedByUsRef.current = false;
+      
+      setTimeout(() => {
+        try {
+          if (recRef.current && aliveRef.current && !mutedRef.current) {
+            console.log("▶️ Resuming microphone after TTS");
+            recRef.current.start();
+          }
+        } catch (err) {
+          // Ignore "already started" errors - in continuous mode it might still be running
+          if (err.message.includes("already started")) {
+            console.log(
+              "ℹ️ Recognition already running (continuous mode) - no need to restart"
+            );
+          } else {
+            console.warn("Failed to resume mic:", err.message);
+          }
+        }
+      }, 100);
     }
 
     // schedule next proactive turn unless we just concluded
@@ -446,46 +448,28 @@ export default function GroupDiscussionSession() {
     }
   };
 
-  // ── Background Pre-fetching with Audio Generation ───────────────────────────
-  async function prefetchAudio(text, agentName, isOpeningTurn = false) {
-    if (!text || !agentName) return;
-    try {
-      const response = await axios.post(
-        `${backend_URL}/api/tts/generate`,
-        {
-          text: text.trim(),
-          voiceId: agentName,
-          engine: "neural",
-        },
-        { timeout: 30000 },
-      );
-      if (response.data.success && aliveRef.current) {
-        prefetchedAudioRef.current = response.data.audioBase64;
-        // Mark opening audio as ready if this is the opening turn
-        if (isOpeningTurn) {
-          openingAudioReadyRef.current = true;
-        }
-      }
-    } catch (err) {
-      console.warn(
-        `Failed pre-generating audio for ${agentName}:`,
-        err.message,
-      );
-      // Still mark opening as ready - let it fail gracefully
-      if (isOpeningTurn) {
-        openingAudioReadyRef.current = true;
-      }
-    }
-  }
+  // ── Background Pre-fetching with Turn Data ──────────────────────────────────
+  // Note: Audio generation is now handled by usePollyTTS hook with caching
+  // We only prefetch the turn data (API call) here
 
   async function prefetchNextTurn(currentSpeaker) {
-    if (prefetchedTurnRef.current || concludedRef.current) return;
+    // Guard: Don't prefetch if we already have one
+    if (prefetchedTurnRef.current) {
+      console.log(
+        `⏭️ Skip prefetch: Already have prefetched turn for ${prefetchedTurnRef.current.agent.name}`
+      );
+      return;
+    }
+    if (concludedRef.current) {
+      console.log("⏭️ Skip prefetch: Session already concluded");
+      return;
+    }
 
     // During conclusion phase, we pre-fetch the "conclude" endpoint
     const endpoint = isConcludingPhase ? "conclude" : "next-turn";
 
     console.log(
-      `🔍 Pre-fetching ${endpoint} for next agent to follow ${currentSpeaker}...`,
+      `🔍 Pre-fetching "${endpoint}" to follow ${currentSpeaker}...`
     );
     try {
       const token = await getTokenRef.current();
@@ -501,9 +485,11 @@ export default function GroupDiscussionSession() {
       );
       if (aliveRef.current) {
         prefetchedTurnRef.current = res.data;
-        // IMMEDIATELY start pre-generating audio for this turn
-        // This runs in parallel while current agent still speaks
-        prefetchAudio(res.data.text, res.data.agent.name).catch(() => {});
+        console.log(
+          `✅ Next turn prefetched: ${res.data.agent.name} will speak next`
+        );
+        // Audio generation is now automatic via usePollyTTS hook when needed
+        // The hook will cache it internally
       }
     } catch (err) {
       console.warn(
@@ -576,31 +562,51 @@ export default function GroupDiscussionSession() {
 
       recognition.onstart = () => {
         console.log("🎙 SpeechRecognition started");
+        recognitionStoppedByUsRef.current = false;
       };
 
       recognition.onresult = (e) => {
-        if (!aliveRef.current || mutedRef.current) return;
+        // Debug logging for voice capture
+        if (e.results[e.results.length - 1].isFinal) {
+          console.log(
+            `🎤 User speech detected: "${e.results[e.results.length - 1][0].transcript}"`
+          );
+        }
+
+        if (!aliveRef.current) {
+          console.log("⏹️ Session not alive, ignoring speech");
+          return;
+        }
+        if (mutedRef.current) {
+          console.log("🔇 Mic muted, ignoring speech");
+          return;
+        }
 
         // ONLY ignore if agent is actually speaking out loud (to avoid echo)
         // If agent is just "thinking" (fetching API), we SHOULD detect user speech!
-        if (agentSpeakingRef.current) return;
+        if (agentSpeakingRef.current) {
+          console.log("🎙 Agent speaking, ignoring user input (anti-echo)");
+          return;
+        }
 
-        // ── USER SPOKE: Cancel opening if it hasn't fired ──
-        if (openTimerRef.current) {
+        // ── USER SPOKE: Set initialization flag & cancel opening if pending ──
+        if (!aiOpeningFiredRef.current && !userInitiatedRef.current) {
+          userInitiatedRef.current = true;
           console.log(
-            "🛑 User spoke before AI opener. Cancelling opening turn.",
+            "[INIT-SEQUENCE] 🎤 User initiated GD. Cancelling pending opening turn."
           );
-          clearTimeout(openTimerRef.current);
-          openTimerRef.current = null;
+          if (openTimerRef.current) {
+            clearTimeout(openTimerRef.current);
+            openTimerRef.current = null;
+          }
         }
 
         // ── USER SPOKE: Invalidate pre-fetch & clear stale audio ──
         if (prefetchedTurnRef.current) {
+          console.log("[INIT-SEQUENCE] 🗑️ Discarding prefetched opening data.");
           prefetchedTurnRef.current = null;
         }
-        if (prefetchedAudioRef.current) {
-          prefetchedAudioRef.current = null;
-        }
+        // Audio cache is now managed by usePollyTTS hook
 
         if (proTimRef.current) clearTimeout(proTimRef.current);
         if (silTimRef.current) clearTimeout(silTimRef.current);
@@ -694,14 +700,19 @@ export default function GroupDiscussionSession() {
               return next;
             });
 
-            silTimRef.current = setTimeout(() => {
-              if (aliveRef.current) {
-                runAgentTurnRef.current({
-                  endpoint: isConcludingPhase ? "conclude" : "next-turn",
-                  body: { userMessage: spoken, proactive: false },
-                });
-              }
-            }, 300); // Snappy response
+            // ── PROTECT FINALIZATION WINDOW ──
+            // Don't schedule if we're already busy or if another silTimer is pending
+            if (!busyRef.current && !silTimRef.current) {
+              silTimRef.current = setTimeout(() => {
+                if (aliveRef.current) {
+                  runAgentTurnRef.current({
+                    endpoint: isConcludingPhase ? "conclude" : "next-turn",
+                    body: { userMessage: spoken, proactive: false },
+                  });
+                }
+                silTimRef.current = null; // Clear after execution
+              }, 300); // Snappy response
+            }
           }
         }, 800);
       };
@@ -712,14 +723,38 @@ export default function GroupDiscussionSession() {
       };
 
       recognition.onend = () => {
-        if (aliveRef.current && !mutedRef.current && !busyRef.current) {
-          try {
-            recognition.start();
-          } catch (_) {}
+        console.log(
+          `🛑 Recognition ended. alive=${aliveRef.current}, muted=${mutedRef.current}, stoppedByUs=${recognitionStoppedByUsRef.current}`
+        );
+        // In continuous mode with proper flag management, we shouldn't need to restart here
+        // But if something goes wrong, try to restart after a delay
+        if (
+          aliveRef.current &&
+          !mutedRef.current &&
+          !recognitionStoppedByUsRef.current
+        ) {
+          setTimeout(() => {
+            try {
+              if (
+                recRef.current &&
+                aliveRef.current &&
+                !mutedRef.current &&
+                !recognitionStoppedByUsRef.current
+              ) {
+                console.log("🔄 Auto-restarting recognition after onend");
+                recRef.current.start();
+              }
+            } catch (err) {
+              if (!err.message.includes("already started")) {
+                console.warn("Failed to restart in onend:", err.message);
+              }
+            }
+          }, 100);
         }
       };
 
       try {
+        recognitionStoppedByUsRef.current = false; // Initialize flag
         recognition.start();
         toast.success("🎙️ Mic ready — speak when you want to join!");
       } catch (err) {
@@ -741,24 +776,18 @@ export default function GroupDiscussionSession() {
         if (aliveRef.current && res.data) {
           // Store it so runAgentTurn will use it instantly
           prefetchedTurnRef.current = res.data;
-          // IMMEDIATELY start generating audio for the opening (mark as opening turn)
-          if (res.data.text && res.data.agent?.name) {
-            prefetchAudio(res.data.text, res.data.agent.name, true).catch(
-              () => {},
-            );
-          }
+          // Audio will be generated on demand by usePollyTTS hook
         }
       } catch (err) {
         console.warn(
           "Opening pre-fetch failed (will retry normally):",
           err.message,
         );
-        // Mark opening audio as ready even if pre-fetch failed
-        openingAudioReadyRef.current = true;
+        // Continue anyway - audio will be fetched on demand
       }
     })();
 
-    // ── Opening agent turn after 1.5s ──
+    // ── Opening agent turn after 5s (or user initiation) ──
     openTimerRef.current = setTimeout(() => {
       if (!aliveRef.current || openedRef.current) return;
 
@@ -767,28 +796,25 @@ export default function GroupDiscussionSession() {
         return;
       }
 
+      // CRITICAL: If user initiated during the 5s window, skip opening entirely
+      if (userInitiatedRef.current) {
+        console.log(
+          "[INIT-SEQUENCE] ✅ User initiated GD during window. Skipping AI opening."
+        );
+        return;
+      }
+
       openedRef.current = true;
+      aiOpeningFiredRef.current = true;
       openTimerRef.current = null;
 
-      // ── WAIT for audio to be ready before playing ──
-      // If audio is still generating, wait a bit for it
-      const attemptPlay = async () => {
-        let waitAttempts = 0;
-        while (!openingAudioReadyRef.current && waitAttempts < 50) {
-          // Wait max 5s for audio (50 * 100ms)
-          await new Promise((r) => setTimeout(r, 100));
-          waitAttempts++;
-        }
+      console.log("[INIT-SEQUENCE] ✅ Timer expired with no user input. Starting AI opening.");
 
-        if (!aliveRef.current) return;
-
-        runAgentTurnRef.current({
-          endpoint: "opening",
-          body: { skipSave: true },
-        });
-      };
-
-      attemptPlay().catch((err) => console.error("Opening turn error:", err));
+      // Run the opening turn - audio will be generated on demand by usePollyTTS hook
+      runAgentTurnRef.current({
+        endpoint: "opening",
+        body: { skipSave: true },
+      });
 
       // After opening starts, transition invigilator status to "analyzing" after 10s
       setTimeout(() => {
@@ -799,15 +825,18 @@ export default function GroupDiscussionSession() {
           );
         }
       }, 10000);
-    }, 1500);
+    }, 5000);
 
     return () => {
       aliveRef.current = false;
+      // Reset initialization flags on cleanup
+      userInitiatedRef.current = false;
+      aiOpeningFiredRef.current = false;
       if (openTimerRef.current) clearTimeout(openTimerRef.current);
       if (prepTimerRef.current) clearInterval(prepTimerRef.current);
       if (proTimRef.current) clearTimeout(proTimRef.current);
       if (silTimRef.current) clearTimeout(silTimRef.current);
-      // TTS is now handled by AWS Polly (no need to cancel native speechSynthesis)
+      // Cancel any browser native speech synthesis (usePollyTTS hook will also clean up)
       if (recRef.current) {
         try {
           recRef.current.stop();
@@ -826,12 +855,40 @@ export default function GroupDiscussionSession() {
     if (recRef.current) {
       if (next) {
         try {
+          console.log("🔇 Muting microphone");
           recRef.current.stop();
-        } catch (_) {}
+          recognitionStoppedByUsRef.current = true;
+        } catch (err) {
+          console.warn("Failed to mute mic:", err.message);
+        }
       } else {
-        try {
-          recRef.current.start();
-        } catch (_) {}
+        // Unmuting - try to start recognition
+        recognitionStoppedByUsRef.current = false;
+        setTimeout(() => {
+          try {
+            if (recRef.current && !mutedRef.current) {
+              console.log("🔊 Unmuting microphone - Starting recognition");
+              recRef.current.start();
+            }
+          } catch (err) {
+            // Ignore "already started" errors
+            if (err.message.includes("already started")) {
+              console.log(
+                "ℹ️ Recognition already running after unmute - no restart needed"
+              );
+            } else {
+              console.warn("Failed to unmute mic:", err.message);
+              // Retry after a delay
+              setTimeout(() => {
+                try {
+                  if (recRef.current && !mutedRef.current) {
+                    recRef.current.start();
+                  }
+                } catch (_) {}
+              }, 500);
+            }
+          }
+        }, 50);
       }
     }
   };
@@ -843,7 +900,10 @@ export default function GroupDiscussionSession() {
         setPrepCountdown((prev) => {
           if (prev === 5) {
             // Trigger voice at 56s (4s remaining)
-            speakText("Start GD now", "Rohan", null, backend_URL);
+            hookSpeakText("Start GD now", "Rohan", {
+              onComplete: () => {},
+              onError: (err) => console.error("TTS error:", err),
+            }).catch(() => {});
           }
           if (prev <= 1) {
             clearInterval(prepTimerRef.current);
@@ -960,7 +1020,7 @@ export default function GroupDiscussionSession() {
 
     if (proTimRef.current) clearTimeout(proTimRef.current);
     if (silTimRef.current) clearTimeout(silTimRef.current);
-    // TTS is now handled by AWS Polly (no need to cancel native speechSynthesis)
+    // Cancel speech synthesis (browser native TTS via usePollyTTS hook)
     if (recRef.current) {
       try {
         recRef.current.stop();
@@ -1032,7 +1092,7 @@ export default function GroupDiscussionSession() {
           )}
           {on && (
             <div
-              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-zinc-900 flex items-center justify-center shadow-lg"
+              className="absolute z-50 -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-zinc-900 flex items-center justify-center shadow-lg"
               style={{ background: color }}
             >
               <FiMic size={10} className="text-white" />
@@ -1478,7 +1538,7 @@ export default function GroupDiscussionSession() {
                           <div
                             className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-xs font-black text-white shadow-lg overflow-hidden"
                             style={{
-                              background: `${color}33`,
+                              background: `${color}`,
                               border: `2px solid ${color}44`,
                             }}
                           >
