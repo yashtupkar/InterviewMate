@@ -19,6 +19,11 @@ const subscriptionSchema = new mongoose.Schema({
     planExpiry: {
         type: Date
     },
+    status: {
+        type: String,
+        enum: ['active', 'cancelled', 'expired'],
+        default: 'active'
+    },
     leftoverFreeCredits: {
         type: Number,
         default: 0
@@ -39,7 +44,20 @@ const subscriptionSchema = new mongoose.Schema({
     paymentHistory: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order'
-    }]
+    }],
+    // Admin manual adjustments tracking
+    manualAdjustments: [{
+        date: { type: Date, default: Date.now },
+        type: { type: String, enum: ['credit_add', 'refund', 'tier_change'], default: 'credit_add' },
+        amount: Number,
+        reason: String,
+        adminId: mongoose.Schema.Types.ObjectId
+    }],
+    // Track why subscription was cancelled
+    cancellationReason: {
+        type: String,
+        default: null
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Subscription', subscriptionSchema);

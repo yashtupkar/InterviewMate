@@ -43,6 +43,15 @@ import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
 import AdminRoute from "./components/AdminRoute";
 import SeedQuestions from "./pages/adminScreens/SeedQuestions";
 import CheckoutPage from "./pages/CheckoutPage";
+import AdminLayout from "./components/layouts/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
+import FeedbackManagement from "./pages/admin/FeedbackManagement";
+import ContactManagement from "./pages/admin/ContactManagement";
+import WaitlistManagement from "./pages/admin/WaitlistManagement";
+import InterviewAnalysis from "./pages/admin/InterviewAnalysis";
+import ToolAnalysis from "./pages/admin/ToolAnalysis";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -254,6 +263,78 @@ function App() {
 
         {/* Admin Routes */}
         <Route element={<AdminRoute />}>
+           <Route 
+             path="/admin" 
+             element={
+               <AdminLayout>
+                 <AdminDashboard />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/users" 
+             element={
+               <AdminLayout>
+                 <UserManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/subscriptions" 
+             element={
+               <AdminLayout>
+                 <SubscriptionManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/feedback" 
+             element={
+               <AdminLayout>
+                 <FeedbackManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/contacts" 
+             element={
+               <AdminLayout>
+                 <ContactManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/waitlist" 
+             element={
+               <AdminLayout>
+                 <WaitlistManagement />
+               </AdminLayout>
+             } 
+           />
+           {/* <Route 
+             path="/admin/questions" 
+             element={
+               <AdminLayout>
+                 <QuestionManagement />
+               </AdminLayout>
+             } 
+           /> */}
+           <Route 
+             path="/admin/interviews" 
+             element={
+               <AdminLayout>
+                 <InterviewAnalysis />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/analytics" 
+             element={
+               <AdminLayout>
+                 <ToolAnalysis />
+               </AdminLayout>
+             } 
+           />
            <Route 
              path="/admin/seed-questions" 
              element={
