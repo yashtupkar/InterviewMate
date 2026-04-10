@@ -37,6 +37,8 @@ export const usePollyTTS = () => {
   const lastSpeakTimeRef = useRef(0);
   const abortControllerRef = useRef(null);
   const utteranceRef = useRef(null);
+  const availableVoicesRef = useRef([]);
+  const voicesReadyPromiseRef = useRef(null);
 
   // Initialize audio player
   useEffect(() => {
@@ -68,6 +70,81 @@ export const usePollyTTS = () => {
       window.speechSynthesis.cancel();
     };
   }, []);
+
+  // Chrome loads voices lazily. Prime and wait once so first click uses the intended voice.
+  useEffect(() => {
+    if (!ttsBehaviorRef.useBrowserNative || typeof window === "undefined") {
+      return;
+    }
+
+    let timeoutId;
+
+    const hydrateVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        availableVoicesRef.current = voices;
+        return true;
+      }
+      return false;
+    };
+
+    voicesReadyPromiseRef.current = new Promise((resolve) => {
+      if (hydrateVoices()) {
+        resolve(availableVoicesRef.current);
+        return;
+      }
+
+      const handleVoicesChanged = () => {
+        if (hydrateVoices()) {
+          window.speechSynthesis.removeEventListener(
+            "voiceschanged",
+            handleVoicesChanged,
+          );
+          clearTimeout(timeoutId);
+          resolve(availableVoicesRef.current);
+        }
+      };
+
+      window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
+
+      timeoutId = setTimeout(() => {
+        window.speechSynthesis.removeEventListener(
+          "voiceschanged",
+          handleVoicesChanged,
+        );
+        // Proceed even if no voices are available yet; this avoids a hard lock.
+        resolve(window.speechSynthesis.getVoices());
+      }, 1500);
+    });
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [ttsBehaviorRef.useBrowserNative]);
+
+  const getReadyBrowserVoices = useCallback(async () => {
+    if (!ttsBehaviorRef.useBrowserNative) {
+      return [];
+    }
+
+    if (availableVoicesRef.current.length > 0) {
+      return availableVoicesRef.current;
+    }
+
+    if (voicesReadyPromiseRef.current) {
+      const voices = await voicesReadyPromiseRef.current;
+      if (voices?.length) {
+        availableVoicesRef.current = voices;
+      }
+      return voices || [];
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices?.length) {
+      availableVoicesRef.current = voices;
+    }
+    return voices || [];
+  }, [ttsBehaviorRef.useBrowserNative]);
 
   /**
    * Fetch audio from Polly API
@@ -141,7 +218,7 @@ export const usePollyTTS = () => {
    * Helper to speak with native TTS
    * @private
    */
-  const speakWithNativeTTS = useCallback((text, agentName, resolve, reject) => {
+  const speakWithNativeTTS = useCallback(async (text, agentName, resolve, reject) => {
     try {
       // Voice mapping for browser native TTS with unique pitch and speed for each agent
       const voiceConfig = {
@@ -200,7 +277,7 @@ export const usePollyTTS = () => {
           ? config.pitch
           : 1.0;
 
-      const voices = window.speechSynthesis.getVoices();
+      const voices = await getReadyBrowserVoices();
       let selectedVoice = null;
 
       // Try to find voice by keywords
@@ -251,7 +328,7 @@ export const usePollyTTS = () => {
       setError(err.message);
       reject(err);
     }
-  }, []);
+  }, [getReadyBrowserVoices]);
 
   /**
    * Get or generate audio
