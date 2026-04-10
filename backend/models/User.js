@@ -33,11 +33,15 @@ const userSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'deleted'],
+        enum: ['active', 'deleted', 'suspended'],
         default: 'active'
     },
     deletedAt: {
         type: Date
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

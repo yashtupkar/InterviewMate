@@ -46,6 +46,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import AdminLayout from "./components/layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
+import UserDetail from "./pages/admin/UserDetail";
 import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import ContactManagement from "./pages/admin/ContactManagement";
@@ -276,6 +277,14 @@ function App() {
              element={
                <AdminLayout>
                  <UserManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/users/:userId" 
+             element={
+               <AdminLayout>
+                 <UserDetail />
                </AdminLayout>
              } 
            />

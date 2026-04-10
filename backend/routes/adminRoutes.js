@@ -7,6 +7,10 @@ const {
   updateUserStatus,
   updateUserSubscription,
   deleteUser,
+  suspendUser,
+  activateUser,
+  changeUserRole,
+  updateUserCredits,
   getSubscriptions,
   getSubscriptionDetail,
   updateSubscription,
@@ -39,6 +43,12 @@ router.get('/users/:userId', getUserDetail);
 router.patch('/users/:userId/status', updateUserStatus);
 router.patch('/users/:userId/subscription', updateUserSubscription);
 router.delete('/users/:userId', deleteUser);
+
+// New specific user actions
+router.patch('/users/:userId/suspend', suspendUser);
+router.patch('/users/:userId/activate', activateUser);
+router.patch('/users/:userId/role', changeUserRole);
+router.patch('/users/:userId/credits', updateUserCredits);
 
 // Subscriptions Management
 router.get('/subscriptions', getSubscriptions);
