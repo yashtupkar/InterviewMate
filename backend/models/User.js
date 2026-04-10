@@ -1,49 +1,54 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
     clerkId: {
-        type: String,
-        required: true,
-        unique: true
+      type: String,
+      required: true,
+      unique: true,
     },
     email: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     firstName: String,
     lastName: String,
     avatar: String,
+    lastLogin: {
+      type: Date,
+    },
     role: {
-        type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
     },
     subscription: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Subscription'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subscription",
     },
     referralCode: {
-        type: String,
-        unique: true,
-        sparse: true
+      type: String,
+      unique: true,
+      sparse: true,
     },
     referredBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     status: {
-        type: String,
-        enum: ['active', 'deleted', 'suspended'],
-        default: 'active'
+      type: String,
+      enum: ["active", "deleted", "suspended"],
+      default: "active",
     },
     deletedAt: {
-        type: Date
+      type: Date,
     },
     isDeleted: {
-        type: Boolean,
-        default: false
-    }
-}, { timestamps: true });
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true },
+);
 
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);
