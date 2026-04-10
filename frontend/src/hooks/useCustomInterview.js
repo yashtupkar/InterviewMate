@@ -650,10 +650,7 @@ export const useCustomInterview = () => {
     };
 
     recognition.onend = () => {
-      if (
-        !hasCallEndedRef.current &&
-        !activeCodingTaskRef.current
-      ) {
+      if (!hasCallEndedRef.current && !activeCodingTaskRef.current) {
         scheduleRecognitionRestart(300);
       }
     };

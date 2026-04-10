@@ -39,7 +39,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   const [isConcludingPhase, setIsConcludingPhase] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false); // New confirm popup state
   const [invigilatorMessage, setInvigilatorMessage] = useState(
-    `Your GD topic is "${topic}". Let's start now.`
+    `Your GD topic is "${topic}". Let's start now.`,
   );
   const [invigilatorStatus, setInvigilatorStatus] = useState("start");
   const [invTimer, setInvTimer] = useState(45);
@@ -124,12 +124,18 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   }, [transcript]);
 
   const runAgentTurnRef = useRef(null);
-  runAgentTurnRef.current = async ({ endpoint = "next-turn", body = {} } = {}) => {
+  runAgentTurnRef.current = async ({
+    endpoint = "next-turn",
+    body = {},
+  } = {}) => {
     if (!aliveRef.current) return;
     if (concludedRef.current && endpoint !== "conclude") return;
 
     let finalEndpoint = endpoint;
-    if (isConcludingPhase && (endpoint === "next-turn" || endpoint === "proactive")) {
+    if (
+      isConcludingPhase &&
+      (endpoint === "next-turn" || endpoint === "proactive")
+    ) {
       finalEndpoint = "conclude";
     }
 
@@ -149,7 +155,10 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
     let turnData = null;
 
-    if ((endpoint === "next-turn" || endpoint === "opening") && prefetchedTurnRef.current) {
+    if (
+      (endpoint === "next-turn" || endpoint === "opening") &&
+      prefetchedTurnRef.current
+    ) {
       if (isConcludingPhase && endpoint === "next-turn") {
         prefetchedTurnRef.current = null;
       } else {
@@ -164,7 +173,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         await axios.post(
           `${backend_URL}/api/group-discussion/add-user-message`,
           { sessionId, text: body.userMessage },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
       } catch (err) {
         console.warn("Failed to manual-save user message:", err.message);
@@ -197,8 +206,13 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         const token = await getTokenRef.current();
         const res = await axios.post(
           `${backend_URL}/api/group-discussion/${finalEndpoint}`,
-          { sessionId, lastSpeaker: lastSpkRef.current, skipSave: true, ...body },
-          { headers: { Authorization: `Bearer ${token}` } }
+          {
+            sessionId,
+            lastSpeaker: lastSpkRef.current,
+            skipSave: true,
+            ...body,
+          },
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         turnData = res.data;
 
@@ -220,7 +234,9 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         setSpeakingAgent(null);
         busyRef.current = false;
         if (aliveRef.current && !mutedRef.current && recRef.current) {
-          try { recRef.current.start(); } catch (_) { }
+          try {
+            recRef.current.start();
+          } catch (_) {}
         }
         scheduleProactive(12000);
         return;
@@ -254,7 +270,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       await axios.post(
         `${backend_URL}/api/group-discussion/add-agent-message`,
         { sessionId, name: agent.name, text, personality: agent.personality },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
     } catch (err) {
       console.warn("Failed to save agent turn to DB:", err.message);
@@ -266,7 +282,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       try {
         recRef.current.stop();
         recognitionStoppedByUsRef.current = true;
-      } catch (err) { }
+      } catch (err) {}
     }
 
     setSpeakingAgent(agent.name);
@@ -277,7 +293,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     }
 
     await hookSpeakText(text, agent.name, {
-      onComplete: () => { },
+      onComplete: () => {},
       onError: (err) => console.error("TTS error:", err),
     });
 
@@ -285,14 +301,19 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     agentSpeakingRef.current = false;
     busyRef.current = false;
 
-    if (aliveRef.current && !mutedRef.current && recognitionStoppedByUsRef.current && recRef.current) {
+    if (
+      aliveRef.current &&
+      !mutedRef.current &&
+      recognitionStoppedByUsRef.current &&
+      recRef.current
+    ) {
       recognitionStoppedByUsRef.current = false;
       setTimeout(() => {
         try {
           if (recRef.current && aliveRef.current && !mutedRef.current) {
             recRef.current.start();
           }
-        } catch (err) { }
+        } catch (err) {}
       }, 100);
     }
 
@@ -316,8 +337,13 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       const token = await getTokenRef.current();
       const res = await axios.post(
         `${backend_URL}/api/group-discussion/${endpoint}`,
-        { sessionId, lastSpeaker: currentSpeaker, proactive: true, skipSave: true },
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          sessionId,
+          lastSpeaker: currentSpeaker,
+          proactive: true,
+          skipSave: true,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       if (aliveRef.current) prefetchedTurnRef.current = res.data;
     } catch (err) {
@@ -330,14 +356,19 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     if (!aliveRef.current) return;
 
     const hasPre = !!prefetchedTurnRef.current;
-    let d = delay ?? (hasPre ? 2000 + Math.random() * 1000 : 6000 + Math.random() * 5000);
+    let d =
+      delay ??
+      (hasPre ? 2000 + Math.random() * 1000 : 6000 + Math.random() * 5000);
     if (isConcludingPhase && !delay) {
       d = hasPre ? 3000 + Math.random() * 2000 : 6000 + Math.random() * 3000;
     }
 
     proTimRef.current = setTimeout(() => {
       if (aliveRef.current && !busyRef.current && !userSpeakingRef.current) {
-        runAgentTurnRef.current({ endpoint: "next-turn", body: { proactive: true } });
+        runAgentTurnRef.current({
+          endpoint: "next-turn",
+          body: { proactive: true },
+        });
       } else if (userSpeakingRef.current) {
         scheduleProactive(3000);
       }
@@ -345,7 +376,11 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   }
 
   function scheduleRecognitionRestart(delay = 120) {
-    if (!aliveRef.current || mutedRef.current || recognitionStoppedByUsRef.current) {
+    if (
+      !aliveRef.current ||
+      mutedRef.current ||
+      recognitionStoppedByUsRef.current
+    ) {
       return;
     }
 
@@ -357,7 +392,12 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     recognitionRestartTimerRef.current = setTimeout(() => {
       recognitionRestartPendingRef.current = false;
       try {
-        if (recRef.current && aliveRef.current && !mutedRef.current && !recognitionStoppedByUsRef.current) {
+        if (
+          recRef.current &&
+          aliveRef.current &&
+          !mutedRef.current &&
+          !recognitionStoppedByUsRef.current
+        ) {
           recRef.current.start();
         }
       } catch (err) {}
@@ -393,7 +433,8 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       };
 
       recognition.onresult = (e) => {
-        if (!aliveRef.current || mutedRef.current || agentSpeakingRef.current) return;
+        if (!aliveRef.current || mutedRef.current || agentSpeakingRef.current)
+          return;
 
         if (!aiOpeningFiredRef.current && !userInitiatedRef.current) {
           userInitiatedRef.current = true;
@@ -431,9 +472,28 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
           setIsUserSpeaking(false);
 
           if (spoken) {
-            const userEntry = { id: Date.now(), speaker: "You", role: "user", text: spoken, color: "#22c55e" };
+            const userEntry = {
+              id: Date.now(),
+              speaker: "You",
+              role: "user",
+              text: spoken,
+              color: "#22c55e",
+            };
             const lower = spoken.toLowerCase();
-            const keywords = ["conclusion", "conclude", "concluding", "wrap up", "wrapping up", "final point", "thank you everyone", "that is all from my side", "my conclusion", "summarize", "summarizing", "end the discussion"];
+            const keywords = [
+              "conclusion",
+              "conclude",
+              "concluding",
+              "wrap up",
+              "wrapping up",
+              "final point",
+              "thank you everyone",
+              "that is all from my side",
+              "my conclusion",
+              "summarize",
+              "summarizing",
+              "end the discussion",
+            ];
             const isUserConcluding = keywords.some((k) => lower.includes(k));
 
             if (isUserConcluding && !concludedRef.current) {
@@ -452,8 +512,12 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
               setTimeout(async () => {
                 try {
                   const token = await getTokenRef.current();
-                  await axios.post(`${backend_URL}/api/group-discussion/add-user-message`, { sessionId, text: spoken }, { headers: { Authorization: `Bearer ${token}` } });
-                } catch (err) { }
+                  await axios.post(
+                    `${backend_URL}/api/group-discussion/add-user-message`,
+                    { sessionId, text: spoken },
+                    { headers: { Authorization: `Bearer ${token}` } },
+                  );
+                } catch (err) {}
                 if (aliveRef.current) endSession();
               }, 1200);
               return;
@@ -485,7 +549,11 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       };
 
       recognition.onend = () => {
-        if (aliveRef.current && !mutedRef.current && !recognitionStoppedByUsRef.current) {
+        if (
+          aliveRef.current &&
+          !mutedRef.current &&
+          !recognitionStoppedByUsRef.current
+        ) {
           scheduleRecognitionRestart(120);
         }
       };
@@ -505,10 +573,10 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         const res = await axios.post(
           `${backend_URL}/api/group-discussion/opening`,
           { sessionId, skipSave: true },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         if (aliveRef.current && res.data) prefetchedTurnRef.current = res.data;
-      } catch (err) { }
+      } catch (err) {}
     })();
 
     openTimerRef.current = setTimeout(() => {
@@ -521,12 +589,17 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       aiOpeningFiredRef.current = true;
       openTimerRef.current = null;
 
-      runAgentTurnRef.current({ endpoint: "opening", body: { skipSave: true } });
+      runAgentTurnRef.current({
+        endpoint: "opening",
+        body: { skipSave: true },
+      });
 
       setTimeout(() => {
         if (aliveRef.current && !isConcludingPhase) {
           setInvigilatorStatus("active");
-          setInvigilatorMessage("AI Invigilator is analyzing the discussion flow...");
+          setInvigilatorMessage(
+            "AI Invigilator is analyzing the discussion flow...",
+          );
         }
       }, 10000);
     }, 5000);
@@ -545,7 +618,9 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         recognitionRestartTimerRef.current = null;
       }
       if (recRef.current) {
-        try { recRef.current.stop(); } catch (_) { }
+        try {
+          recRef.current.stop();
+        } catch (_) {}
         recRef.current = null;
       }
     };
@@ -561,7 +636,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
           recRef.current.stop();
           recognitionStoppedByUsRef.current = true;
           recognitionRestartPendingRef.current = false;
-        } catch (err) { }
+        } catch (err) {}
       } else {
         recognitionStoppedByUsRef.current = false;
         scheduleRecognitionRestart(80);
@@ -575,9 +650,9 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         setPrepCountdown((prev) => {
           if (prev === 5) {
             hookSpeakText("Start GD now", "Rohan", {
-              onComplete: () => { },
+              onComplete: () => {},
               onError: (err) => console.error("TTS error:", err),
-            }).catch(() => { });
+            }).catch(() => {});
           }
           if (prev <= 1) {
             clearInterval(prepTimerRef.current);
@@ -597,12 +672,17 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     setShowPrepModal(false);
     if (aliveRef.current && !openedRef.current) {
       openedRef.current = true;
-      runAgentTurnRef.current({ endpoint: "opening", body: { skipSave: true } });
+      runAgentTurnRef.current({
+        endpoint: "opening",
+        body: { skipSave: true },
+      });
 
       setTimeout(() => {
         if (aliveRef.current && !isConcludingPhase) {
           setInvigilatorStatus("active");
-          setInvigilatorMessage("AI Invigilator is analyzing the discussion flow...");
+          setInvigilatorMessage(
+            "AI Invigilator is analyzing the discussion flow...",
+          );
         }
       }, 10000);
     }
@@ -632,7 +712,9 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     }
     recognitionRestartPendingRef.current = false;
     if (recRef.current) {
-      try { recRef.current.stop(); } catch (_) { }
+      try {
+        recRef.current.stop();
+      } catch (_) {}
       recRef.current = null;
     }
 
@@ -641,11 +723,11 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       await axios.post(
         `${backend_URL}/api/group-discussion/generate-report`,
         { sessionId, duration },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setSessionEnded(true);
       setIsEnding(false);
-    } catch (err) { }
+    } catch (err) {}
   };
 
   return {
@@ -668,17 +750,17 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       showEndConfirm,
       user,
       openedRef: openedRef.current,
-      concludedRef: concludedRef.current
+      concludedRef: concludedRef.current,
     },
     refs: {
-      endRef
+      endRef,
     },
     actions: {
       toggleMute,
       endSession: triggerEndSession,
       confirmEndSession,
       cancelEndSession,
-      handlePrepEnd
+      handlePrepEnd,
     },
     constants: {
       AGENT_COLORS,
@@ -691,7 +773,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         { name: "Marcus", color: "#f59e0b" },
         { name: "Emma", color: "#10b981" },
       ],
-      maxTime
-    }
+      maxTime,
+    },
   };
 }
