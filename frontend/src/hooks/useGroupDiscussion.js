@@ -57,6 +57,8 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   const recRef = useRef(null);
   const recognitionRef = recRef;
   const recognitionStoppedByUsRef = useRef(false);
+  const recognitionRestartTimerRef = useRef(null);
+  const recognitionRestartPendingRef = useRef(false);
   const proTimRef = useRef(null);
   const silTimRef = useRef(null);
   const openedRef = useRef(false);
@@ -342,6 +344,26 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     }, d);
   }
 
+  function scheduleRecognitionRestart(delay = 120) {
+    if (!aliveRef.current || mutedRef.current || recognitionStoppedByUsRef.current) {
+      return;
+    }
+
+    if (recognitionRestartTimerRef.current) {
+      clearTimeout(recognitionRestartTimerRef.current);
+    }
+
+    recognitionRestartPendingRef.current = true;
+    recognitionRestartTimerRef.current = setTimeout(() => {
+      recognitionRestartPendingRef.current = false;
+      try {
+        if (recRef.current && aliveRef.current && !mutedRef.current && !recognitionStoppedByUsRef.current) {
+          recRef.current.start();
+        }
+      } catch (err) {}
+    }, delay);
+  }
+
   useEffect(() => {
     if (!sessionId) return;
     aliveRef.current = true;
@@ -362,9 +384,12 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       let finalBuffer = "";
       let interimText = "";
       let finalizeTimer = null;
+      let lastProcessedFinalIndex = -1;
 
       recognition.onstart = () => {
         recognitionStoppedByUsRef.current = false;
+        recognitionRestartPendingRef.current = false;
+        lastProcessedFinalIndex = -1;
       };
 
       recognition.onresult = (e) => {
@@ -385,8 +410,14 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
         interimText = "";
         for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finalBuffer += e.results[i][0].transcript;
-          else interimText += e.results[i][0].transcript;
+          if (e.results[i].isFinal) {
+            if (i > lastProcessedFinalIndex) {
+              finalBuffer += e.results[i][0].transcript;
+              lastProcessedFinalIndex = i;
+            }
+          } else {
+            interimText += e.results[i][0].transcript;
+          }
         }
         setLiveText((finalBuffer + " " + interimText).trim());
 
@@ -455,13 +486,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
       recognition.onend = () => {
         if (aliveRef.current && !mutedRef.current && !recognitionStoppedByUsRef.current) {
-          setTimeout(() => {
-            try {
-              if (recRef.current && aliveRef.current && !mutedRef.current && !recognitionStoppedByUsRef.current) {
-                recRef.current.start();
-              }
-            } catch (err) { }
-          }, 100);
+          scheduleRecognitionRestart(120);
         }
       };
 
@@ -510,10 +535,15 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       aliveRef.current = false;
       userInitiatedRef.current = false;
       aiOpeningFiredRef.current = false;
+      recognitionRestartPendingRef.current = false;
       if (openTimerRef.current) clearTimeout(openTimerRef.current);
       if (prepTimerRef.current) clearInterval(prepTimerRef.current);
       if (proTimRef.current) clearTimeout(proTimRef.current);
       if (silTimRef.current) clearTimeout(silTimRef.current);
+      if (recognitionRestartTimerRef.current) {
+        clearTimeout(recognitionRestartTimerRef.current);
+        recognitionRestartTimerRef.current = null;
+      }
       if (recRef.current) {
         try { recRef.current.stop(); } catch (_) { }
         recRef.current = null;
@@ -530,22 +560,11 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         try {
           recRef.current.stop();
           recognitionStoppedByUsRef.current = true;
+          recognitionRestartPendingRef.current = false;
         } catch (err) { }
       } else {
         recognitionStoppedByUsRef.current = false;
-        setTimeout(() => {
-          try {
-            if (recRef.current && !mutedRef.current) {
-              recRef.current.start();
-            }
-          } catch (err) {
-            setTimeout(() => {
-              try {
-                if (recRef.current && !mutedRef.current) recRef.current.start();
-              } catch (_) { }
-            }, 500);
-          }
-        }, 50);
+        scheduleRecognitionRestart(80);
       }
     }
   };
@@ -607,6 +626,11 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
     if (proTimRef.current) clearTimeout(proTimRef.current);
     if (silTimRef.current) clearTimeout(silTimRef.current);
+    if (recognitionRestartTimerRef.current) {
+      clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRestartTimerRef.current = null;
+    }
+    recognitionRestartPendingRef.current = false;
     if (recRef.current) {
       try { recRef.current.stop(); } catch (_) { }
       recRef.current = null;

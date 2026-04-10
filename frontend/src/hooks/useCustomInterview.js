@@ -78,6 +78,8 @@ export const useCustomInterview = () => {
   const wrapUpInformedRef = useRef(false);
   const lastAiFinishTimeRef = useRef(0);
   const isWaitingForInactivityResponseRef = useRef(false);
+  const recognitionRestartTimerRef = useRef(null);
+  const recognitionRestartPendingRef = useRef(false);
 
   const MOCK_INTERVIEW_DATA = {
     interviewType: "Technical",
@@ -460,6 +462,38 @@ export const useCustomInterview = () => {
     setTimeout(handleEndCall, 5000);
   };
 
+  const scheduleRecognitionRestart = useCallback((delay = 600) => {
+    if (
+      hasCallEndedRef.current ||
+      activeCodingTaskRef.current ||
+      !recognitionRef.current
+    ) {
+      return;
+    }
+
+    if (recognitionRestartTimerRef.current) {
+      clearTimeout(recognitionRestartTimerRef.current);
+    }
+
+    recognitionRestartPendingRef.current = true;
+    recognitionRestartTimerRef.current = setTimeout(() => {
+      recognitionRestartPendingRef.current = false;
+      if (
+        !recognitionRef.current ||
+        hasCallEndedRef.current ||
+        activeCodingTaskRef.current ||
+        isAgentSpeakingRef.current ||
+        isAiThinkingRef.current
+      ) {
+        return;
+      }
+
+      try {
+        recognitionRef.current.start();
+      } catch (e) {}
+    }, delay);
+  }, []);
+
   const playTTS = useCallback(
     async (text) => {
       if (activeCodingTaskRef.current || hasCallEndedRef.current) return;
@@ -507,30 +541,14 @@ export const useCustomInterview = () => {
                 handleEndCall();
                 return;
               }
-              if (
-                !hasCallEndedRef.current &&
-                !activeCodingTaskRef.current &&
-                recognitionRef.current
-              ) {
-                try {
-                  recognitionRef.current.start();
-                } catch (e) {}
-              }
+              scheduleRecognitionRestart(500);
             }, 500);
           },
           onError: (err) => {
             console.error("[TTS] Polly error:", err);
             isAgentSpeakingRef.current = false;
             setIsAgentSpeaking(false);
-            if (
-              !hasCallEndedRef.current &&
-              !activeCodingTaskRef.current &&
-              recognitionRef.current
-            ) {
-              try {
-                recognitionRef.current.start();
-              } catch (e) {}
-            }
+            scheduleRecognitionRestart(500);
           },
         });
       } catch (err) {
@@ -563,8 +581,12 @@ export const useCustomInterview = () => {
     recognition.interimResults = true;
     recognition.lang = "en-US";
     let finalBuffer = "";
+    let lastProcessedFinalIndex = -1;
 
     recognition.onstart = () => {
+      finalBuffer = "";
+      lastProcessedFinalIndex = -1;
+      recognitionRestartPendingRef.current = false;
       setCallStatus("active");
       setConnectionStatus("Connected");
       if (transcriptRef.current.length === 0) handleAiChat();
@@ -572,7 +594,7 @@ export const useCustomInterview = () => {
 
     recognition.onresult = (e) => {
       const now = Date.now();
-      const isCoolingDown = now - lastAiFinishTimeRef.current < 1500;
+      const isCoolingDown = now - lastAiFinishTimeRef.current < 2500;
       if (
         isAgentSpeakingRef.current ||
         isAiThinkingRef.current ||
@@ -582,23 +604,35 @@ export const useCustomInterview = () => {
         return;
 
       let interimTranscript = "";
+      let hasNewFinalText = false;
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const transcriptChunk = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalBuffer += transcriptChunk;
-        else interimTranscript += transcriptChunk;
+        if (e.results[i].isFinal) {
+          if (i > lastProcessedFinalIndex) {
+            finalBuffer += transcriptChunk;
+            lastProcessedFinalIndex = i;
+            hasNewFinalText = true;
+          }
+        } else {
+          interimTranscript += transcriptChunk;
+        }
       }
 
-      const currentText = (finalBuffer + interimTranscript).trim();
-      if (currentText) {
+      const hasSpeechActivity =
+        Boolean(interimTranscript.trim()) || Boolean(finalBuffer.trim());
+      if (hasSpeechActivity) {
         setIsUserSpeaking(true);
         if (inactivityTimerRef.current)
           clearTimeout(inactivityTimerRef.current);
         isWaitingForInactivityResponseRef.current = false;
-        updateUserTranscript(currentText);
+
+        if (hasNewFinalText) {
+          updateUserTranscript(finalBuffer.trim());
+        }
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
-          const finalStr = finalBuffer.trim() || interimTranscript.trim();
+          const finalStr = finalBuffer.trim();
           if (finalStr) {
             handleUserSpeech(finalStr);
             finalBuffer = "";
@@ -618,12 +652,9 @@ export const useCustomInterview = () => {
     recognition.onend = () => {
       if (
         !hasCallEndedRef.current &&
-        !activeCodingTaskRef.current &&
-        !isAgentSpeakingRef.current
+        !activeCodingTaskRef.current
       ) {
-        try {
-          recognition.start();
-        } catch (e) {}
+        scheduleRecognitionRestart(300);
       }
     };
 
@@ -631,7 +662,13 @@ export const useCustomInterview = () => {
     try {
       recognition.start();
     } catch (e) {}
-  }, [handleAiChat, handleUserSpeech, updateUserTranscript, setCallStatus]);
+  }, [
+    handleAiChat,
+    handleUserSpeech,
+    updateUserTranscript,
+    setCallStatus,
+    scheduleRecognitionRestart,
+  ]);
 
   const handleEndCall = useCallback(() => {
     hasCallEndedRef.current = true;
@@ -639,6 +676,11 @@ export const useCustomInterview = () => {
     setCallStatus("ended");
     setConnectionStatus("Call Ended");
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (recognitionRestartTimerRef.current) {
+      clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRestartTimerRef.current = null;
+    }
+    recognitionRestartPendingRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.onend = null;
@@ -677,6 +719,11 @@ export const useCustomInterview = () => {
 
   const handleSaveAndExit = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (recognitionRestartTimerRef.current) {
+      clearTimeout(recognitionRestartTimerRef.current);
+      recognitionRestartTimerRef.current = null;
+    }
+    recognitionRestartPendingRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.onend = null;
@@ -866,8 +913,15 @@ export const useCustomInterview = () => {
     }
     setTimeout(startSTT, 1000);
     return () => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (recognitionRestartTimerRef.current) {
+        clearTimeout(recognitionRestartTimerRef.current);
+        recognitionRestartTimerRef.current = null;
+      }
+      recognitionRestartPendingRef.current = false;
       if (recognitionRef.current)
         try {
+          recognitionRef.current.onend = null;
           recognitionRef.current.stop();
         } catch (e) {}
       stopSpeaking();
