@@ -214,7 +214,7 @@ const DashboardOverview = () => {
         }}
       />
 
-      <div className="px-4 md:px-8 py-8 md:py-12 max-w-6xl mx-auto space-y-12 animate-fade-in text-zinc-100 selection:bg-[#bef264] selection:text-black">
+      <div className="px-4 md:px-8 py-8 md:py-12 max-w-6xl mx-auto space-y-6 md:space-y-12 animate-fade-in text-zinc-100 selection:bg-[#bef264] selection:text-black">
         {/* Welcome Section */}
         <section>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -222,11 +222,11 @@ const DashboardOverview = () => {
               <span className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 Performance Overview
               </span>
-              <h2 className="text-4xl font-black tracking-tighter text-white">
-                Welcome back, {user?.firstName}.{" "}
-                <span className="text-4xl animate-wave">👋</span>
+              <h2 className="text-2xl md:text-4xl font-black tracking-tighter text-white">
+                Welcome, <span className="text-[#bef264] capitalize">{user?.firstName}</span>.{" "}
+                <span className="text-3xl md:text-4xl animate-wave">👋</span>
               </h2>
-              <p className="text-zinc-400 mt-2 max-w-lg">
+              <p className="text-zinc-400 text-sm md:text-base mt-2 max-w-lg">
                 You're making great progress in your interview preparations.
                 Keep the momentum going to achieve your targeted role.
               </p>
@@ -235,7 +235,7 @@ const DashboardOverview = () => {
               {loading ? (
                 <Skeleton className="min-w-[280px] h-[140px] rounded-2xl" />
               ) : subscription ? (
-                <div className="bg-[#bef264] rounded-2xl p-6 flex flex-col gap-5 shadow-[0_20px_50px_-12px_rgba(190,242,100,0.4)] min-w-[280px] group transition-all duration-500 hover:scale-[1.02]">
+                <div className="bg-[#bef264] rounded-2xl p-3 md:p-6 flex flex-col gap-5 shadow-[0_20px_50px_-12px_rgba(190,242,100,0.4)] w-full md:min-w-[280px] group transition-all duration-500 hover:scale-[1.02]">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[11px] font-black text-black uppercase tracking-[0.2em] leading-none shrink-0 opacity-80">
                       {subscription.tier}
@@ -308,7 +308,7 @@ const DashboardOverview = () => {
         </section>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2  lg:grid-cols-5 gap-2 md:gap-4">
           {loading ? (
             Array(5)
               .fill(0)
@@ -318,7 +318,7 @@ const DashboardOverview = () => {
           ) : (
             <>
               <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+            <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FaClock size={24} />
             </div>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
@@ -336,7 +336,7 @@ const DashboardOverview = () => {
           </div>
 
           <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+            <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FaCheckCircle size={24} />
             </div>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
@@ -361,7 +361,7 @@ const DashboardOverview = () => {
           </div>
 
           <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+            <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
               <FaUsers size={24} />
             </div>
             <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
@@ -384,7 +384,7 @@ const DashboardOverview = () => {
           </div>
 
               <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-                <div className="absolute top-0 right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+                <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
                   <FiTarget size={24} />
                 </div>
                 <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
@@ -412,18 +412,18 @@ const DashboardOverview = () => {
         </div>
 
         {/* Activity Grid - Asymmetric Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-8 items-start">
           {/* Left Column: Main Activities */}
-          <div className="lg:col-span-7 md:col-span-12 space-y-8">
+          <div className="lg:col-span-7 hidden md:block md:col-span-12 space-y-8">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-white">
+              <h3 className="text-lg md:text-xl font-black text-white">
                 Recommended Focus
               </h3>
               <Link
                 to="/paths"
                 className="text-[#bef264] text-xs font-black uppercase tracking-widest hover:text-[#dcfc9f] transition-colors"
               >
-                View all paths
+                View all 
               </Link>
             </div>
 

@@ -140,28 +140,28 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
     return (
       <div className="flex-1  p-6 md:p-10 overflow-y-auto custom-scrollbar animate-fade">
         <div className="max-w-7xl mx-auto">
-          <header className="mb-10 flex items-center justify-between">
+          <header className="mb-4 sm:mb-10 flex items-center justify-between">
             <div>
-              <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
+              <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-2 sm:mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 Template Selection
               </div>
-              <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
                 Choose your <span className="text-[#bef264] italic">Style</span>
               </h1>
-              <p className="text-zinc-500 font-medium text-md mt-4">
+              <p className="text-zinc-500 font-medium text-sm sm:text-md mt-2 sm:mt-4">
                 Select a professional layout to start your journey
               </p>
             </div>
             <button
               onClick={() => setView("dashboard")}
-              className="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl border border-zinc-800 font-bold text-sm transition-all flex items-center gap-2 group"
+              className="px-6 py-3 hidden sm:flex bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl border border-zinc-800 font-bold text-sm transition-all  items-center gap-2 group"
             >
               <IoAdd className="w-5 h-5 rotate-45 group-hover:rotate-[135deg] transition-transform" />
               Back to Dashboard
             </button>
           </header>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
             {Object.keys(templates).map((key) => {
               const themeColor = TEMPLATE_THEMES[key] || "#bef264";
               const customData = {
@@ -179,7 +179,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
               return (
                 <div key={key} className="group flex flex-col">
                   <div
-                    className="relative aspect-[210/297] bg-white rounded-2xl shadow-lg border border-zinc-200 overflow-hidden cursor-pointer transform group-hover:-translate-y-2 transition-all duration-500"
+                    className="relative aspect-[210/297] bg-white rounded-xl sm:rounded-2xl shadow-lg border border-zinc-200 overflow-hidden cursor-pointer transform group-hover:-translate-y-2 transition-all duration-500"
                     onClick={() => onNew(key)}
                   >
                     <ResumeCardPreview resume={customData} />
@@ -188,7 +188,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                         className="bg-white text-zinc-950 px-6 py-2 rounded-xl font-black text-[10px] tracking-[0.2em] shadow-2xl border-b-4 border-zinc-200 active:border-b-0 active:translate-y-1 transition-all"
                         style={{ color: themeColor }}
                       >
-                        USE THIS TEMPLATE
+                        USE <span className="hidden md:block">THIS TEMPLATE</span>
                       </div>
                     </div>
                   </div>
@@ -221,19 +221,24 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
           <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
             Resume Builder
           </div>
-          <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
             Build your{" "}
             <span className="text-[#bef264] italic">ATS Friendly</span> Resumes
           </h1>
-          <p className="text-zinc-500 font-medium text-md mt-4">
-            Create professional, ATS-optimized resumes in minutes. Current Tier: <span className="text-white font-bold">{userTier.tier}</span> ({resumes.length}/{userTier.limit} Used)
-            <Link to={"/pricing"} className="text-lime-400 hover:underline ml-2">
+          <p className="text-zinc-500 font-medium text-sm md:text-md mt-4">
+            Create professional, ATS-optimized resumes in minutes.
+            (
+            {resumes.length}/{userTier.limit} Used)
+            <Link
+              to={"/pricing"}
+              className="text-lime-400 hover:underline ml-2"
+            >
               Upgrade plan
             </Link>
           </p>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
           {/* New Resume Card (Matches image style) */}
           <button
             onClick={() => {
@@ -243,7 +248,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                 setView("templates");
               }
             }}
-            className="group relative aspect-[210/297] bg-black rounded-2xl border-2 border-dashed border-zinc-700 hover:border-lime-400/50 hover:bg-lime-400/5 transition-all flex flex-col items-center justify-center gap-3"
+            className="group relative aspect-[210/297] bg-black rounded-xl sm:rounded-2xl border-2 border-dashed border-zinc-700 hover:border-lime-400/50 hover:bg-lime-400/5 transition-all flex flex-col items-center justify-center gap-3"
           >
             <div className="text-zinc-500 group-hover:text-lime-400 transition-colors">
               <FiPlusCircle className="w-10 h-10 stroke-[1.5]" />
@@ -257,7 +262,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
           {resumes.map((resume) => (
             <div key={resume._id} className="group flex flex-col">
               <div
-                className="relative aspect-[210/297] bg-zinc-800 rounded-2xl shadow-sm hover:shadow-2xl hover:shadow-lime-400/10 transition-all overflow-hidden cursor-pointer mb-3 border border-zinc-800"
+                className="relative aspect-[210/297] bg-zinc-800 rounded-xl sm:rounded-2xlshadow-sm hover:shadow-2xl hover:shadow-lime-400/10 transition-all overflow-hidden cursor-pointer mb-3 border border-zinc-800"
                 onClick={() => onEdit(resume._id)}
               >
                 {/* Real Resume Preview */}
@@ -273,12 +278,12 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
 
               <div className="flex items-start justify-between px-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-black text-white truncate text-lg leading-tight group-hover:text-lime-400 transition-colors uppercase tracking-tight capitalize">
+                  <h3 className="font-black text-white truncate text-sm sm:text-lg leading-tight group-hover:text-lime-400 transition-colors uppercase tracking-tight capitalize">
                     {resume.title || "Untitled"}
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
                     <span>
-                      edited {formatDistanceToNow(new Date(resume.updatedAt))}{" "}
+                       {formatDistanceToNow(new Date(resume.updatedAt))}{" "}
                       ago
                     </span>
                     <span className="text-zinc-800">•</span>

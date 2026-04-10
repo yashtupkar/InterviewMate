@@ -8,6 +8,7 @@ import {
   FiUsers,
   FiMic,
   FiArrowRight,
+  FiChevronLeft,
   FiZap,
   FiGlobe,
   FiCpu,
@@ -75,6 +76,10 @@ const GroupDiscussionSetup = () => {
   const [micReady, setMicReady] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [customTopic, setCustomTopic] = useState("");
+  const [mobileStage, setMobileStage] = useState(1);
+  const [isSmallScreen, setIsSmallScreen] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
   const { backend_URL } = useContext(AppContext);
   const { getToken } = useAuth();
   const navigate = useNavigate();
@@ -82,6 +87,21 @@ const GroupDiscussionSetup = () => {
   const topics = TOPIC_POOLS[selectedCategory] || [];
 
   const [subscription, setSubscription] = useState(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const small = window.innerWidth < 768;
+      setIsSmallScreen(small);
+      if (!small) {
+        setMobileStage(1);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -168,20 +188,38 @@ const GroupDiscussionSetup = () => {
     }
   };
 
+  const canProceedToForm = micReady;
+  const isCompactMobileForm = isSmallScreen && mobileStage === 2;
+
+  const handleNextStage = () => {
+    if (!canProceedToForm) {
+      toast.error("Please allow microphone access to continue.");
+      return;
+    }
+
+    setMobileStage(2);
+  };
+
+  const handleBackToSetup = () => {
+    setMobileStage(1);
+  };
+
   return (
     <>
       <Helmet>
         <title>GD Setup | PlaceMateAI</title>
       </Helmet>
       <div className="min-h-screen  text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
-        <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto mt-8 relative">
+        <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto mt-2 sm:mt-8 relative">
           {/* Left Column: Preview & Info - Sticky */}
-          <div className="w-full lg:w-1/2 flex flex-col lg:sticky lg:top-16 h-fit space-y-6 animate-fade-in-left">
+          <div
+            className={`w-full lg:w-1/2 flex flex-col lg:sticky lg:top-16 h-fit space-y-4 sm:space-y-6 animate-fade-in-left ${isSmallScreen && mobileStage === 2 ? "hidden" : ""}`}
+          >
             <div className="space-y-4">
               <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 GD Simulator AI
               </div>
-              <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight leading-tight">
                 Master the <span className="text-[#bef264] italic">GD</span>{" "}
                 Dynamics
               </h1>
@@ -193,12 +231,12 @@ const GroupDiscussionSetup = () => {
             </div>
 
             {/* Discussion Panel Preview */}
-            <div className="p-8 bg-zinc-950 rounded-[2rem] border-y border-[#bef264] shadow-2xl shadow-[#bef264]/5 relative overflow-hidden group">
+            <div className=" p-4 sm:p-8 bg-zinc-950 rounded-xl sm:rounded-[2rem] border-y border-[#bef264] shadow-2xl shadow-[#bef264]/5 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#bef264]/5 rounded-full blur-3xl -mr-10 -mt-10" />
-              <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-6 relative z-10">
+              <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-2 sm:mb-6 relative z-10">
                 Discussion Panel
               </h3>
-              <div className="grid grid-cols-2 gap-6 relative z-10">
+              <div className="grid grid-cols-2 gap-2 md:gap-6 relative z-10">
                 {[
                   {
                     name: "Rohan",
@@ -227,7 +265,7 @@ const GroupDiscussionSetup = () => {
                 ].map((agent) => (
                   <div
                     key={agent.name}
-                    className="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 overflow-hidden"
+                    className="flex items-center gap-4 p-2 sm:p-3 rounded-2xl bg-white/5 border border-white/5 overflow-hidden"
                   >
                     <div
                       className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-black text-white shadow-lg flex-shrink-0 overflow-hidden"
@@ -258,7 +296,7 @@ const GroupDiscussionSetup = () => {
                 ))}
               </div>
 
-              <div className="mt-8 flex items-center justify-between border-t border-white/5 pt-6 relative z-10">
+              <div className="mt-4 sm:mt-8 flex items-center justify-between border-t border-white/5 pt-6 relative z-10">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#bef264]/20 border-2 border-[#bef264]/40 flex items-center justify-center">
                     <FiMic size={18} className="text-[#bef264]" />
@@ -285,7 +323,19 @@ const GroupDiscussionSetup = () => {
               </div>
             </div>
 
-            <div className="dark:bg-[#1a1a1a] bg-white p-7 shadow-xl rounded-[2rem] border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
+            {isSmallScreen && mobileStage === 1 && (
+              <button
+                onClick={handleNextStage}
+                disabled={!canProceedToForm}
+                className={`w-full py-3 rounded-2xl font-black tracking-wider text-sm transition-all ${canProceedToForm ? "bg-[#bef264] text-black shadow-xl shadow-[#bef264]/20" : "bg-zinc-800 text-zinc-500 cursor-not-allowed"}`}
+              >
+                {canProceedToForm
+                  ? "Proceed to Session Details"
+                  : "Enable Microphone"}
+              </button>
+            )}
+
+            <div className="sm:bg-[#1a1a1a] p-3 sm:p-7 shadow-xl rounded-[2rem] sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
               <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
                 <FiMessageSquare className="mr-3 text-[#bef264] text-lg" /> GD
                 Dynamics
@@ -299,19 +349,40 @@ const GroupDiscussionSetup = () => {
           </div>
 
           {/* Right Column: Setup Form */}
-          <div className="w-full lg:w-[450px] flex flex-col gap-8 animate-fade-in-right px-4">
-            <div className="pb-2">
-              <h2 className="text-lg font-black dark:text-white text-black mb-1 uppercase tracking-tight">
+          <div
+            className={`w-full lg:w-[450px] flex flex-col animate-fade-in-right ${isSmallScreen && mobileStage === 1 ? "hidden" : ""} ${isCompactMobileForm ? "gap-5 px-1" : "gap-8 px-4"}`}
+          >
+            {isCompactMobileForm && (
+              <div className="flex items-center justify-between mb-1">
+                <button
+                  type="button"
+                  onClick={handleBackToSetup}
+                  className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+                >
+                  <FiChevronLeft size={14} /> Back
+                </button>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#bef264]">
+                  Step 2 of 2
+                </span>
+              </div>
+            )}
+
+            <div className={isCompactMobileForm ? "pb-1" : "pb-2"}>
+              <h2
+                className={`${isCompactMobileForm ? "text-base" : "text-lg"} font-black dark:text-white text-black mb-1 uppercase tracking-tight`}
+              >
                 Session Configuration
               </h2>
-              <p className="dark:text-zinc-500 text-gray-500 text-sm font-medium">
+              <p
+                className={`dark:text-zinc-500 text-gray-500 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium`}
+              >
                 Configure your group discussion environment
               </p>
             </div>
 
-            <div className="space-y-6">
+            <div className={isCompactMobileForm ? "space-y-4" : "space-y-6"}>
               {/* Duration Select */}
-              <div className="space-y-4">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Time Limit
                 </label>
@@ -320,7 +391,7 @@ const GroupDiscussionSetup = () => {
                     <button
                       key={min}
                       onClick={() => setTimeLimit(min)}
-                      className={`py-2.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                      className={`${isCompactMobileForm ? "py-2 text-[10px]" : "py-2.5 text-[11px]"} rounded-lg font-black uppercase tracking-wider transition-all ${
                         timeLimit === min
                           ? "bg-[#bef264] text-black shadow-lg"
                           : "text-zinc-500 hover:text-zinc-300"
@@ -335,7 +406,9 @@ const GroupDiscussionSetup = () => {
               <hr className="dark:border-white/5 border-black/5" />
 
               {/* Preparation Time Toggle */}
-              <div className="flex items-center justify-between p-4 bg-black rounded-xl border border-zinc-800 shadow-sm transition-all hover:border-zinc-700">
+              <div
+                className={`flex items-center justify-between ${isCompactMobileForm ? "p-3" : "p-4"} bg-black rounded-xl border border-zinc-800 shadow-sm transition-all hover:border-zinc-700`}
+              >
                 <div className="space-y-0.5">
                   <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                     Topic Preparation
@@ -362,16 +435,18 @@ const GroupDiscussionSetup = () => {
               <hr className="dark:border-white/5 border-black/5" />
 
               {/* Category Select */}
-              <div className="space-y-4">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Category
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div
+                  className={`grid ${isCompactMobileForm ? "grid-cols-1 gap-2.5" : "grid-cols-2 gap-3"}`}
+                >
                   {CATEGORIES.map(({ key, label, icon: Icon }) => (
                     <button
                       key={key}
                       onClick={() => handleCategoryChange(key)}
-                      className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
+                      className={`flex items-center gap-3 ${isCompactMobileForm ? "p-3" : "p-3.5"} rounded-2xl border transition-all ${
                         selectedCategory === key
                           ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5"
                           : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"
@@ -395,12 +470,14 @@ const GroupDiscussionSetup = () => {
               <hr className="dark:border-white/5 border-black/5" />
 
               {/* Topic List */}
-              <div className="space-y-4">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Select Topic
                 </label>
                 <div className="p-1 bg-black rounded-2xl border border-zinc-800 overflow-hidden shadow-sm">
-                  <div className="max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                  <div
+                    className={`${isCompactMobileForm ? "max-h-[190px]" : "max-h-[220px]"} overflow-y-auto custom-scrollbar pr-1`}
+                  >
                     {/* Random Option */}
                     <button
                       onClick={() => setSelectedTopicIdx(null)}
@@ -410,7 +487,9 @@ const GroupDiscussionSetup = () => {
                           : "text-zinc-400 bg-zinc-800 hover:bg-zinc-900 hover:text-white font-bold"
                       }`}
                     >
-                      <span className="text-[12px] font-black uppercase tracking-widest">
+                      <span
+                        className={`${isCompactMobileForm ? "text-[11px]" : "text-[12px]"} font-black uppercase tracking-widest`}
+                      >
                         Choose Automatically
                       </span>
                       <FiShuffle
@@ -432,7 +511,9 @@ const GroupDiscussionSetup = () => {
                           : "text-zinc-400 bg-zinc-800 hover:bg-zinc-900 hover:text-white font-bold"
                       }`}
                     >
-                      <span className="text-[12px] font-black uppercase tracking-widest">
+                      <span
+                        className={`${isCompactMobileForm ? "text-[11px]" : "text-[12px]"} font-black uppercase tracking-widest`}
+                      >
                         Custom Topic
                       </span>
                       <FiEdit
@@ -446,13 +527,15 @@ const GroupDiscussionSetup = () => {
                     </button>
 
                     {selectedTopicIdx === "custom" && (
-                      <div className="p-3 animate-fade-in">
+                      <div
+                        className={`${isCompactMobileForm ? "p-2.5" : "p-3"} animate-fade-in`}
+                      >
                         <textarea
                           value={customTopic}
                           onChange={(e) => setCustomTopic(e.target.value)}
                           placeholder="Type your custom topic here..."
-                          className="w-full p-3 bg-zinc-900 border border-zinc-700 rounded-xl text-white text-[12px] focus:ring-1 focus:ring-[#bef264] outline-none resize-none"
-                          rows="3"
+                          className={`w-full ${isCompactMobileForm ? "p-2.5 text-[11px]" : "p-3 text-[12px]"} bg-zinc-900 border border-zinc-700 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] outline-none resize-none`}
+                          rows={isCompactMobileForm ? 2 : 3}
                         />
                       </div>
                     )}
@@ -464,24 +547,28 @@ const GroupDiscussionSetup = () => {
                       <button
                         key={idx}
                         onClick={() => setSelectedTopicIdx(idx)}
-                        className={`w-full text-left px-4 py-3 rounded-xl transition-all mb-1 ${
+                        className={`w-full text-left ${isCompactMobileForm ? "px-3 py-2.5" : "px-4 py-3"} rounded-xl transition-all mb-1 ${
                           selectedTopicIdx === idx
                             ? "bg-[#bef264]/10 text-[#bef264] border border-[#bef264]/20 font-black"
                             : "text-zinc-400 hover:text-white hover:bg-zinc-900 font-bold"
                         }`}
                       >
-                        <p className="text-[12px] leading-snug">{topic}</p>
+                        <p
+                          className={`${isCompactMobileForm ? "text-[11px]" : "text-[12px]"} leading-snug`}
+                        >
+                          {topic}
+                        </p>
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4">
+              <div className={isCompactMobileForm ? "pt-2" : "pt-4"}>
                 <button
                   onClick={handleStart}
                   disabled={isStarting || !micReady}
-                  className={`w-full ${subscription && subscription.tier !== "Infinite Elite" && (subscription.credits || 0) <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} font-black py-4 rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50 active:scale-95`}
+                  className={`w-full ${isCompactMobileForm ? "py-3.5 text-sm" : "py-4"} ${subscription && subscription.tier !== "Infinite Elite" && (subscription.credits || 0) <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} font-black rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50 active:scale-95`}
                 >
                   {isStarting ? (
                     <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />

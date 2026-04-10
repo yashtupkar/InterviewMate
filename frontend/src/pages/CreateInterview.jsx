@@ -60,6 +60,10 @@ const CreateInterview = () => {
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] =
     useState(false);
+  const [mobileStage, setMobileStage] = useState(1);
+  const [isSmallScreen, setIsSmallScreen] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
   const { speakText, stopSpeaking } = usePollyTTS();
 
   const playVoiceSample = async (agent, e = null) => {
@@ -80,6 +84,21 @@ const CreateInterview = () => {
   const navigate = useNavigate();
 
   const [subscription, setSubscription] = useState(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const small = window.innerWidth < 768;
+      setIsSmallScreen(small);
+      if (!small) {
+        setMobileStage(1);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     resetInterview();
@@ -238,20 +257,38 @@ const CreateInterview = () => {
 
   const toggleVideo = () => setIsCameraEnabled(!isCameraEnabled);
 
+  const canProceedToForm = isCameraEnabled && isMicEnabled;
+  const isCompactMobileForm = isSmallScreen && mobileStage === 2;
+
+  const handleNextStage = () => {
+    if (!canProceedToForm) {
+      toast.error("Please enable both camera and microphone to continue.");
+      return;
+    }
+
+    setMobileStage(2);
+  };
+
+  const handleBackToSetup = () => {
+    setMobileStage(1);
+  };
+
   return (
     <>
       <Helmet>
         <title>Interview Setup | PlaceMateAI</title>
       </Helmet>
-      <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 pb-20 p-4 md:p-8">
-        <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto mt-8 relative">
+      <div className="min-h-screen text-zinc-100 transition-colors selection:bg-[#bef264]/30 md:pb-20 p-4 md:p-8">
+        <div className="flex flex-col lg:flex-row items-start justify-center gap-12 max-w-7xl mx-auto mt-2 sm:mt-8 relative">
           {/* Pre-call Preview / Green Room - Sticky Section */}
-          <div className="w-full lg:w-1/2 flex flex-col lg:sticky lg:top-16 h-fit space-y-6 animate-fade-in-left">
+          <div
+            className={`w-full lg:w-1/2 flex flex-col lg:sticky lg:top-16 h-fit space-y-4 sm:space-y-6 animate-fade-in-left ${isSmallScreen && mobileStage === 2 ? "hidden" : ""}`}
+          >
             <div className="space-y-4">
               <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 AI Mock Interview
               </div>
-              <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight leading-tight">
                 Ace your <span className="text-[#bef264] italic">Job</span>{" "}
                 Interview
               </h1>
@@ -262,14 +299,14 @@ const CreateInterview = () => {
               </p>
             </div>
 
-            <div className="relative aspect-video bg-zinc-950 rounded-[2rem] border-y border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
+            <div className="relative aspect-video bg-zinc-950 rounded-xl sm:rounded-[2rem] border-y border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
               {isCameraEnabled ? (
                 <video
                   ref={localVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="absolute inset-0 w-full h-full object-cover mirror rounded-[2rem]"
+                  className="absolute inset-0 w-full h-full object-cover mirror rounded-xl sm:rounded-[2rem]"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/50 backdrop-blur-sm">
@@ -278,59 +315,94 @@ const CreateInterview = () => {
                       <img
                         src={user?.imageUrl}
                         alt="User Avatar"
-                        className="w-24 h-24 rounded-full object-cover mb-4 border-4 border-indigo-500/30"
+                        className="w-10 h-10 sm:w-24 sm:h-24 rounded-full object-cover mb-4 border-4 border-indigo-500/30"
                       />
                     ) : (
-                      <div className="w-24 h-24 rounded-full bg-indigo-500/20 flex items-center justify-center mb-4 border-2 border-indigo-500/50">
+                      <div className="w-10 h-10 sm:w-24 sm:h-24 rounded-full bg-indigo-500/20 flex items-center justify-center mb-4 border-2 border-indigo-500/50">
                         <FiUser className="text-4xl text-indigo-400" />
                       </div>
                     )}
-                    <span className="text-sm font-semibold text-zinc-400 tracking-wide uppercase">
+                    <span className="text-xs sm:text-sm font-semibold text-zinc-400 tracking-wide uppercase">
                       Camera is Off
                     </span>
                   </div>
                 </div>
               )}
 
-              {/* Controls Overlay */}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-zinc-900/80 backdrop-blur-2xl p-2.5 rounded-3xl border border-white/10 transition-all duration-300 shadow-2xl hover:bg-zinc-900">
+              {/* Controls Overlay Desktop*/}
+              <div className="absolute hidden  bottom-2 sm:bottom-6 left-1/2 -translate-x-1/2 sm:flex items-center gap-4 bg-zinc-900/80 backdrop-blur-2xl p-2.5  rounded-xl sm:rounded-3xl border border-white/10 transition-all duration-300 shadow-2xl hover:bg-zinc-900">
                 <button
                   onClick={() => setIsMicEnabled(!isMicEnabled)}
-                  className={`p-4 rounded-2xl transition-all cursor-pointer ${!isMicEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
+                  className={`p-3 sm:p-4 rounded-lg sm:rounded-2xl transition-all cursor-pointer ${!isMicEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
                 >
                   {!isMicEnabled ? (
-                    <FiMicOff className="text-xl" />
+                    <FiMicOff className="text-sm sm:text-xl" />
                   ) : (
-                    <FiMic className="text-xl" />
+                    <FiMic className="text-sm sm:text-xl" />
                   )}
                 </button>
                 <button
                   onClick={toggleVideo}
-                  className={`p-4 rounded-2xl transition-all cursor-pointer ${!isCameraEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
+                  className={`p-3 sm:p-4 rounded-lg sm:rounded-2xl transition-all cursor-pointer ${!isCameraEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
                 >
                   {!isCameraEnabled ? (
-                    <FiVideoOff className="text-xl" />
+                    <FiVideoOff className="text-sm sm:text-xl" />
                   ) : (
-                    <FiVideo className="text-xl" />
+                    <FiVideo className="text-sm sm:text-xl" />
                   )}
                 </button>
               </div>
 
-              <div className="absolute top-6 left-6 flex items-center space-x-2 bg-zinc-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
+              <div className="absolute top-1 sm:top-6 left-1 sm:left-6 flex items-center space-x-2 bg-zinc-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                 <div
                   className={`w-2 h-2 rounded-full ${isCameraEnabled && isMicEnabled ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}
                 ></div>
-                <span className="text-[10px] font-black tracking-widest text-white uppercase opacity-90">
+                <span className="text-[8px] sm:text-[10px] font-black tracking-widest text-white uppercase opacity-90">
                   {isCameraEnabled && isMicEnabled
                     ? "System Ready"
                     : "Setup Required"}
                 </span>
               </div>
             </div>
+            {/* Controls Overlay Mobile */}
+            <div className="w-fit mx-auto sm:hidden  flex items-center gap-4 bg-zinc-900/80 backdrop-blur-2xl p-2.5  rounded-xl sm:rounded-3xl border border-white/10 transition-all duration-300 shadow-2xl hover:bg-zinc-900">
+              <button
+                onClick={() => setIsMicEnabled(!isMicEnabled)}
+                className={`px-4 py-2 sm:p-4 rounded-lg sm:rounded-2xl transition-all cursor-pointer ${!isMicEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
+              >
+                {!isMicEnabled ? (
+                  <FiMicOff className="text-sm sm:text-xl" />
+                ) : (
+                  <FiMic className="text-sm sm:text-xl" />
+                )}
+              </button>
+              <button
+                onClick={toggleVideo}
+                className={`px-4 py-2 sm:p-4  rounded-lg sm:rounded-2xl transition-all cursor-pointer ${!isCameraEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
+              >
+                {!isCameraEnabled ? (
+                  <FiVideoOff className="text-sm sm:text-xl" />
+                ) : (
+                  <FiVideo className="text-sm sm:text-xl" />
+                )}
+              </button>
+            </div>
 
-            <div className="dark:bg-[#1a1a1a] bg-white p-7 shadow-xl rounded-[2rem] border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
+            {isSmallScreen && mobileStage === 1 && (
+              <button
+                onClick={handleNextStage}
+                disabled={!canProceedToForm}
+                className={`w-full py-3 rounded-2xl  font-black  tracking-wider text-sm transition-all ${canProceedToForm ? "bg-[#bef264] text-black shadow-xl shadow-[#bef264]/20" : "bg-zinc-800 text-zinc-500 cursor-not-allowed"}`}
+              >
+                {canProceedToForm
+                  ? "Proceed to Interview Details"
+                  : "Enable Camera & Mic"}
+              </button>
+            )}
+
+            <div className="sm:dark:bg-[#1a1a1a] sm:bg-white p-3 sm:p-7 shadow-xl rounded-[2rem] sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
               <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
-                <FiShield className="mr-3 text-[#bef264] text-xl" />{" "}
+                <FiShield className="mr-3 text-[#bef264] text-xl" />
                 Professional Environment
               </h3>
               <p className="text-[13px] dark:text-zinc-500 text-gray-600 leading-relaxed font-medium">
@@ -342,19 +414,40 @@ const CreateInterview = () => {
           </div>
 
           {/* Setup Form */}
-          <div className="w-full lg:w-[450px] flex flex-col gap-8 animate-fade-in-right px-4">
-            <div className="pb-2">
-              <h2 className="text-lg font-black dark:text-white text-black mb-1 uppercase tracking-tight">
+          <div
+            className={`w-full lg:w-[450px] flex flex-col animate-fade-in-right ${isSmallScreen && mobileStage === 1 ? "hidden" : ""} ${isCompactMobileForm ? "gap-5 px-1" : "gap-8 px-4"}`}
+          >
+            {isCompactMobileForm && (
+              <div className="flex items-center justify-between mb-1">
+                <button
+                  type="button"
+                  onClick={handleBackToSetup}
+                  className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-zinc-400 hover:text-white transition-colors"
+                >
+                  <FiChevronLeft size={14} /> Back
+                </button>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#bef264]">
+                  Step 2 of 2
+                </span>
+              </div>
+            )}
+
+            <div className={isCompactMobileForm ? "pb-1" : "pb-2"}>
+              <h2
+                className={`${isCompactMobileForm ? "text-base" : "text-lg"} font-black dark:text-white text-black mb-1 uppercase tracking-tight`}
+              >
                 Interview details
               </h2>
-              <p className="dark:text-zinc-500 text-gray-500 text-sm font-medium">
+              <p
+                className={`dark:text-zinc-500 text-gray-500 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium`}
+              >
                 Give the job details you want to apply for
               </p>
             </div>
 
-            <div className="space-y-6">
+            <div className={isCompactMobileForm ? "space-y-4" : "space-y-6"}>
               {/* Job Title */}
-              <div className="space-y-4">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Job title
                 </label>
@@ -363,7 +456,7 @@ const CreateInterview = () => {
                   value={interviewData?.role || ""}
                   onChange={handleInputChange}
                   placeholder="e.g. Frontend Developer"
-                  className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none text-[13px] font-bold placeholder-gray-600 shadow-sm"
+                  className={`w-full ${isCompactMobileForm ? "px-4 py-3 text-xs" : "px-5 py-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none font-bold placeholder-gray-600 shadow-sm`}
                 />
 
                 {/* Job Title Suggestions Slider */}
@@ -411,34 +504,38 @@ const CreateInterview = () => {
 
               <hr className="dark:border-white/5 border-black/5" />
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
+                <div
+                  className={`flex items-center justify-between ${isCompactMobileForm ? "mb-1" : "mb-2"}`}
+                >
                   <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                     Context source
                   </label>
                   <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
                     <button
                       onClick={() => setInputType("jobDescription")}
-                      className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all ${inputType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
                     >
                       JD
                     </button>
                     <button
                       onClick={() => setInputType("resume")}
-                      className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all ${inputType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
                     >
                       Resume
                     </button>
                     <button
                       onClick={() => setInputType("both")}
-                      className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-full transition-all ${inputType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
                     >
                       Both
                     </button>
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div
+                  className={isCompactMobileForm ? "space-y-3" : "space-y-4"}
+                >
                   {(inputType === "jobDescription" || inputType === "both") && (
                     <div className="space-y-2">
                       <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest">
@@ -447,9 +544,9 @@ const CreateInterview = () => {
                       <textarea
                         value={jobDescription}
                         onChange={(e) => setJobDescription(e.target.value)}
-                        rows="4"
+                        rows={isCompactMobileForm ? 3 : 4}
                         placeholder="Paste the job description here..."
-                        className="w-full p-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] transition-all outline-none resize-none text-[13px] font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm"
+                        className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] transition-all outline-none resize-none font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm`}
                       ></textarea>
                     </div>
                   )}
@@ -462,9 +559,9 @@ const CreateInterview = () => {
                       <textarea
                         value={resumeContent}
                         onChange={(e) => setResumeContent(e.target.value)}
-                        rows="4"
+                        rows={isCompactMobileForm ? 3 : 4}
                         placeholder="Paste your core resume points here..."
-                        className="w-full p-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 transition-all outline-none resize-none text-[13px] font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm"
+                        className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 transition-all outline-none resize-none font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm`}
                       ></textarea>
                     </div>
                   )}
@@ -474,7 +571,10 @@ const CreateInterview = () => {
               <hr className="dark:border-white/5 border-black/5" />
 
               {/* Experience Level */}
-              <div className="relative space-y-4" ref={experienceDropdownRef}>
+              <div
+                className={`relative ${isCompactMobileForm ? "space-y-3" : "space-y-4"}`}
+                ref={experienceDropdownRef}
+              >
                 <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Experience level
                 </label>
@@ -483,7 +583,7 @@ const CreateInterview = () => {
                   onClick={() =>
                     setIsExperienceDropdownOpen(!isExperienceDropdownOpen)
                   }
-                  className="w-full flex items-center justify-between px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] outline-none text-[13px] font-bold shadow-sm transition-all cursor-pointer hover:border-zinc-700"
+                  className={`w-full flex items-center justify-between ${isCompactMobileForm ? "px-4 py-3 text-xs" : "px-5 py-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] outline-none font-bold shadow-sm transition-all cursor-pointer hover:border-zinc-700`}
                 >
                   <span>
                     {
@@ -536,7 +636,7 @@ const CreateInterview = () => {
               <hr className="dark:border-white/5 border-black/5" />
 
               {/* Interviewer Selection */}
-              <div className="space-y-4">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                     Select Interviewer
@@ -548,7 +648,9 @@ const CreateInterview = () => {
                     {showAllAgents ? "Show Less" : "View All"}
                   </button>
                 </div>
-                <div className="grid grid-cols-2 gap-3 transition-all duration-300">
+                <div
+                  className={`grid ${isCompactMobileForm ? "grid-cols-1 gap-2.5" : "grid-cols-2 gap-3"} transition-all duration-300`}
+                >
                   {interviewAgents
                     .filter((a) =>
                       [
@@ -649,11 +751,13 @@ const CreateInterview = () => {
               <hr className="dark:border-white/5 border-black/5" />
 
               {/* Interview Types */}
-              <div className="space-y-4">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Interview Type
                 </label>
-                <div className="space-y-3">
+                <div
+                  className={isCompactMobileForm ? "space-y-2.5" : "space-y-3"}
+                >
                   {/* Technical */}
                   <button
                     onClick={() =>
@@ -662,7 +766,7 @@ const CreateInterview = () => {
                         interviewType: "technical",
                       }))
                     }
-                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "technical" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
+                    className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-4 py-3" : "px-5 py-4"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "technical" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
                   >
                     <div
                       className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "technical" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
@@ -692,7 +796,7 @@ const CreateInterview = () => {
                         interviewType: "behavioral",
                       }))
                     }
-                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
+                    className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-4 py-3" : "px-5 py-4"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
                   >
                     <div
                       className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
@@ -719,7 +823,7 @@ const CreateInterview = () => {
               <hr className="dark:border-white/5 border-black/5" />
 
               {/* Interview Duration */}
-              <div className="space-y-4">
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
                   Interview Duration
                 </label>
@@ -728,7 +832,7 @@ const CreateInterview = () => {
                     <button
                       key={mins}
                       onClick={() => setDuration(mins)}
-                      className={`flex-1 py-2.5 text-[11px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                      className={`flex-1 ${isCompactMobileForm ? "py-2 text-[10px]" : "py-2.5 text-[11px]"} font-black uppercase tracking-wider rounded-lg transition-all ${
                         duration === mins
                           ? "bg-[#bef264] text-black shadow-lg"
                           : "text-zinc-500 hover:text-zinc-300"
@@ -740,11 +844,11 @@ const CreateInterview = () => {
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className={isCompactMobileForm ? "pt-1" : "pt-2"}>
                 <button
                   onClick={startInterview}
                   disabled={loading}
-                  className={`w-full px-10 ${subscription && subscription.tier !== "Infinite Elite" && subscription.credits <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} cursor-pointer font-black py-4 rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95 group`}
+                  className={`w-full ${isCompactMobileForm ? "px-6 py-3.5 text-sm" : "px-10 py-4"} ${subscription && subscription.tier !== "Infinite Elite" && subscription.credits <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95 group`}
                 >
                   {loading ? (
                     <>
