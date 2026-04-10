@@ -126,8 +126,8 @@ const QuestionDetail = () => {
                 <button
                   onClick={() => speak(question.title + ". " + question.description, 'problem')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${isPlaying === 'problem'
-                      ? "bg-[#bef264] text-black"
-                      : "bg-zinc-800 text-zinc-400 hover:text-white"
+                    ? "bg-[#bef264] text-black"
+                    : "bg-zinc-800 text-zinc-400 hover:text-white"
                     }`}
                 >
                   {isPlaying === 'problem' ? (
@@ -176,11 +176,11 @@ const QuestionDetail = () => {
               </div>
             </div>
 
-  
 
-           
-              <GoogleAdsBlock slotId="content-ad" />
-            
+
+
+            <GoogleAdsBlock slotId="content-ad" />
+
 
             {/* 💻 SOLUTION / ANSWER */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 md:p-6 relative overflow-hidden">
@@ -193,8 +193,8 @@ const QuestionDetail = () => {
                   <button
                     onClick={() => speak(question.answerMarkdown, 'answer')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-sm transition-all ${isPlaying === 'answer'
-                        ? "bg-[#bef264] text-black"
-                        : "bg-zinc-800 text-zinc-400 hover:text-white"
+                      ? "bg-[#bef264] text-black"
+                      : "bg-zinc-800 text-zinc-400 hover:text-white"
                       }`}
                   >
                     {isPlaying === 'answer' ? (

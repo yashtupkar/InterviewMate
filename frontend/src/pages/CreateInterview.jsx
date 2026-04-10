@@ -21,6 +21,7 @@ import {
 import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
+import usePollyTTS from "../hooks/usePollyTTS";
 
 import { interviewAgents } from "../constants/agents";
 
@@ -59,57 +60,18 @@ const CreateInterview = () => {
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] =
     useState(false);
-  const [availableVoices, setAvailableVoices] = useState([]);
+  const { speakText, stopSpeaking } = usePollyTTS();
 
-  useEffect(() => {
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) setAvailableVoices(voices);
-    };
-    loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-  }, []);
-
-  const playVoiceSample = (agent, e = null) => {
+  const playVoiceSample = async (agent, e = null) => {
     if (e) e.stopPropagation();
-    window.speechSynthesis.cancel();
 
-    const config = agent.browserVoiceConfig;
-    if (!config) {
-      toast.error("Voice preview not available for this agent.");
-      return;
+    try {
+      const text = `Hi, I am ${agent.name}. I'll be your interviewer today.`;
+      await speakText(text, agent.name);
+    } catch (err) {
+      console.error("Voice preview error:", err);
+      toast.error("Voice preview unavailable. Please try again.");
     }
-
-    const text = `Hi, I am ${agent.name}. I'll be your interviewer today.`;
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    const voices =
-      availableVoices.length > 0
-        ? availableVoices
-        : window.speechSynthesis.getVoices();
-    let voice = null;
-    for (const kw of config.keywords) {
-      voice = voices.find((v) => v.name.includes(kw) && v.lang.includes("en"));
-      if (voice) break;
-    }
-    if (!voice) {
-      voice = voices.find(
-        (v) =>
-          (config.gender === "female"
-            ? v.name.includes("Female") || v.name.includes("Zira")
-            : v.name.includes("Male") || v.name.includes("David")) &&
-          v.lang.includes("en"),
-      );
-    }
-    if (!voice) voice = voices.find((v) => v.lang.includes("en"));
-
-    if (voice) utterance.voice = voice;
-    utterance.rate = config.rate;
-    utterance.pitch = config.pitch;
-
-    window.speechSynthesis.speak(utterance);
   };
 
   const localVideoRef = useRef(null);
@@ -274,7 +236,6 @@ const CreateInterview = () => {
     }
   };
 
-
   const toggleVideo = () => setIsCameraEnabled(!isCameraEnabled);
 
   return (
@@ -404,17 +365,21 @@ const CreateInterview = () => {
                   placeholder="e.g. Frontend Developer"
                   className="w-full px-5 py-4 bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none text-[13px] font-bold placeholder-gray-600 shadow-sm"
                 />
-                
+
                 {/* Job Title Suggestions Slider */}
                 <div className="relative group/slider">
-                  <div 
+                  <div
                     ref={jobTitleSliderRef}
                     className="flex gap-2 overflow-x-auto mx-4 scrollbar-none no-scrollbar snap-x snap-mandatory"
                   >
                     {jobTitles.map((title) => (
                       <button
                         key={title}
-                        onClick={() => handleInputChange({ target: { name: "role", value: title } })}
+                        onClick={() =>
+                          handleInputChange({
+                            target: { name: "role", value: title },
+                          })
+                        }
                         className={`whitespace-nowrap px-4 py-2 rounded-full border text-[11px] font-bold transition-all cursor-pointer snap-start ${
                           interviewData.role === title
                             ? "bg-[#bef264]/10 border-[#bef264] text-[#bef264] shadow-[0_0_15px_-3px_rgba(190,242,100,0.2)]"
@@ -425,7 +390,7 @@ const CreateInterview = () => {
                       </button>
                     ))}
                   </div>
-                  
+
                   {/* Left Scroll Button */}
                   <button
                     onClick={() => scrollSlider("left")}
@@ -433,7 +398,7 @@ const CreateInterview = () => {
                   >
                     <FiChevronLeft size={16} />
                   </button>
-                  
+
                   {/* Right Scroll Button */}
                   <button
                     onClick={() => scrollSlider("right")}
