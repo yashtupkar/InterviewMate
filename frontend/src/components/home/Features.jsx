@@ -5,62 +5,69 @@ const featuresList = [
   {
     subtitle: "INTERVIEW PREPARATION",
     title: "AI Mock Interviews",
-    description: "Experience zero-latency conversations with AI personas that mirror real interviewers. Our models analyze your tone, pace, and content to adapt their questioning strategy on the fly.",
+    description:
+      "Experience zero-latency conversations with AI personas that mirror real interviewers. Our models analyze your tone, pace, and content to adapt their questioning strategy on the fly.",
     bullets: [
       "Adaptive questioning based on your narrative arc.",
-      "Real-time stress level assessment."
+      "Real-time stress level assessment.",
     ],
     icon: PlayCircle,
-    reverse: false
+    reverse: false,
   },
   {
     subtitle: "COLLABORATIVE DYNAMICS",
     title: "AI GD Simulator",
-    description: "Practice collaborative problem-solving with multiple AI personas simulating a real group dynamic. Master the subtle cues of conversation flow, interruption management, and consensus building.",
+    description:
+      "Practice collaborative problem-solving with multiple AI personas simulating a real group dynamic. Master the subtle cues of conversation flow, interruption management, and consensus building.",
     bullets: [
       "Realistic multi-participant simulations.",
-      "Conflict resolution and leadership tracking."
+      "Conflict resolution and leadership tracking.",
     ],
     icon: Users,
-    reverse: true
+    videoSrc: "/assets/featuresVideo/gd.mp4",
+
+    reverse: true,
   },
   {
     subtitle: "DEEP ANALYTICS",
     title: "AI Expert Feedback",
-    description: "Stop guessing where you went wrong. Our engine provides a line-by-line breakdown of your responses, identifying power words, confidence gaps, and missed opportunities.",
+    description:
+      "Stop guessing where you went wrong. Our engine provides a line-by-line breakdown of your responses, identifying power words, confidence gaps, and missed opportunities.",
     bullets: [
       "Visual heatmap of vocal confidence.",
-      "Industry-standard STAR method optimization."
+      "Industry-standard STAR method optimization.",
     ],
     icon: BarChart,
     videoSrc: "/assets/featuresVideo/ai-report-feedback.mp4",
-    reverse: false
+    reverse: false,
   },
   {
     subtitle: "CAREER FOUNDATION",
     title: "Resume Builder",
-    description: "Craft a professional, ATS-friendly resume from scratch. Our AI evaluates job descriptions to provide tailored bullet point suggestions and structural optimizations.",
+    description:
+      "Craft a professional, ATS-friendly resume from scratch. Our AI evaluates job descriptions to provide tailored bullet point suggestions and structural optimizations.",
     bullets: [
       "Guaranteed ATS compliance scores.",
-      "Smart keyword optimization for your industry."
+      "Smart keyword optimization for your industry.",
     ],
     icon: FileText,
     videoSrc: "/assets/featuresVideo/resume-builder.mp4",
 
-    reverse: true
+    reverse: true,
   },
   {
     subtitle: "KNOWLEDGE REPOSITORY",
     title: "Interview Question Bank",
-    description: "Access a massive repository of company-specific and role-specific interview questions. Each question comes with AI-generated model answers and detailed evaluation rubrics.",
+    description:
+      "Access a massive repository of company-specific and role-specific interview questions. Each question comes with AI-generated model answers and detailed evaluation rubrics.",
     bullets: [
       "FAANG-level technical deep dives.",
-      "Role-specific behavioral question sets."
+      "Role-specific behavioral question sets.",
     ],
     icon: BookOpen,
     videoSrc: "/assets/featuresVideo/question-bank.mp4",
-    reverse: false
-  }
+    reverse: false,
+  },
 ];
 
 const Features = () => {
