@@ -34,6 +34,7 @@ import VoiceTest from "./pages/VoiceTest";
 import HelpPage from "./pages/Help";
 import AtsScorer from "./pages/AtsScorer";
 import ResumeBuilder from "./pages/ResumeBuilder";
+import MicTest from "./pages/MicTest";
 import AboutUs from "./pages/AboutUs";
 import LandingHome from "./pages/LandingHome";
 import Contact from "./pages/Contact";
@@ -248,6 +249,15 @@ function App() {
           element={
             <Layout>
               <QuestionDetail />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/mic"
+          element={
+            <Layout>
+              <MicTest />
             </Layout>
           }
         />

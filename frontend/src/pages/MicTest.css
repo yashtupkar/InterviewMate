@@ -1,0 +1,141 @@
+.mic-test-page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: radial-gradient(circle at top right, #e0f2fe 0%, #f8fafc 45%, #ffffff 100%);
+}
+
+.mic-test-card {
+  width: 100%;
+  max-width: 760px;
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(2, 132, 199, 0.08);
+}
+
+.mic-test-card h1 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.8vw, 1.9rem);
+  color: #0f172a;
+}
+
+.mic-test-subtitle {
+  margin: 10px 0 20px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.mic-test-controls label {
+  font-weight: 600;
+  color: #1e293b;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.mic-test-controls select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  color: #0f172a;
+  background: #fff;
+}
+
+.mic-test-buttons {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mic-test-buttons button {
+  border: none;
+  border-radius: 10px;
+  background: #0ea5e9;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.mic-test-buttons button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.mic-test-buttons button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mic-volume-wrap {
+  margin-top: 20px;
+}
+
+.mic-volume-wrap span {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.mic-volume-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.mic-volume-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #84cc16 45%, #f97316 100%);
+  transition: width 0.08s linear;
+}
+
+.mic-error {
+  margin-top: 12px;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.mic-note {
+  margin-top: 12px;
+  color: #7c2d12;
+  background: #ffedd5;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.mic-transcript-box {
+  margin-top: 18px;
+  min-height: 170px;
+  background: #f8fafc;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  padding: 14px;
+  color: #0f172a;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .mic-test-card {
+    padding: 18px;
+  }
+
+  .mic-test-buttons button {
+    flex: 1;
+    min-width: 96px;
+  }
+
+  .mic-transcript-box {
+    min-height: 150px;
+  }
+}
