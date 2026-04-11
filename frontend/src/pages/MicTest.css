@@ -130,11 +130,62 @@
   color: #0f172a;
   line-height: 1.6;
   white-space: pre-wrap;
+  word-break: break-word;
+  overflow-y: auto;
+}
+
+.mic-transcript-panel {
+  margin-bottom: 18px;
+}
+
+.mic-transcript-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.mic-transcript-panel-header span:first-child {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.mic-live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.mic-live-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.mic-live-dot.active {
+  color: #15803d;
+}
+
+.mic-live-dot.active::before {
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
 }
 
 @media (max-width: 640px) {
+  .mic-test-page {
+    align-items: flex-start;
+    padding-top: 96px;
+    padding-bottom: 24px;
+  }
+
   .mic-test-card {
-    padding: 18px;
+    padding: 16px;
   }
 
   .mic-test-buttons button {
@@ -142,7 +193,17 @@
     min-width: 96px;
   }
 
+  .mic-transcript-panel {
+    margin-bottom: 16px;
+  }
+
+  .mic-transcript-panel-header {
+    align-items: flex-start;
+  }
+
   .mic-transcript-box {
-    min-height: 150px;
+    min-height: 180px;
+    max-height: 36vh;
+    margin-top: 0;
   }
 }

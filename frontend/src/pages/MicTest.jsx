@@ -299,6 +299,21 @@ function MicTest() {
           Select a device, start listening, and verify live transcript updates.
         </p>
 
+        <div className="mic-transcript-panel">
+          <div className="mic-transcript-panel-header">
+            <span>Live transcript</span>
+            <span className={isListening ? "mic-live-dot active" : "mic-live-dot"}>
+              {isListening ? "Listening" : "Idle"}
+            </span>
+          </div>
+          <div className="mic-transcript-box">
+            {transcriptText ||
+              (isListening
+                ? "Speak now. Your words will appear here in real time."
+                : "Start the test to show your live transcript here.")}
+          </div>
+        </div>
+
         <div className="mic-test-controls">
           <label htmlFor="mic-device">Microphone device</label>
           <select
@@ -353,11 +368,6 @@ function MicTest() {
             for speech-to-text.
           </p>
         )}
-
-        <div className="mic-transcript-box">
-          {transcriptText ||
-            "Your transcript will appear here while you speak..."}
-        </div>
       </div>
     </div>
   );
