@@ -562,7 +562,6 @@ export const useCustomInterview = () => {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
-    let finalBuffer = "";
 
     recognition.onstart = () => {
       setCallStatus("active");
@@ -581,14 +580,20 @@ export const useCustomInterview = () => {
       )
         return;
 
+      let currentFinal = "";
       let interimTranscript = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
+
+      // Reconstruct from scratch to handle unreliable resultIndex on some mobile browsers (Android).
+      for (let i = 0; i < e.results.length; i++) {
         const transcriptChunk = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalBuffer += transcriptChunk;
-        else interimTranscript += transcriptChunk;
+        if (e.results[i].isFinal) {
+          currentFinal += transcriptChunk;
+        } else {
+          interimTranscript += transcriptChunk;
+        }
       }
 
-      const currentText = (finalBuffer + interimTranscript).trim();
+      const currentText = (currentFinal + interimTranscript).trim();
       if (currentText) {
         setIsUserSpeaking(true);
         if (inactivityTimerRef.current)
@@ -598,10 +603,9 @@ export const useCustomInterview = () => {
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = setTimeout(() => {
-          const finalStr = finalBuffer.trim() || interimTranscript.trim();
+          const finalStr = currentFinal.trim() || interimTranscript.trim();
           if (finalStr) {
             handleUserSpeech(finalStr);
-            finalBuffer = "";
           }
           setIsUserSpeaking(false);
         }, SILENCE_THRESHOLD);

@@ -21,6 +21,7 @@ function MicTest() {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const rafRef = useRef(null);
+  const processedIndicesRef = useRef(new Set());
 
   const speechRecognitionSupported = useMemo(
     () => Boolean(SpeechRecognitionAPI),
@@ -140,6 +141,7 @@ function MicTest() {
       stopRequestedRef.current = false;
       stopMediaStream();
       stopVolumeMonitor();
+      processedIndicesRef.current.clear();
 
       const baseAudioConstraints = {
         echoCancellation: true,
@@ -185,20 +187,26 @@ function MicTest() {
       };
 
       recognition.onresult = (event) => {
-        let finalPart = "";
+        let newFinalText = "";
         let interimPart = "";
 
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        // Iterate through all results from index 0 to ensure consistency across devices.
+        // On some Android browsers, event.resultIndex is always 0.
+        for (let i = 0; i < event.results.length; i += 1) {
           const result = event.results[i];
           if (result.isFinal) {
-            finalPart += `${result[0].transcript} `;
+            // Only add this result if we haven't processed this index as final before.
+            if (!processedIndicesRef.current.has(i)) {
+              newFinalText += `${result[0].transcript} `;
+              processedIndicesRef.current.add(i);
+            }
           } else {
             interimPart += result[0].transcript;
           }
         }
 
-        if (finalPart) {
-          setFinalTranscript((prev) => `${prev}${finalPart}`.trim());
+        if (newFinalText) {
+          setFinalTranscript((prev) => `${prev}${newFinalText}`.trim());
         }
 
         setInterimTranscript(interimPart);
@@ -302,7 +310,9 @@ function MicTest() {
         <div className="mic-transcript-panel">
           <div className="mic-transcript-panel-header">
             <span>Live transcript</span>
-            <span className={isListening ? "mic-live-dot active" : "mic-live-dot"}>
+            <span
+              className={isListening ? "mic-live-dot active" : "mic-live-dot"}
+            >
               {isListening ? "Listening" : "Idle"}
             </span>
           </div>

@@ -359,7 +359,6 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       recognitionRef.current = recognition;
       recRef.current = recognition;
 
-      let finalBuffer = "";
       let interimText = "";
       let finalizeTimer = null;
 
@@ -383,23 +382,38 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         userSpeakingRef.current = true;
         setIsUserSpeaking(true);
 
-        interimText = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finalBuffer += e.results[i][0].transcript;
-          else interimText += e.results[i][0].transcript;
+        let currentFinal = "";
+        let currentInterim = "";
+        
+        // Reconstruct from scratch every time to handle unreliable resultIndex on mobile browsers (Android).
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i].isFinal) {
+            currentFinal += e.results[i][0].transcript;
+          } else {
+            currentInterim += e.results[i][0].transcript;
+          }
         }
-        setLiveText((finalBuffer + " " + interimText).trim());
+        
+        setLiveText((currentFinal + " " + currentInterim).trim());
 
         if (finalizeTimer) clearTimeout(finalizeTimer);
         finalizeTimer = setTimeout(() => {
-          const spoken = finalBuffer.trim();
-          finalBuffer = "";
-          interimText = "";
+          const spoken = currentFinal.trim() || currentInterim.trim();
+          currentFinal = "";
+          currentInterim = "";
           setLiveText("");
           userSpeakingRef.current = false;
           setIsUserSpeaking(false);
 
           if (spoken) {
+            // Stop and restart recognition to clear the internal buffer for the next utterance.
+            // The onend handler will automatically restart it.
+            if (recRef.current) {
+              try {
+                recRef.current.stop();
+              } catch (err) { }
+            }
+
             const userEntry = { id: Date.now(), speaker: "You", role: "user", text: spoken, color: "#22c55e" };
             const lower = spoken.toLowerCase();
             const keywords = ["conclusion", "conclude", "concluding", "wrap up", "wrapping up", "final point", "thank you everyone", "that is all from my side", "my conclusion", "summarize", "summarizing", "end the discussion"];
