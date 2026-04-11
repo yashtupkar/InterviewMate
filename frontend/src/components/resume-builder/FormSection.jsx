@@ -132,7 +132,7 @@ const FormSection = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 spacing-y-4 md:space-y-6">
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime-400/10 border border-lime-400/20 mb-4">
           <IoSparkles className="w-3.5 h-3.5 text-lime-400" />
@@ -161,7 +161,7 @@ const FormSection = () => {
               className={`group border transition-all duration-300 rounded-2xl relative ${
                 isOpen
                   ? "bg-zinc-900 border-zinc-700/50 shadow-xl overflow-visible z-30"
-                  : "bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/60 overflow-hidden z-0"
+                  : "bg-zinc-800/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/60 overflow-hidden z-0"
               }`}
             >
               <button
@@ -172,7 +172,7 @@ const FormSection = () => {
                   className={`p-2.5 rounded-xl transition-all duration-300 ${
                     isOpen
                       ? "bg-lime-400 text-zinc-950 scale-110 shadow-[0_0_15px_rgba(190,242,100,0.3)]"
-                      : "bg-zinc-800 text-zinc-400 group-hover:text-zinc-200"
+                      : "bg-zinc-800 text-white group-hover:text-zinc-200"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -206,7 +206,7 @@ const FormSection = () => {
                   ) : (
                     <div className="flex items-center justify-between">
                       <h3
-                        className={`font-bold text-sm transition-colors ${isOpen ? "text-white" : "text-zinc-400 group-hover:text-zinc-200"}`}
+                        className={`font-bold text-sm transition-colors ${isOpen ? "text-white" : "text-white group-hover:text-zinc-200"}`}
                       >
                         {section.title}
                       </h3>
@@ -224,7 +224,7 @@ const FormSection = () => {
                     </div>
                   )}
                   {!isOpen && (
-                    <p className="text-[11px] text-zinc-600 font-medium mt-0.5">
+                    <p className="text-[11px] text-zinc-400 font-medium mt-0.5">
                       {section.description}
                     </p>
                   )}

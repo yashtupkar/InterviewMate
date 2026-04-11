@@ -21,6 +21,8 @@ import {
   IoContract,
   IoCreate,
   IoCheckmark,
+  IoMenu,
+  IoClose,
 } from "react-icons/io5";
 import { MdZoomIn, MdZoomOut } from "react-icons/md";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -60,6 +62,9 @@ const ResumeBuilder = () => {
   const [zoom, setZoom] = useState(0.85);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
+  const [previewPageCount, setPreviewPageCount] = useState(1);
   const resumeRef = useRef();
 
   // Load resume data based on URL parameter
@@ -137,25 +142,34 @@ const ResumeBuilder = () => {
 
       {/* Modern Header */}
       <header className="h-[64px] bg-zinc-900/50 backdrop-blur-md border-b border-zinc-800/50 flex items-center justify-between px-4 shrink-0 z-50">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/resume-builder")}
-            className="w-10 h-10 flex items-center justify-center hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all group overflow-hidden"
-            title="Back to Dashboard"
-          >
-            <div className="relative w-full h-full flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center justify-center transition-all duration-300 group-hover:opacity-0 group-hover:scale-75">
-                <Logo size={34} />
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 md:gap-2">
+            <button
+              onClick={() => navigate("/resume-builder")}
+              className="w-10 h-10 flex items-center justify-center hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all group overflow-hidden"
+              title="Back to Dashboard"
+            >
+              <div className="relative w-full h-full flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center transition-all duration-300 group-hover:opacity-0 group-hover:scale-75">
+                  <Logo size={34} />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100">
+                  <IoChevronBack className="w-6 h-6" />
+                </div>
               </div>
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 scale-75 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100">
-                <IoChevronBack className="w-6 h-6" />
-              </div>
-            </div>
-          </button>
+            </button>
+            <button
+              onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+              className="md:hidden w-10 h-10 flex items-center justify-center hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all"
+              title="Menu"
+            >
+              <IoMenu className="w-6 h-6" />
+            </button>
+          </div>
 
-          <div className="h-8 w-px bg-zinc-800 mx-1"></div>
+          <div className="hidden md:block h-8 w-px bg-zinc-800 mx-1"></div>
 
-          <div className="flex flex-col">
+          <div className="hidden md:flex flex-col">
             <div className="flex items-center gap-2 group/title">
               {isEditingTitle ? (
                 <div className="flex items-center gap-2 bg-zinc-800/50 px-2 py-1 rounded-lg border border-zinc-700/50">
@@ -256,26 +270,27 @@ const ResumeBuilder = () => {
               }
             }}
             disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl transition-all disabled:opacity-50 text-sm font-medium"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl transition-all disabled:opacity-50 text-sm font-medium"
           >
             <IoCloudUpload className="w-4 h-4" />
-            <span className="hidden md:inline">Sync</span>
+            <span className="hidden sm:inline">Sync</span>
           </button>
 
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-5 py-2 bg-lime-400 hover:bg-lime-500 text-zinc-950 text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.2)] active:scale-95"
+            className="hidden md:flex items-center gap-2 px-3 sm:px-5 py-2 bg-lime-400 hover:bg-lime-500 text-zinc-950 text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.2)] active:scale-95"
           >
             <IoDownload className="w-4 h-4" />
-            Download PDF
+            <span className="hidden sm:inline">Download PDF</span>
+            <span className="sm:hidden">PDF</span>
           </button>
         </div>
       </header>
 
       {/* Main Content Pane */}
-      <main className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Icons */}
-        <div className="w-[72px] bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-6 gap-4 shrink-0 z-40">
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* Left Sidebar - Icons (Desktop) */}
+        <div className="hidden md:flex relative inset-y-0 left-0 z-30 w-[72px] bg-zinc-900 border-r border-zinc-800 flex-col items-center py-6 gap-4 shrink-0">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -283,10 +298,11 @@ const ResumeBuilder = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`relative group p-2 rounded-lg transition-all duration-300 ${isActive
+                className={`relative group p-2 rounded-lg transition-all duration-300 ${
+                  isActive
                     ? "bg-lime-400 text-zinc-950 shadow-[0_0_20px_rgba(190,242,100,0.3)]"
                     : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
-                  }`}
+                }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="absolute left-full ml-4 px-2.5 py-1.5 bg-zinc-800 text-white text-[11px] font-bold rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 border border-zinc-700 shadow-xl">
@@ -314,14 +330,89 @@ const ResumeBuilder = () => {
           </div>
         </div>
 
+        {/* Mobile Sidebar Drawer */}
+        <aside
+          className={`md:hidden fixed inset-y-0 left-0 z-50 w-[84%] max-w-[360px] bg-zinc-900 border-r border-zinc-800 px-5 py-6 flex flex-col transition-transform duration-300 ${
+            isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-white">Dashboard</h2>
+            <button
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="w-9 h-9 rounded-lg border border-zinc-700 bg-zinc-800/60 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors flex items-center justify-center"
+              title="Close menu"
+            >
+              <IoClose className="w-5 h-5" />
+            </button>
+          </div>
+
+          <nav className="flex flex-col gap-0.5">
+            {sidebarItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-all border ${
+                    isActive
+                      ? "bg-zinc-800 border-zinc-700 text-lime-400"
+                      : "bg-transparent border-transparent text-zinc-300 hover:bg-zinc-800/70 hover:border-zinc-700"
+                  }`}
+                >
+                  <Icon className="w-4.5 h-4.5 shrink-0" />
+                  <span className="text-sm font-semibold">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="mt-2 pt-0 flex flex-col gap-1.5">
+            <button
+              onClick={() => {
+                setIsMobileSidebarOpen(false);
+                setIsMobilePreviewOpen(true);
+              }}
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-100 py-2.5 text-sm font-semibold hover:bg-zinc-800 transition-colors"
+            >
+              <IoEye className="w-4 h-4" />
+              Preview
+            </button>
+
+            <button
+              onClick={() => {
+                setIsMobileSidebarOpen(false);
+                handlePrint();
+              }}
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-lime-400 text-zinc-950 py-2.5 text-sm font-bold hover:bg-lime-500 transition-colors"
+            >
+              <IoDownload className="w-4 h-4" />
+              Download PDF
+            </button>
+          </div>
+        </aside>
+
+        {/* Mobile Sidebar Overlay */}
+        {isMobileSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          ></div>
+        )}
+
         {/* Side Pane - Forms/Controls */}
         {!isFullscreen && (
-          <div className="w-[420px] xl:w-[480px] bg-zinc-950/20 backdrop-blur-sm border-r border-zinc-800 flex flex-col shrink-0 overflow-hidden">
+          <div className="flex-1 md:w-[420px] md:xl:w-[480px] md:flex-none bg-zinc-950/20 backdrop-blur-sm border-r border-zinc-800 flex flex-col shrink-0 overflow-hidden">
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {activeTab === "content" && <FormSection />}
               {activeTab === "design" && <CustomizeSection />}
               {activeTab === "templates" && (
-                <div className="p-6">
+                <div className="p-3 md:p-6">
                   <div className="mb-6">
                     <h2 className="text-xl font-bold text-white mb-2">
                       Templates
@@ -358,11 +449,16 @@ const ResumeBuilder = () => {
                       return (
                         <button
                           key={template}
-                          onClick={() => setSelectedTemplate(template)}
-                          className={`relative group p-2.5 rounded-xl border-2 transition-all text-left ${selectedTemplate === template
+                          onClick={() => {
+                            setSelectedTemplate(template);
+                            // On mobile, keep the view on templates or go back to content?
+                            // User didn't specify, but usually you want to see the result.
+                          }}
+                          className={`relative group p-2.5 rounded-xl border-2 transition-all text-left ${
+                            selectedTemplate === template
                               ? "border-lime-400 bg-lime-400/5 shadow-[0_0_20px_rgba(190,242,100,0.1)]"
                               : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
-                            }`}
+                          }`}
                         >
                           <div className="flex items-center justify-between mb-2 px-0.5">
                             <span
@@ -390,8 +486,8 @@ const ResumeBuilder = () => {
           </div>
         )}
 
-        {/* Preview Area */}
-        <div className="flex-1 bg-[#121214] relative overflow-hidden flex flex-col">
+        {/* Preview Area (Desktop) */}
+        <div className="hidden md:flex flex-1 bg-[#121214] relative overflow-hidden flex-col">
           <div className="flex-1 overflow-auto custom-scrollbar p-8 md:p-12 flex justify-center items-start">
             <div
               style={{
@@ -401,11 +497,17 @@ const ResumeBuilder = () => {
               }}
               className="rounded-sm"
             >
-              <PreviewSection ref={resumeRef} template={selectedTemplate} />
+              <PreviewSection
+                ref={resumeRef}
+                template={selectedTemplate}
+                onPageCountChange={(count) =>
+                  setPreviewPageCount((prev) => (prev === count ? prev : count))
+                }
+              />
             </div>
           </div>
 
-          {/* Floating Preview Controls (Mobile/Compact) */}
+          {/* Floating Preview Controls (Desktop) */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-zinc-900/90 backdrop-blur-xl border border-zinc-700/50 p-2 rounded-2xl shadow-2xl z-50">
             <button
               onClick={handleZoomOut}
@@ -429,6 +531,68 @@ const ResumeBuilder = () => {
             </button>
           </div>
         </div>
+
+        {/* Floating Action Button for Mobile Preview */}
+        <button
+          onClick={() => setIsMobilePreviewOpen(true)}
+          className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-lime-400 hover:bg-lime-500 text-zinc-950 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(190,242,100,0.3)] active:scale-90 transition-all z-40"
+          title="Preview Resume"
+        >
+          <IoEye className="w-6 h-6" />
+        </button>
+
+        {/* Full-screen Mobile Preview Modal */}
+        {isMobilePreviewOpen && (
+          <div
+            className="md:hidden fixed inset-0 z-[100] bg-zinc-950/30 backdrop-blur-lg flex flex-col animate-in fade-in duration-300"
+            onClick={() => setIsMobilePreviewOpen(false)}
+          >
+            <div
+              className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className={`mx-auto w-full max-w-[560px] [&_.hide-on-print]:p-2 [&_.hide-on-print]:gap-3 ${
+                  previewPageCount === 1
+                    ? "min-h-full flex items-center justify-center"
+                    : "flex justify-center"
+                }`}
+              >
+                <div className="origin-top scale-[0.41] min-[360px]:scale-[0.44] min-[390px]:scale-[0.47] sm:scale-[0.64]">
+                  <PreviewSection
+                    ref={resumeRef}
+                    template={selectedTemplate}
+                    onPageCountChange={(count) =>
+                      setPreviewPageCount((prev) =>
+                        prev === count ? prev : count,
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="p-3 bg-zinc-900/35  border-t border-zinc-700/50 flex gap-2 items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setIsMobilePreviewOpen(false)}
+                className="w-[120px] flex items-center justify-center gap-2 py-3 bg-white text-zinc-950 text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.2)]"
+              >
+                <IoClose className="w-4 h-4" />
+                close
+              </button>{" "}
+              <button
+                onClick={handlePrint}
+                className="w-[220px] flex items-center justify-center gap-2 py-3 bg-lime-400 hover:bg-lime-500 text-zinc-950 text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.2)]"
+              >
+                <IoDownload className="w-4 h-4" />
+                Download PDF
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

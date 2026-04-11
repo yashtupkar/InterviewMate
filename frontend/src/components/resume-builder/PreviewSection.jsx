@@ -1,4 +1,10 @@
-import React, { forwardRef, useState, useEffect, useRef, useImperativeHandle } from "react";
+import React, {
+  forwardRef,
+  useState,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+} from "react";
 import ModernTemplate from "./resume-templates/ModernTemplate";
 import ProfessionalTemplate from "./resume-templates/ProfessionalTemplate";
 import CreativeTemplate from "./resume-templates/CreativeTemplate";
@@ -10,7 +16,7 @@ import ElegantTemplate from "./resume-templates/ElegantTemplate";
 import StandardTemplate from "./resume-templates/StandardTemplate";
 import { useResume } from "../../context/ResumeContext";
 
-const PreviewSection = forwardRef(({ template }, ref) => {
+const PreviewSection = forwardRef(({ template, onPageCountChange }, ref) => {
   const { resumeData } = useResume();
   const [contentHeight, setContentHeight] = useState(0);
   const [pageHeightPx, setPageHeightPx] = useState(1122);
@@ -25,7 +31,6 @@ const PreviewSection = forwardRef(({ template }, ref) => {
   const size = isLetter
     ? { width: "215.9mm", height: "279.4mm", name: "Letter", hVal: 279.4 }
     : { width: "210mm", height: "297mm", name: "A4", hVal: 297 };
-
 
   // Mapping template keys to their components
   const templates = {
@@ -60,18 +65,19 @@ const PreviewSection = forwardRef(({ template }, ref) => {
     }
   }, [size.height]);
 
-  // Padding configuration: First page has no top padding, others have 20px
-  const P = 2;
-  const firstPageVisibleHeight = pageHeightPx - P;
-  const otherPageVisibleHeight = pageHeightPx - (2 * P);
+  // Add a tiny tolerance to avoid creating a phantom extra page from sub-pixel rounding.
+  const PAGE_OVERFLOW_TOLERANCE_PX = 4;
+  const overflowHeight = Math.max(
+    0,
+    contentHeight - pageHeightPx - PAGE_OVERFLOW_TOLERANCE_PX,
+  );
+  const numPages = 1 + Math.ceil(overflowHeight / pageHeightPx);
 
-  // Calculate number of pages based on the unique first page and standard subsequent pages
-  const numPages = contentHeight <= firstPageVisibleHeight
-    ? 1
-    : 1 + Math.ceil((contentHeight - firstPageVisibleHeight) / otherPageVisibleHeight);
-
-  // Alternative: manually calculating based on mm is more reliable for screen scaling
-  // We'll use a CSS-based approach for the visual split
+  useEffect(() => {
+    if (typeof onPageCountChange === "function") {
+      onPageCountChange(numPages);
+    }
+  }, [numPages, onPageCountChange]);
 
   return (
     <div className="flex flex-col items-center">
@@ -128,42 +134,44 @@ const PreviewSection = forwardRef(({ template }, ref) => {
         {/* Hidden element just to measure the exact pixel height of one page */}
         <div
           ref={pageMeasureRef}
-          style={{ height: size.height, width: size.width, position: 'absolute', visibility: 'hidden', pointerEvents: 'none' }}
+          style={{
+            height: size.height,
+            width: size.width,
+            position: "absolute",
+            visibility: "hidden",
+            pointerEvents: "none",
+          }}
         />
 
         {Array.from({ length: numPages }).map((_, i) => {
-          const isFirst = i === 0;
-          const marginTop = isFirst ? 0 : -(firstPageVisibleHeight + (i - 1) * otherPageVisibleHeight);
+          const pageOffset = i * pageHeightPx;
 
           return (
-            <div
-              key={i}
-              className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden border border-white/5 relative"
-              style={{
-                width: size.width,
-                height: size.height,
-                aspectRatio: isLetter ? "8.5 / 11" : "210 / 297",
-                paddingTop: isFirst ? 0 : `${P}px`,
-                paddingBottom: `${P}px`,
-                paddingLeft: `${P}px`,
-                paddingRight: `${P}px`,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
+            <div key={i} className="p-2 sm:p-3">
               <div
+                className="bg-white shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden border border-white/5 relative"
                 style={{
-                  marginTop: `${marginTop}px`,
-                  width: '100%',
-                  flex: 1,
-                  overflow: 'hidden'
+                  width: size.width,
+                  height: size.height,
+                  aspectRatio: isLetter ? "8.5 / 11" : "210 / 297",
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
-                <SelectedTemplate data={resumeData} />
-              </div>
+                <div
+                  style={{
+                    marginTop: `-${pageOffset}px`,
+                    width: "100%",
+                    flex: 1,
+                    overflow: "hidden",
+                  }}
+                >
+                  <SelectedTemplate data={resumeData} />
+                </div>
 
-              <div className="absolute bottom-2 right-4 text-[10px] text-zinc-400 font-bold tracking-widest uppercase opacity-20 pointer-events-none">
-                Page {i + 1}
+                <div className="absolute bottom-2 right-4 text-[10px] text-zinc-400 font-bold tracking-widest uppercase opacity-20 pointer-events-none">
+                  Page {i + 1}
+                </div>
               </div>
             </div>
           );
