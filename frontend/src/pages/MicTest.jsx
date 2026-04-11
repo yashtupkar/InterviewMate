@@ -1,54 +1,320 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { AppContext } from "../context/AppContext";
 import "./MicTest.css";
 
+const SpeechRecognitionAPI =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+const MOBILE_REGEX = /Android|iPhone|iPad|iPod|Mobile/i;
+
 function MicTest() {
+  const { backend_URL } = useContext(AppContext);
+
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [displayTranscript, setDisplayTranscript] = useState("");
+  const [volume, setVolume] = useState(0);
   const [error, setError] = useState("");
   const [browserSupported, setBrowserSupported] = useState(true);
+  const [sttEngine, setSttEngine] = useState("web-speech");
+  const [isFallbackActive, setIsFallbackActive] = useState(false);
 
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
   const stopRequestedRef = useRef(false);
   const restartTimerRef = useRef(null);
 
-  // ✅ All transcript state lives here — persists across recognition restarts
-  // finalSentences: array of confirmed, fully-processed strings (never re-processed)
-  // currentInterim: the live partial string being spoken right now
+  const streamRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const rafRef = useRef(null);
+
+  const mediaRecorderRef = useRef(null);
+  const deepgramQueueRef = useRef(Promise.resolve());
+  const noSpeechCountRef = useRef(0);
+  const lastDeepgramChunkRef = useRef("");
+
   const finalSentencesRef = useRef([]);
   const currentInterimRef = useRef("");
 
-  const getSpeechRecognition = useCallback(() => {
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  const speechRecognitionSupported = useMemo(
+    () => Boolean(SpeechRecognitionAPI),
+    [],
+  );
+
+  const isMobileDevice = useMemo(
+    () => MOBILE_REGEX.test(navigator.userAgent || ""),
+    [],
+  );
+
+  const buildDisplayTranscript = useCallback(() => {
+    const committed = finalSentencesRef.current.join(" ").trim();
+    const interim = (currentInterimRef.current || "").trim();
+    const combined = `${committed} ${interim}`.trim();
+    setDisplayTranscript(combined);
+  }, []);
+
+  const stopVolumeMonitor = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    analyserRef.current = null;
+    setVolume(0);
+  }, []);
+
+  const stopMediaStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const cleanupDeepgramRecorder = useCallback(() => {
+    if (!mediaRecorderRef.current) return;
+
+    const recorder = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+
+    try {
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    } catch {
+      // Ignore recorder stop race conditions.
+    }
   }, []);
 
   const refreshDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
+
     try {
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = allDevices.filter((d) => d.kind === "audioinput");
       setDevices(audioInputs);
+
       if (audioInputs.length === 0) {
         setSelectedDeviceId("");
         return;
       }
-      const stillAvailable = audioInputs.some(
+
+      const selectedStillAvailable = audioInputs.some(
         (input) => input.deviceId === selectedDeviceId,
       );
-      if (!selectedDeviceId || !stillAvailable) {
+
+      if (!selectedDeviceId || !selectedStillAvailable) {
         setSelectedDeviceId(audioInputs[0].deviceId);
       }
     } catch {
-      /* non-critical */
+      // Non-critical: keep page usable even if listing fails.
     }
   }, [selectedDeviceId]);
+
+  const startVolumeMonitor = useCallback((stream) => {
+    const AudioContextAPI = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextAPI) return;
+
+    const audioContext = new AudioContextAPI();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+
+    audioContextRef.current = audioContext;
+    analyserRef.current = analyser;
+
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    const update = () => {
+      if (!analyserRef.current) return;
+      analyserRef.current.getByteFrequencyData(data);
+      const avg = data.reduce((sum, value) => sum + value, 0) / data.length;
+      setVolume(Math.min(100, Math.round((avg / 255) * 140)));
+      rafRef.current = requestAnimationFrame(update);
+    };
+
+    update();
+  }, []);
+
+  const appendCommittedText = useCallback(
+    (text) => {
+      const normalized = (text || "").trim();
+      if (!normalized) return;
+      finalSentencesRef.current.push(normalized);
+      buildDisplayTranscript();
+    },
+    [buildDisplayTranscript],
+  );
+
+  const transcribeChunkWithDeepgram = useCallback(
+    async (audioChunk) => {
+      if (!audioChunk || audioChunk.size === 0) return;
+
+      if (!backend_URL) {
+        throw new Error("Backend URL is missing for fallback transcription.");
+      }
+
+      const formData = new FormData();
+      formData.append("audio", audioChunk, "chunk.webm");
+      formData.append("language", "en-US");
+
+      const response = await fetch(`${backend_URL}/api/stt/transcribe`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || "Cloud transcription failed.");
+      }
+
+      const transcript = (payload.text || "").trim();
+      if (!transcript || transcript === lastDeepgramChunkRef.current) return;
+
+      lastDeepgramChunkRef.current = transcript;
+      currentInterimRef.current = "";
+      appendCommittedText(transcript);
+    },
+    [appendCommittedText, backend_URL],
+  );
+
+  const queueDeepgramChunk = useCallback(
+    (audioChunk) => {
+      deepgramQueueRef.current = deepgramQueueRef.current
+        .then(() => transcribeChunkWithDeepgram(audioChunk))
+        .catch((err) => {
+          if (!stopRequestedRef.current) {
+            setError(err.message || "Deepgram fallback request failed.");
+          }
+        });
+    },
+    [transcribeChunkWithDeepgram],
+  );
+
+  const startDeepgramRecorder = useCallback(
+    (stream) => {
+      if (!window.MediaRecorder) {
+        setError("MediaRecorder is not supported in this browser.");
+        return false;
+      }
+
+      cleanupDeepgramRecorder();
+
+      const preferredTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+      ];
+
+      const supportedType = preferredTypes.find((type) =>
+        MediaRecorder.isTypeSupported(type),
+      );
+
+      let recorder;
+      try {
+        recorder = supportedType
+          ? new MediaRecorder(stream, { mimeType: supportedType })
+          : new MediaRecorder(stream);
+      } catch {
+        recorder = new MediaRecorder(stream);
+      }
+
+      recorder.ondataavailable = (event) => {
+        if (
+          stopRequestedRef.current ||
+          !isListeningRef.current ||
+          !event.data ||
+          event.data.size === 0
+        ) {
+          return;
+        }
+
+        queueDeepgramChunk(event.data);
+      };
+
+      recorder.onerror = () => {
+        if (!stopRequestedRef.current) {
+          setError("Could not capture audio for Deepgram fallback.");
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+
+      try {
+        recorder.start(2500);
+      } catch {
+        setError("Unable to start fallback recorder on this device.");
+        return false;
+      }
+
+      setSttEngine("deepgram");
+      setIsFallbackActive(true);
+      setBrowserSupported(true);
+      isListeningRef.current = true;
+      setIsListening(true);
+      currentInterimRef.current = "Using Deepgram fallback...";
+      buildDisplayTranscript();
+
+      return true;
+    },
+    [buildDisplayTranscript, cleanupDeepgramRecorder, queueDeepgramChunk],
+  );
+
+  const switchToDeepgramFallback = useCallback(
+    (reason) => {
+      if (
+        stopRequestedRef.current ||
+        !streamRef.current ||
+        (mediaRecorderRef.current &&
+          mediaRecorderRef.current.state === "recording")
+      ) {
+        return;
+      }
+
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.onend = null;
+          recognitionRef.current.abort();
+        } catch {
+          // Ignore stop race conditions.
+        }
+        recognitionRef.current = null;
+      }
+
+      noSpeechCountRef.current = 0;
+      if (reason) {
+        setError(`Switched to Deepgram fallback: ${reason}.`);
+      }
+      startDeepgramRecorder(streamRef.current);
+    },
+    [startDeepgramRecorder],
+  );
 
   const stopListening = useCallback(() => {
     stopRequestedRef.current = true;
     isListeningRef.current = false;
     setIsListening(false);
+
+    currentInterimRef.current = "";
+    buildDisplayTranscript();
+
+    noSpeechCountRef.current = 0;
+    setIsFallbackActive(false);
 
     if (restartTimerRef.current) {
       clearTimeout(restartTimerRef.current);
@@ -61,164 +327,228 @@ function MicTest() {
         recognitionRef.current.onerror = null;
         recognitionRef.current.onend = null;
         recognitionRef.current.abort();
-      } catch (e) {}
+      } catch {
+        // Ignore abort race conditions.
+      }
       recognitionRef.current = null;
     }
-  }, []);
 
-  // ✅ Attach a fresh recognition session WITHOUT touching finalSentencesRef
-  // Called both on first start and on every auto-restart
-  const attachRecognition = useCallback(
-    (SR) => {
-      const recognition = new SR();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
-      recognition.maxAlternatives = 1;
+    cleanupDeepgramRecorder();
+    stopVolumeMonitor();
+    stopMediaStream();
 
-      recognition.onstart = () => {
-        // ✅ Each new session starts its own result-index tracking from 0
-        // We do NOT clear finalSentencesRef — those are already committed sentences
-        isListeningRef.current = true;
-        setIsListening(true);
-        setError("");
-      };
+    setSttEngine(
+      isMobileDevice || !speechRecognitionSupported ? "deepgram" : "web-speech",
+    );
+  }, [
+    buildDisplayTranscript,
+    cleanupDeepgramRecorder,
+    isMobileDevice,
+    speechRecognitionSupported,
+    stopMediaStream,
+    stopVolumeMonitor,
+  ]);
 
-      recognition.onresult = (event) => {
-        // ✅ CORE FIX: On every new recognition session, result indices restart from 0.
-        // So we CANNOT use resultIndex to avoid reprocessing across sessions.
-        // Instead we use a per-session Set to track which indices we've already
-        // committed as final in THIS session only.
-        // finalSentencesRef holds everything committed from ALL past sessions.
+  const startWebSpeech = useCallback(() => {
+    if (!speechRecognitionSupported) return false;
 
-        if (!recognition._processedFinalIndices) {
-          recognition._processedFinalIndices = new Set();
-        }
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
 
-        let newFinals = "";
+    recognition.onstart = () => {
+      noSpeechCountRef.current = 0;
+      isListeningRef.current = true;
+      setIsListening(true);
+      setError("");
+      setSttEngine("web-speech");
+      setIsFallbackActive(false);
+      setBrowserSupported(true);
+    };
 
-        for (let i = 0; i < event.results.length; i++) {
-          if (
-            event.results[i].isFinal &&
-            !recognition._processedFinalIndices.has(i)
-          ) {
-            // ✅ Mark this index as processed for THIS session — will never add it again
-            recognition._processedFinalIndices.add(i);
-            newFinals += event.results[i][0].transcript + " ";
-          }
-        }
-
-        if (newFinals) {
-          finalSentencesRef.current.push(newFinals.trim());
-        }
-
-        // ✅ Only the latest non-final result is the live interim
-        let latestInterim = "";
-        for (let i = event.results.length - 1; i >= 0; i--) {
-          if (!event.results[i].isFinal) {
-            latestInterim = event.results[i][0].transcript;
-            break;
-          }
-        }
-        currentInterimRef.current = latestInterim;
-
-        // ✅ Build display: all committed sentences + current interim
-        const committed = finalSentencesRef.current.join(" ");
-        const display = (committed + " " + latestInterim).trim();
-        setDisplayTranscript(display);
-      };
-
-      recognition.onerror = (event) => {
-        // Non-fatal — will auto-restart via onend
-        if (["aborted", "no-speech", "network"].includes(event.error)) return;
-
-        if (event.error === "not-allowed") {
-          setError("Microphone permission denied. Please allow mic access.");
-          stopListening();
-          return;
-        }
-        if (event.error === "audio-capture") {
-          setError("No microphone detected. Please connect a microphone.");
-          return;
-        }
-        setError(`Speech recognition error: ${event.error}`);
-      };
-
-      recognition.onend = () => {
-        // ✅ On unexpected end (very common on Android), restart recognition.
-        // finalSentencesRef is preserved — new session picks up from where we left off.
-        // Each new session gets its own _processedFinalIndices Set starting fresh.
-        if (
-          !stopRequestedRef.current &&
-          isListeningRef.current &&
-          recognitionRef.current
-        ) {
-          restartTimerRef.current = setTimeout(() => {
-            try {
-              if (
-                !stopRequestedRef.current &&
-                isListeningRef.current &&
-                recognitionRef.current
-              ) {
-                recognitionRef.current.start();
-              }
-            } catch {
-              /* ignore rapid restart failures */
-            }
-          }, 150);
-        }
-      };
-
-      recognitionRef.current = recognition;
-
-      try {
-        recognition.start();
-      } catch (e) {
-        setError("Failed to start speech recognition. Please try again.");
+    recognition.onresult = (event) => {
+      if (!recognition._processedFinalIndices) {
+        recognition._processedFinalIndices = new Set();
       }
-    },
-    [stopListening],
-  );
+
+      let newFinals = "";
+      for (let i = 0; i < event.results.length; i += 1) {
+        if (
+          event.results[i].isFinal &&
+          !recognition._processedFinalIndices.has(i)
+        ) {
+          recognition._processedFinalIndices.add(i);
+          newFinals += `${event.results[i][0].transcript} `;
+        }
+      }
+
+      if (newFinals.trim()) {
+        finalSentencesRef.current.push(newFinals.trim());
+      }
+
+      let latestInterim = "";
+      for (let i = event.results.length - 1; i >= 0; i -= 1) {
+        if (!event.results[i].isFinal) {
+          latestInterim = event.results[i][0].transcript;
+          break;
+        }
+      }
+
+      currentInterimRef.current = latestInterim;
+      buildDisplayTranscript();
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error === "aborted") return;
+
+      if (event.error === "no-speech") {
+        noSpeechCountRef.current += 1;
+        if (noSpeechCountRef.current >= 3) {
+          switchToDeepgramFallback("repeated no-speech");
+        }
+        return;
+      }
+
+      if (event.error === "not-allowed") {
+        setError("Microphone permission denied. Please allow mic access.");
+        stopListening();
+        return;
+      }
+
+      if (
+        ["audio-capture", "network", "service-not-allowed"].includes(
+          event.error,
+        )
+      ) {
+        switchToDeepgramFallback(event.error);
+        return;
+      }
+
+      setError(`Speech recognition error: ${event.error}`);
+    };
+
+    recognition.onend = () => {
+      if (
+        !stopRequestedRef.current &&
+        isListeningRef.current &&
+        recognitionRef.current
+      ) {
+        restartTimerRef.current = setTimeout(() => {
+          try {
+            if (
+              !stopRequestedRef.current &&
+              isListeningRef.current &&
+              recognitionRef.current
+            ) {
+              recognitionRef.current.start();
+            }
+          } catch {
+            // Ignore rapid restart failures.
+          }
+        }, 150);
+      }
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+      return true;
+    } catch {
+      return false;
+    }
+  }, [
+    buildDisplayTranscript,
+    speechRecognitionSupported,
+    stopListening,
+    switchToDeepgramFallback,
+  ]);
 
   const startListening = useCallback(async () => {
     setError("");
 
-    const SR = getSpeechRecognition();
-    if (!SR) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       setBrowserSupported(false);
-      setError(
-        "Speech recognition not supported. Use Chrome on Android or Safari on iOS.",
-      );
+      setError("Your browser does not support microphone access.");
       return;
     }
 
-    // Clean stop before restarting
     stopListening();
-    await new Promise((r) => setTimeout(r, 150));
+    await new Promise((resolve) => setTimeout(resolve, 120));
 
     stopRequestedRef.current = false;
-
-    // ✅ Full reset of transcript state on new session start
     finalSentencesRef.current = [];
     currentInterimRef.current = "";
+    lastDeepgramChunkRef.current = "";
+    noSpeechCountRef.current = 0;
     setDisplayTranscript("");
 
-    // Request mic permission explicitly upfront
-    // Required on iOS Safari and many Android browsers before SR will work
+    const baseAudioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    };
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Release immediately — SpeechRecognition manages mic itself
-      stream.getTracks().forEach((track) => track.stop());
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: selectedDeviceId
+            ? {
+                ...baseAudioConstraints,
+                deviceId: { exact: selectedDeviceId },
+              }
+            : baseAudioConstraints,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: baseAudioConstraints,
+        });
+      }
+
+      streamRef.current = stream;
+      startVolumeMonitor(stream);
+      await refreshDevices();
+
+      const preferDeepgram = isMobileDevice || !speechRecognitionSupported;
+      if (preferDeepgram) {
+        const started = startDeepgramRecorder(stream);
+        if (!started) {
+          setBrowserSupported(false);
+          setError(
+            "No supported transcription engine available on this device.",
+          );
+          stopListening();
+        }
+        return;
+      }
+
+      const startedWebSpeech = startWebSpeech();
+      if (!startedWebSpeech) {
+        const startedFallback = startDeepgramRecorder(stream);
+        if (!startedFallback) {
+          setBrowserSupported(false);
+          setError("Failed to start speech recognition. Please try again.");
+          stopListening();
+        }
+      }
     } catch {
       setError(
-        "Microphone permission denied. Please allow microphone access and try again.",
+        "Unable to access this microphone. Please allow permission or choose another device.",
       );
-      return;
+      stopListening();
     }
-
-    await refreshDevices();
-    attachRecognition(SR);
-  }, [getSpeechRecognition, refreshDevices, stopListening, attachRecognition]);
+  }, [
+    isMobileDevice,
+    refreshDevices,
+    selectedDeviceId,
+    speechRecognitionSupported,
+    startDeepgramRecorder,
+    startVolumeMonitor,
+    startWebSpeech,
+    stopListening,
+  ]);
 
   const clearTranscript = useCallback(() => {
     finalSentencesRef.current = [];
@@ -227,14 +557,21 @@ function MicTest() {
   }, []);
 
   useEffect(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) setBrowserSupported(false);
+    if (!speechRecognitionSupported && !window.MediaRecorder) {
+      setBrowserSupported(false);
+    }
+
     refreshDevices();
-    const handleDeviceChange = () => refreshDevices();
+
+    const handleDeviceChange = () => {
+      refreshDevices();
+    };
+
     navigator.mediaDevices?.addEventListener(
       "devicechange",
       handleDeviceChange,
     );
+
     return () => {
       navigator.mediaDevices?.removeEventListener(
         "devicechange",
@@ -242,7 +579,7 @@ function MicTest() {
       );
       stopListening();
     };
-  }, []);
+  }, [refreshDevices, speechRecognitionSupported, stopListening]);
 
   return (
     <div className="mic-test-page">
@@ -261,6 +598,12 @@ function MicTest() {
               {isListening ? "Listening" : "Idle"}
             </span>
           </div>
+          <p className="mic-engine-tag">
+            Engine:{" "}
+            {sttEngine === "deepgram"
+              ? "Deepgram (fallback)"
+              : "Web Speech API"}
+          </p>
           <div className="mic-transcript-box">
             {displayTranscript
               ? displayTranscript
@@ -309,7 +652,21 @@ function MicTest() {
           </div>
         </div>
 
+        <div className="mic-volume-wrap">
+          <span>Input level</span>
+          <div className="mic-volume-track" aria-hidden="true">
+            <div className="mic-volume-fill" style={{ width: `${volume}%` }} />
+          </div>
+        </div>
+
         {error && <p className="mic-error">{error}</p>}
+
+        {isFallbackActive && (
+          <p className="mic-note">
+            Mobile-safe fallback is active. Transcript may appear in short
+            chunks.
+          </p>
+        )}
 
         {!browserSupported && (
           <p className="mic-note">
