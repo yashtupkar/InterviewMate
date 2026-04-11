@@ -13,7 +13,12 @@ function MicTest() {
   const isListeningRef = useRef(false);
   const stopRequestedRef = useRef(false);
   const restartTimerRef = useRef(null);
-  const committedFinalTextRef = useRef("");
+
+  // ✅ All transcript state lives here — persists across recognition restarts
+  // finalSentences: array of confirmed, fully-processed strings (never re-processed)
+  // currentInterim: the live partial string being spoken right now
+  const finalSentencesRef = useRef([]);
+  const currentInterimRef = useRef("");
 
   const getSpeechRecognition = useCallback(() => {
     return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -29,14 +34,14 @@ function MicTest() {
         setSelectedDeviceId("");
         return;
       }
-      const selectedStillAvailable = audioInputs.some(
+      const stillAvailable = audioInputs.some(
         (input) => input.deviceId === selectedDeviceId,
       );
-      if (!selectedDeviceId || !selectedStillAvailable) {
+      if (!selectedDeviceId || !stillAvailable) {
         setSelectedDeviceId(audioInputs[0].deviceId);
       }
     } catch {
-      // Device listing failed silently — not critical
+      /* non-critical */
     }
   }, [selectedDeviceId]);
 
@@ -61,6 +66,120 @@ function MicTest() {
     }
   }, []);
 
+  // ✅ Attach a fresh recognition session WITHOUT touching finalSentencesRef
+  // Called both on first start and on every auto-restart
+  const attachRecognition = useCallback(
+    (SR) => {
+      const recognition = new SR();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = "en-US";
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        // ✅ Each new session starts its own result-index tracking from 0
+        // We do NOT clear finalSentencesRef — those are already committed sentences
+        isListeningRef.current = true;
+        setIsListening(true);
+        setError("");
+      };
+
+      recognition.onresult = (event) => {
+        // ✅ CORE FIX: On every new recognition session, result indices restart from 0.
+        // So we CANNOT use resultIndex to avoid reprocessing across sessions.
+        // Instead we use a per-session Set to track which indices we've already
+        // committed as final in THIS session only.
+        // finalSentencesRef holds everything committed from ALL past sessions.
+
+        if (!recognition._processedFinalIndices) {
+          recognition._processedFinalIndices = new Set();
+        }
+
+        let newFinals = "";
+
+        for (let i = 0; i < event.results.length; i++) {
+          if (
+            event.results[i].isFinal &&
+            !recognition._processedFinalIndices.has(i)
+          ) {
+            // ✅ Mark this index as processed for THIS session — will never add it again
+            recognition._processedFinalIndices.add(i);
+            newFinals += event.results[i][0].transcript + " ";
+          }
+        }
+
+        if (newFinals) {
+          finalSentencesRef.current.push(newFinals.trim());
+        }
+
+        // ✅ Only the latest non-final result is the live interim
+        let latestInterim = "";
+        for (let i = event.results.length - 1; i >= 0; i--) {
+          if (!event.results[i].isFinal) {
+            latestInterim = event.results[i][0].transcript;
+            break;
+          }
+        }
+        currentInterimRef.current = latestInterim;
+
+        // ✅ Build display: all committed sentences + current interim
+        const committed = finalSentencesRef.current.join(" ");
+        const display = (committed + " " + latestInterim).trim();
+        setDisplayTranscript(display);
+      };
+
+      recognition.onerror = (event) => {
+        // Non-fatal — will auto-restart via onend
+        if (["aborted", "no-speech", "network"].includes(event.error)) return;
+
+        if (event.error === "not-allowed") {
+          setError("Microphone permission denied. Please allow mic access.");
+          stopListening();
+          return;
+        }
+        if (event.error === "audio-capture") {
+          setError("No microphone detected. Please connect a microphone.");
+          return;
+        }
+        setError(`Speech recognition error: ${event.error}`);
+      };
+
+      recognition.onend = () => {
+        // ✅ On unexpected end (very common on Android), restart recognition.
+        // finalSentencesRef is preserved — new session picks up from where we left off.
+        // Each new session gets its own _processedFinalIndices Set starting fresh.
+        if (
+          !stopRequestedRef.current &&
+          isListeningRef.current &&
+          recognitionRef.current
+        ) {
+          restartTimerRef.current = setTimeout(() => {
+            try {
+              if (
+                !stopRequestedRef.current &&
+                isListeningRef.current &&
+                recognitionRef.current
+              ) {
+                recognitionRef.current.start();
+              }
+            } catch {
+              /* ignore rapid restart failures */
+            }
+          }, 150);
+        }
+      };
+
+      recognitionRef.current = recognition;
+
+      try {
+        recognition.start();
+      } catch (e) {
+        setError("Failed to start speech recognition. Please try again.");
+      }
+    },
+    [stopListening],
+  );
+
   const startListening = useCallback(async () => {
     setError("");
 
@@ -68,7 +187,7 @@ function MicTest() {
     if (!SR) {
       setBrowserSupported(false);
       setError(
-        "Speech recognition is not supported in this browser. Please use Chrome on Android or Safari on iOS.",
+        "Speech recognition not supported. Use Chrome on Android or Safari on iOS.",
       );
       return;
     }
@@ -78,135 +197,44 @@ function MicTest() {
     await new Promise((r) => setTimeout(r, 150));
 
     stopRequestedRef.current = false;
-    committedFinalTextRef.current = "";
+
+    // ✅ Full reset of transcript state on new session start
+    finalSentencesRef.current = [];
+    currentInterimRef.current = "";
     setDisplayTranscript("");
 
-    // Request mic permission explicitly before starting recognition
-    // Required on iOS Safari and many Android browsers
+    // Request mic permission explicitly upfront
+    // Required on iOS Safari and many Android browsers before SR will work
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Immediately release the stream — STT manages mic on its own
+      // Release immediately — SpeechRecognition manages mic itself
       stream.getTracks().forEach((track) => track.stop());
-    } catch (err) {
+    } catch {
       setError(
         "Microphone permission denied. Please allow microphone access and try again.",
       );
       return;
     }
 
-    // Enumerate devices now that permission is granted
     await refreshDevices();
-
-    // Always create a fresh instance — reusing causes silent failures on mobile
-    const recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      committedFinalTextRef.current = "";
-      isListeningRef.current = true;
-      setIsListening(true);
-      setError("");
-    };
-
-    recognition.onresult = (event) => {
-      // Only process NEW results from e.resultIndex
-      // Starting from 0 causes every word to repeat on each new event (Android bug)
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          committedFinalTextRef.current += event.results[i][0].transcript + " ";
-        }
-      }
-
-      // Only grab the latest interim chunk
-      let latestInterim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (!event.results[i].isFinal) {
-          latestInterim += event.results[i][0].transcript;
-        }
-      }
-
-      // Display = confirmed finals + live interim
-      const display = (committedFinalTextRef.current + latestInterim).trim();
-      if (display) {
-        setDisplayTranscript(display);
-      }
-    };
-
-    recognition.onerror = (event) => {
-      // Non-fatal — will auto-restart via onend
-      if (["aborted", "no-speech", "network"].includes(event.error)) return;
-
-      committedFinalTextRef.current = "";
-
-      if (event.error === "not-allowed") {
-        setError("Microphone permission denied. Please allow mic access.");
-        stopListening();
-        return;
-      }
-
-      if (event.error === "audio-capture") {
-        setError("No microphone detected. Please connect a microphone.");
-        return;
-      }
-
-      setError(`Speech recognition error: ${event.error}`);
-    };
-
-    recognition.onend = () => {
-      // Do NOT reset committedFinalTextRef here —
-      // mobile restarts recognition constantly mid-sentence,
-      // resetting would wipe in-progress speech.
-      // Only reset on explicit stopListening() or new session start.
-
-      if (
-        !stopRequestedRef.current &&
-        isListeningRef.current &&
-        recognitionRef.current
-      ) {
-        restartTimerRef.current = setTimeout(() => {
-          try {
-            if (
-              recognitionRef.current &&
-              isListeningRef.current &&
-              !stopRequestedRef.current
-            ) {
-              recognitionRef.current.start();
-            }
-          } catch {
-            // Ignore restart failures
-          }
-        }, 150);
-      }
-    };
-
-    recognitionRef.current = recognition;
-
-    try {
-      recognition.start();
-    } catch (e) {
-      setError("Failed to start speech recognition. Please try again.");
-    }
-  }, [getSpeechRecognition, refreshDevices, stopListening]);
+    attachRecognition(SR);
+  }, [getSpeechRecognition, refreshDevices, stopListening, attachRecognition]);
 
   const clearTranscript = useCallback(() => {
-    committedFinalTextRef.current = "";
+    finalSentencesRef.current = [];
+    currentInterimRef.current = "";
     setDisplayTranscript("");
   }, []);
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) setBrowserSupported(false);
-
     refreshDevices();
     const handleDeviceChange = () => refreshDevices();
     navigator.mediaDevices?.addEventListener(
       "devicechange",
       handleDeviceChange,
     );
-
     return () => {
       navigator.mediaDevices?.removeEventListener(
         "devicechange",
