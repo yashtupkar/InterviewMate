@@ -8,8 +8,7 @@ function MicTest() {
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [finalTranscript, setFinalTranscript] = useState("");
-  const [interimTranscript, setInterimTranscript] = useState("");
+  const [displayTranscript, setDisplayTranscript] = useState(""); // What user sees (final + interim)
   const [volume, setVolume] = useState(0);
   const [error, setError] = useState("");
 
@@ -21,7 +20,9 @@ function MicTest() {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const rafRef = useRef(null);
-  const processedIndicesRef = useRef(new Set());
+
+  // ✅ Same pattern as useCustomInterview — persistent ref for committed final text
+  const committedFinalTextRef = useRef("");
 
   const speechRecognitionSupported = useMemo(
     () => Boolean(SpeechRecognitionAPI),
@@ -33,12 +34,10 @@ function MicTest() {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
-
     analyserRef.current = null;
     setVolume(0);
   }, []);
@@ -55,21 +54,17 @@ function MicTest() {
       setError("Your browser does not support microphone device listing.");
       return;
     }
-
     try {
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = allDevices.filter((d) => d.kind === "audioinput");
       setDevices(audioInputs);
-
       if (audioInputs.length === 0) {
         setSelectedDeviceId("");
         return;
       }
-
       const selectedStillAvailable = audioInputs.some(
         (input) => input.deviceId === selectedDeviceId,
       );
-
       if (!selectedDeviceId || !selectedStillAvailable) {
         setSelectedDeviceId(audioInputs[0].deviceId);
       }
@@ -81,19 +76,14 @@ function MicTest() {
   const startVolumeMonitor = useCallback((stream) => {
     const AudioContextAPI = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextAPI) return;
-
     const audioContext = new AudioContextAPI();
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
-
     const source = audioContext.createMediaStreamSource(stream);
     source.connect(analyser);
-
     audioContextRef.current = audioContext;
     analyserRef.current = analyser;
-
     const data = new Uint8Array(analyser.frequencyBinCount);
-
     const update = () => {
       if (!analyserRef.current) return;
       analyserRef.current.getByteFrequencyData(data);
@@ -101,7 +91,6 @@ function MicTest() {
       setVolume(Math.min(100, Math.round((avg / 255) * 140)));
       rafRef.current = requestAnimationFrame(update);
     };
-
     update();
   }, []);
 
@@ -109,7 +98,6 @@ function MicTest() {
     stopRequestedRef.current = true;
     setIsListening(false);
     isListeningRef.current = false;
-    setInterimTranscript("");
 
     if (restartTimerRef.current) {
       clearTimeout(restartTimerRef.current);
@@ -141,7 +129,10 @@ function MicTest() {
       stopRequestedRef.current = false;
       stopMediaStream();
       stopVolumeMonitor();
-      processedIndicesRef.current.clear();
+
+      // ✅ Reset committed text on fresh start
+      committedFinalTextRef.current = "";
+      setDisplayTranscript("");
 
       const baseAudioConstraints = {
         echoCancellation: true,
@@ -153,14 +144,11 @@ function MicTest() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: selectedDeviceId
-            ? {
-                ...baseAudioConstraints,
-                deviceId: { exact: selectedDeviceId },
-              }
+            ? { ...baseAudioConstraints, deviceId: { exact: selectedDeviceId } }
             : baseAudioConstraints,
         });
       } catch {
-        // Some Android devices reject exact device constraints.
+        // Some Android devices reject exact device constraints
         stream = await navigator.mediaDevices.getUserMedia({
           audio: baseAudioConstraints,
         });
@@ -182,40 +170,40 @@ function MicTest() {
       recognition.lang = "en-US";
 
       recognition.onstart = () => {
+        // ✅ Reset committed text each time recognition session starts fresh
+        committedFinalTextRef.current = "";
         isListeningRef.current = true;
         setIsListening(true);
       };
 
       recognition.onresult = (event) => {
-        let newFinalText = "";
-        let interimPart = "";
-
-        // Iterate through all results from index 0 to ensure consistency across devices.
-        // On some Android browsers, event.resultIndex is always 0.
-        for (let i = 0; i < event.results.length; i += 1) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            // Only add this result if we haven't processed this index as final before.
-            if (!processedIndicesRef.current.has(i)) {
-              newFinalText += `${result[0].transcript} `;
-              processedIndicesRef.current.add(i);
-            }
-          } else {
-            interimPart += result[0].transcript;
+        // ✅ KEY FIX: Only process NEW results from e.resultIndex
+        // (same fix as useCustomInterview — prevents word repetition on mobile)
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            committedFinalTextRef.current +=
+              event.results[i][0].transcript + " ";
           }
         }
 
-        if (newFinalText) {
-          setFinalTranscript((prev) => `${prev}${newFinalText}`.trim());
+        // ✅ Only grab latest interim chunk, not all interim results
+        let latestInterim = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (!event.results[i].isFinal) {
+            latestInterim += event.results[i][0].transcript;
+          }
         }
 
-        setInterimTranscript(interimPart);
+        // ✅ Display = confirmed finals + current interim (clean, no repetition)
+        const display = (committedFinalTextRef.current + latestInterim).trim();
+        setDisplayTranscript(display);
       };
 
       recognition.onerror = (event) => {
-        if (["aborted", "no-speech"].includes(event.error)) {
-          return;
-        }
+        // ✅ Reset on error to prevent stale state
+        committedFinalTextRef.current = "";
+
+        if (["aborted", "no-speech"].includes(event.error)) return;
 
         if (event.error === "not-allowed") {
           setError("Microphone permission denied. Please allow mic access.");
@@ -232,6 +220,9 @@ function MicTest() {
       };
 
       recognition.onend = () => {
+        // ✅ Reset on end — prevents carry-over into next recognition session
+        committedFinalTextRef.current = "";
+
         if (
           !stopRequestedRef.current &&
           isListeningRef.current &&
@@ -247,7 +238,7 @@ function MicTest() {
                 recognitionRef.current.start();
               }
             } catch {
-              // Ignore restart failures from rapid state changes.
+              // Ignore restart failures from rapid state changes
             }
           }, 100);
         }
@@ -272,22 +263,17 @@ function MicTest() {
   ]);
 
   const clearTranscript = useCallback(() => {
-    setFinalTranscript("");
-    setInterimTranscript("");
+    committedFinalTextRef.current = "";
+    setDisplayTranscript("");
   }, []);
 
   useEffect(() => {
     refreshDevices();
-
-    const handleDeviceChange = () => {
-      refreshDevices();
-    };
-
+    const handleDeviceChange = () => refreshDevices();
     navigator.mediaDevices?.addEventListener(
       "devicechange",
       handleDeviceChange,
     );
-
     return () => {
       navigator.mediaDevices?.removeEventListener(
         "devicechange",
@@ -296,8 +282,6 @@ function MicTest() {
       stopListening();
     };
   }, [refreshDevices, stopListening]);
-
-  const transcriptText = `${finalTranscript} ${interimTranscript}`.trim();
 
   return (
     <div className="mic-test-page">
@@ -317,7 +301,7 @@ function MicTest() {
             </span>
           </div>
           <div className="mic-transcript-box">
-            {transcriptText ||
+            {displayTranscript ||
               (isListening
                 ? "Speak now. Your words will appear here in real time."
                 : "Start the test to show your live transcript here.")}
