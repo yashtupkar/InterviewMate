@@ -15,6 +15,8 @@ function MicTest() {
 
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
+  const stopRequestedRef = useRef(false);
+  const restartTimerRef = useRef(null);
   const streamRef = useRef(null);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
@@ -22,7 +24,7 @@ function MicTest() {
 
   const speechRecognitionSupported = useMemo(
     () => Boolean(SpeechRecognitionAPI),
-    []
+    [],
   );
 
   const stopVolumeMonitor = useCallback(() => {
@@ -58,7 +60,16 @@ function MicTest() {
       const audioInputs = allDevices.filter((d) => d.kind === "audioinput");
       setDevices(audioInputs);
 
-      if (!selectedDeviceId && audioInputs.length > 0) {
+      if (audioInputs.length === 0) {
+        setSelectedDeviceId("");
+        return;
+      }
+
+      const selectedStillAvailable = audioInputs.some(
+        (input) => input.deviceId === selectedDeviceId,
+      );
+
+      if (!selectedDeviceId || !selectedStillAvailable) {
         setSelectedDeviceId(audioInputs[0].deviceId);
       }
     } catch {
@@ -67,7 +78,10 @@ function MicTest() {
   }, [selectedDeviceId]);
 
   const startVolumeMonitor = useCallback((stream) => {
-    const audioContext = new window.AudioContext();
+    const AudioContextAPI = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextAPI) return;
+
+    const audioContext = new AudioContextAPI();
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
 
@@ -91,9 +105,15 @@ function MicTest() {
   }, []);
 
   const stopListening = useCallback(() => {
+    stopRequestedRef.current = true;
     setIsListening(false);
     isListeningRef.current = false;
     setInterimTranscript("");
+
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
 
     if (recognitionRef.current) {
       recognitionRef.current.onresult = null;
@@ -116,24 +136,40 @@ function MicTest() {
     }
 
     try {
+      stopListening();
+      stopRequestedRef.current = false;
       stopMediaStream();
       stopVolumeMonitor();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: selectedDeviceId
-          ? {
-              deviceId: { exact: selectedDeviceId },
-              echoCancellation: true,
-              noiseSuppression: true,
-            }
-          : true,
-      });
+      const baseAudioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      };
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: selectedDeviceId
+            ? {
+                ...baseAudioConstraints,
+                deviceId: { exact: selectedDeviceId },
+              }
+            : baseAudioConstraints,
+        });
+      } catch {
+        // Some Android devices reject exact device constraints.
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: baseAudioConstraints,
+        });
+      }
 
       streamRef.current = stream;
       startVolumeMonitor(stream);
       await refreshDevices();
 
       if (!speechRecognitionSupported) {
+        isListeningRef.current = true;
         setIsListening(true);
         return;
       }
@@ -142,6 +178,11 @@ function MicTest() {
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = "en-US";
+
+      recognition.onstart = () => {
+        isListeningRef.current = true;
+        setIsListening(true);
+      };
 
       recognition.onresult = (event) => {
         let finalPart = "";
@@ -164,29 +205,51 @@ function MicTest() {
       };
 
       recognition.onerror = (event) => {
-        if (event.error !== "aborted") {
-          setError(`Speech recognition error: ${event.error}`);
+        if (["aborted", "no-speech"].includes(event.error)) {
+          return;
         }
+
+        if (event.error === "not-allowed") {
+          setError("Microphone permission denied. Please allow mic access.");
+          stopListening();
+          return;
+        }
+
+        if (event.error === "audio-capture") {
+          setError("No active microphone input detected on this device.");
+          return;
+        }
+
+        setError(`Speech recognition error: ${event.error}`);
       };
 
       recognition.onend = () => {
-        // Keep listening while test is active.
-        if (isListeningRef.current) {
-          try {
-            recognition.start();
-          } catch {
-            // Ignore rapid restart errors.
-          }
+        if (
+          !stopRequestedRef.current &&
+          isListeningRef.current &&
+          recognitionRef.current
+        ) {
+          restartTimerRef.current = setTimeout(() => {
+            try {
+              if (
+                recognitionRef.current &&
+                isListeningRef.current &&
+                !stopRequestedRef.current
+              ) {
+                recognitionRef.current.start();
+              }
+            } catch {
+              // Ignore restart failures from rapid state changes.
+            }
+          }, 100);
         }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
-      isListeningRef.current = true;
-      setIsListening(true);
     } catch {
       setError(
-        "Unable to access this microphone. Please allow permission or choose another device."
+        "Unable to access this microphone. Please allow permission or choose another device.",
       );
       stopListening();
     }
@@ -212,12 +275,15 @@ function MicTest() {
       refreshDevices();
     };
 
-    navigator.mediaDevices?.addEventListener("devicechange", handleDeviceChange);
+    navigator.mediaDevices?.addEventListener(
+      "devicechange",
+      handleDeviceChange,
+    );
 
     return () => {
       navigator.mediaDevices?.removeEventListener(
         "devicechange",
-        handleDeviceChange
+        handleDeviceChange,
       );
       stopListening();
     };
@@ -241,7 +307,9 @@ function MicTest() {
             onChange={(e) => setSelectedDeviceId(e.target.value)}
             disabled={isListening}
           >
-            {devices.length === 0 && <option value="">No microphone found</option>}
+            {devices.length === 0 && (
+              <option value="">No microphone found</option>
+            )}
             {devices.map((device, index) => (
               <option key={device.deviceId || index} value={device.deviceId}>
                 {device.label || `Microphone ${index + 1}`}
@@ -250,10 +318,18 @@ function MicTest() {
           </select>
 
           <div className="mic-test-buttons">
-            <button type="button" onClick={startListening} disabled={isListening}>
+            <button
+              type="button"
+              onClick={startListening}
+              disabled={isListening}
+            >
               Start Test
             </button>
-            <button type="button" onClick={stopListening} disabled={!isListening}>
+            <button
+              type="button"
+              onClick={stopListening}
+              disabled={!isListening}
+            >
               Stop
             </button>
             <button type="button" onClick={clearTranscript}>
@@ -265,10 +341,7 @@ function MicTest() {
         <div className="mic-volume-wrap">
           <span>Input level</span>
           <div className="mic-volume-track" aria-hidden="true">
-            <div
-              className="mic-volume-fill"
-              style={{ width: `${volume}%` }}
-            />
+            <div className="mic-volume-fill" style={{ width: `${volume}%` }} />
           </div>
         </div>
 
@@ -276,13 +349,14 @@ function MicTest() {
 
         {!speechRecognitionSupported && (
           <p className="mic-note">
-            Live transcript is not supported in this browser. Use Chrome or Edge for
-            speech-to-text.
+            Live transcript is not supported in this browser. Use Chrome or Edge
+            for speech-to-text.
           </p>
         )}
 
         <div className="mic-transcript-box">
-          {transcriptText || "Your transcript will appear here while you speak..."}
+          {transcriptText ||
+            "Your transcript will appear here while you speak..."}
         </div>
       </div>
     </div>

@@ -105,13 +105,18 @@ function App() {
 
       const fetchReferrer = async () => {
         try {
-          const res = await axios.get(`${backendURL}/api/referrals/info/${ref}`);
+          const res = await axios.get(
+            `${backendURL}/api/referrals/info/${ref}`,
+          );
           if (res.data.success) {
             setReferredBy(res.data.referrer.name);
             if (!isSignedIn) {
               setShowWelcome(true);
             } else {
-              toast.error("Referral detected! Rewards only apply to new signups.", { icon: 'ℹ️' });
+              toast.error(
+                "Referral detected! Rewards only apply to new signups.",
+                { icon: "ℹ️" },
+              );
             }
           }
         } catch (err) {
@@ -137,39 +142,39 @@ function App() {
         position="top-center"
         toastOptions={{
           style: {
-            background: '#121214',
-            color: '#fff',
-            border: '1px solid rgba(136, 136, 136, 0.28)',
-            padding: '12px 20px',
-            borderRadius: '16px',
-            fontSize: '14px',
-            fontWeight: '600',
-            fontFamily: 'inherit',
+            background: "#121214",
+            color: "#fff",
+            border: "1px solid rgba(136, 136, 136, 0.28)",
+            padding: "12px 20px",
+            borderRadius: "16px",
+            fontSize: "14px",
+            fontWeight: "600",
+            fontFamily: "inherit",
           },
           success: {
             style: {
-              background: '#09090b',
+              background: "#09090b",
             },
             iconTheme: {
-              primary: '#bef264',
-              secondary: '#000',
+              primary: "#bef264",
+              secondary: "#000",
             },
           },
           error: {
             style: {
-              background: '#09090b',
+              background: "#09090b",
             },
             iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+              primary: "#ef4444",
+              secondary: "#fff",
             },
           },
           // Custom style for generic/warning toasts
           blank: {
             style: {
-              background: '#09090b',
+              background: "#09090b",
             },
-          }
+          },
         }}
       />
 
@@ -184,9 +189,7 @@ function App() {
         />
       )}
 
-      {showSuccess && (
-        <SuccessPopup onClose={() => setShowSuccess(false)} />
-      )}
+      {showSuccess && <SuccessPopup onClose={() => setShowSuccess(false)} />}
 
       <Routes>
         {/* Homepage Route */}
@@ -264,25 +267,19 @@ function App() {
 
         {/* Admin Routes */}
         <Route element={<AdminRoute />}>
-           <Route 
-             path="/admin/seed-questions" 
-             element={
-               <Layout>
-                 <SeedQuestions />
-               </Layout>
-             } 
-           />
+          <Route
+            path="/admin/seed-questions"
+            element={
+              <Layout>
+                <SeedQuestions />
+              </Layout>
+            }
+          />
         </Route>
 
-        <Route
-          path="/terms"
-          element={<TermsAndConditions />}
-        />
+        <Route path="/terms" element={<TermsAndConditions />} />
 
-        <Route
-          path="/privacy"
-          element={<PrivacyPolicy />}
-        />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
 
         {/* Protected Routes Wrapper */}
         <Route element={<ProtectedRoute />}>
@@ -291,8 +288,14 @@ function App() {
             <Route index element={<DashboardOverview />} />
             <Route path="setup" element={<CreateInterview />} />
             <Route path="reports" element={<Reports />} />
-            <Route path="interviews" element={<Navigate to="/dashboard/reports" replace />} />
-            <Route path="gd-interviews" element={<Navigate to="/dashboard/reports" replace />} />
+            <Route
+              path="interviews"
+              element={<Navigate to="/dashboard/reports" replace />}
+            />
+            <Route
+              path="gd-interviews"
+              element={<Navigate to="/dashboard/reports" replace />}
+            />
             <Route path="linkedin" element={<LinkedInOptimisation />} />
             <Route path="result/:sessionId" element={<InterviewResult />} />
           </Route>
@@ -305,24 +308,14 @@ function App() {
           </Route>
 
           {/* Standalone Session Routes (No Sidebar) */}
-          <Route
-            path="/session"
-            element={<InterviewSession />}
-          />
+          <Route path="/session" element={<InterviewSession />} />
 
-          <Route
-            path="/session/:sessionId"
-            element={<InterviewSession />}
-          />
+          <Route path="/session/:sessionId" element={<InterviewSession />} />
           <Route
             path="/session-custom/:sessionId"
             element={<CustomInterviewSession />}
           />
-          <Route
-            path="/session-custom"
-            element={<CustomInterviewSession />}
-          />
-
+          <Route path="/session-custom" element={<CustomInterviewSession />} />
 
           {/* Group Discussion Routes */}
           <Route path="/gd" element={<InterviewLayout />}>
@@ -369,14 +362,8 @@ function App() {
           />
 
           {/* Testing routes */}
-          <Route
-            path="/voices"
-            element={<VoiceTest />}
-          />
-          <Route
-            path="/code"
-            element={<CodingSpace />}
-          />
+          <Route path="/voices" element={<VoiceTest />} />
+          <Route path="/code" element={<CodingSpace />} />
         </Route>
 
         {/* Auth Routes */}
@@ -391,4 +378,3 @@ function App() {
 }
 
 export default App;
-
