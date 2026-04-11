@@ -1,59 +1,26 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./MicTest.css";
-
-const SpeechRecognitionAPI =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
 
 function MicTest() {
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [displayTranscript, setDisplayTranscript] = useState(""); // What user sees (final + interim)
-  const [volume, setVolume] = useState(0);
+  const [displayTranscript, setDisplayTranscript] = useState("");
   const [error, setError] = useState("");
+  const [browserSupported, setBrowserSupported] = useState(true);
 
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false);
   const stopRequestedRef = useRef(false);
   const restartTimerRef = useRef(null);
-  const streamRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const rafRef = useRef(null);
-
-  // ✅ Same pattern as useCustomInterview — persistent ref for committed final text
   const committedFinalTextRef = useRef("");
 
-  const speechRecognitionSupported = useMemo(
-    () => Boolean(SpeechRecognitionAPI),
-    [],
-  );
-
-  const stopVolumeMonitor = useCallback(() => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-    analyserRef.current = null;
-    setVolume(0);
-  }, []);
-
-  const stopMediaStream = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
+  const getSpeechRecognition = useCallback(() => {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
   }, []);
 
   const refreshDevices = useCallback(async () => {
-    if (!navigator.mediaDevices?.enumerateDevices) {
-      setError("Your browser does not support microphone device listing.");
-      return;
-    }
+    if (!navigator.mediaDevices?.enumerateDevices) return;
     try {
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       const audioInputs = allDevices.filter((d) => d.kind === "audioinput");
@@ -69,35 +36,14 @@ function MicTest() {
         setSelectedDeviceId(audioInputs[0].deviceId);
       }
     } catch {
-      setError("Could not load microphone devices.");
+      // Device listing failed silently — not critical
     }
   }, [selectedDeviceId]);
 
-  const startVolumeMonitor = useCallback((stream) => {
-    const AudioContextAPI = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextAPI) return;
-    const audioContext = new AudioContextAPI();
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
-    audioContextRef.current = audioContext;
-    analyserRef.current = analyser;
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    const update = () => {
-      if (!analyserRef.current) return;
-      analyserRef.current.getByteFrequencyData(data);
-      const avg = data.reduce((sum, value) => sum + value, 0) / data.length;
-      setVolume(Math.min(100, Math.round((avg / 255) * 140)));
-      rafRef.current = requestAnimationFrame(update);
-    };
-    update();
-  }, []);
-
   const stopListening = useCallback(() => {
     stopRequestedRef.current = true;
-    setIsListening(false);
     isListeningRef.current = false;
+    setIsListening(false);
 
     if (restartTimerRef.current) {
       clearTimeout(restartTimerRef.current);
@@ -105,162 +51,145 @@ function MicTest() {
     }
 
     if (recognitionRef.current) {
-      recognitionRef.current.onresult = null;
-      recognitionRef.current.onerror = null;
-      recognitionRef.current.onend = null;
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {}
       recognitionRef.current = null;
     }
-
-    stopVolumeMonitor();
-    stopMediaStream();
-  }, [stopMediaStream, stopVolumeMonitor]);
+  }, []);
 
   const startListening = useCallback(async () => {
     setError("");
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError("Your browser does not support microphone access.");
+    const SR = getSpeechRecognition();
+    if (!SR) {
+      setBrowserSupported(false);
+      setError(
+        "Speech recognition is not supported in this browser. Please use Chrome on Android or Safari on iOS.",
+      );
       return;
     }
 
+    // Clean stop before restarting
+    stopListening();
+    await new Promise((r) => setTimeout(r, 150));
+
+    stopRequestedRef.current = false;
+    committedFinalTextRef.current = "";
+    setDisplayTranscript("");
+
+    // Request mic permission explicitly before starting recognition
+    // Required on iOS Safari and many Android browsers
     try {
-      stopListening();
-      stopRequestedRef.current = false;
-      stopMediaStream();
-      stopVolumeMonitor();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Immediately release the stream — STT manages mic on its own
+      stream.getTracks().forEach((track) => track.stop());
+    } catch (err) {
+      setError(
+        "Microphone permission denied. Please allow microphone access and try again.",
+      );
+      return;
+    }
 
-      // ✅ Reset committed text on fresh start
+    // Enumerate devices now that permission is granted
+    await refreshDevices();
+
+    // Always create a fresh instance — reusing causes silent failures on mobile
+    const recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
       committedFinalTextRef.current = "";
-      setDisplayTranscript("");
+      isListeningRef.current = true;
+      setIsListening(true);
+      setError("");
+    };
 
-      const baseAudioConstraints = {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      };
-
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: selectedDeviceId
-            ? { ...baseAudioConstraints, deviceId: { exact: selectedDeviceId } }
-            : baseAudioConstraints,
-        });
-      } catch {
-        // Some Android devices reject exact device constraints
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: baseAudioConstraints,
-        });
+    recognition.onresult = (event) => {
+      // Only process NEW results from e.resultIndex
+      // Starting from 0 causes every word to repeat on each new event (Android bug)
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          committedFinalTextRef.current += event.results[i][0].transcript + " ";
+        }
       }
 
-      streamRef.current = stream;
-      startVolumeMonitor(stream);
-      await refreshDevices();
+      // Only grab the latest interim chunk
+      let latestInterim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) {
+          latestInterim += event.results[i][0].transcript;
+        }
+      }
 
-      if (!speechRecognitionSupported) {
-        isListeningRef.current = true;
-        setIsListening(true);
+      // Display = confirmed finals + live interim
+      const display = (committedFinalTextRef.current + latestInterim).trim();
+      if (display) {
+        setDisplayTranscript(display);
+      }
+    };
+
+    recognition.onerror = (event) => {
+      // Non-fatal — will auto-restart via onend
+      if (["aborted", "no-speech", "network"].includes(event.error)) return;
+
+      committedFinalTextRef.current = "";
+
+      if (event.error === "not-allowed") {
+        setError("Microphone permission denied. Please allow mic access.");
+        stopListening();
         return;
       }
 
-      const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
+      if (event.error === "audio-capture") {
+        setError("No microphone detected. Please connect a microphone.");
+        return;
+      }
 
-      recognition.onstart = () => {
-        // ✅ Reset committed text each time recognition session starts fresh
-        committedFinalTextRef.current = "";
-        isListeningRef.current = true;
-        setIsListening(true);
-      };
+      setError(`Speech recognition error: ${event.error}`);
+    };
 
-      recognition.onresult = (event) => {
-        // ✅ KEY FIX: Only process NEW results from e.resultIndex
-        // (same fix as useCustomInterview — prevents word repetition on mobile)
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            committedFinalTextRef.current +=
-              event.results[i][0].transcript + " ";
-          }
-        }
+    recognition.onend = () => {
+      // Do NOT reset committedFinalTextRef here —
+      // mobile restarts recognition constantly mid-sentence,
+      // resetting would wipe in-progress speech.
+      // Only reset on explicit stopListening() or new session start.
 
-        // ✅ Only grab latest interim chunk, not all interim results
-        let latestInterim = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (!event.results[i].isFinal) {
-            latestInterim += event.results[i][0].transcript;
-          }
-        }
-
-        // ✅ Display = confirmed finals + current interim (clean, no repetition)
-        const display = (committedFinalTextRef.current + latestInterim).trim();
-        setDisplayTranscript(display);
-      };
-
-      recognition.onerror = (event) => {
-        // ✅ Reset on error to prevent stale state
-        committedFinalTextRef.current = "";
-
-        if (["aborted", "no-speech"].includes(event.error)) return;
-
-        if (event.error === "not-allowed") {
-          setError("Microphone permission denied. Please allow mic access.");
-          stopListening();
-          return;
-        }
-
-        if (event.error === "audio-capture") {
-          setError("No active microphone input detected on this device.");
-          return;
-        }
-
-        setError(`Speech recognition error: ${event.error}`);
-      };
-
-      recognition.onend = () => {
-        // ✅ Reset on end — prevents carry-over into next recognition session
-        committedFinalTextRef.current = "";
-
-        if (
-          !stopRequestedRef.current &&
-          isListeningRef.current &&
-          recognitionRef.current
-        ) {
-          restartTimerRef.current = setTimeout(() => {
-            try {
-              if (
-                recognitionRef.current &&
-                isListeningRef.current &&
-                !stopRequestedRef.current
-              ) {
-                recognitionRef.current.start();
-              }
-            } catch {
-              // Ignore restart failures from rapid state changes
+      if (
+        !stopRequestedRef.current &&
+        isListeningRef.current &&
+        recognitionRef.current
+      ) {
+        restartTimerRef.current = setTimeout(() => {
+          try {
+            if (
+              recognitionRef.current &&
+              isListeningRef.current &&
+              !stopRequestedRef.current
+            ) {
+              recognitionRef.current.start();
             }
-          }, 100);
-        }
-      };
+          } catch {
+            // Ignore restart failures
+          }
+        }, 150);
+      }
+    };
 
-      recognitionRef.current = recognition;
+    recognitionRef.current = recognition;
+
+    try {
       recognition.start();
-    } catch {
-      setError(
-        "Unable to access this microphone. Please allow permission or choose another device.",
-      );
-      stopListening();
+    } catch (e) {
+      setError("Failed to start speech recognition. Please try again.");
     }
-  }, [
-    refreshDevices,
-    selectedDeviceId,
-    speechRecognitionSupported,
-    startVolumeMonitor,
-    stopListening,
-    stopMediaStream,
-    stopVolumeMonitor,
-  ]);
+  }, [getSpeechRecognition, refreshDevices, stopListening]);
 
   const clearTranscript = useCallback(() => {
     committedFinalTextRef.current = "";
@@ -268,12 +197,16 @@ function MicTest() {
   }, []);
 
   useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) setBrowserSupported(false);
+
     refreshDevices();
     const handleDeviceChange = () => refreshDevices();
     navigator.mediaDevices?.addEventListener(
       "devicechange",
       handleDeviceChange,
     );
+
     return () => {
       navigator.mediaDevices?.removeEventListener(
         "devicechange",
@@ -281,7 +214,7 @@ function MicTest() {
       );
       stopListening();
     };
-  }, [refreshDevices, stopListening]);
+  }, []);
 
   return (
     <div className="mic-test-page">
@@ -301,10 +234,11 @@ function MicTest() {
             </span>
           </div>
           <div className="mic-transcript-box">
-            {displayTranscript ||
-              (isListening
+            {displayTranscript
+              ? displayTranscript
+              : isListening
                 ? "Speak now. Your words will appear here in real time."
-                : "Start the test to show your live transcript here.")}
+                : "Start the test to show your live transcript here."}
           </div>
         </div>
 
@@ -347,19 +281,12 @@ function MicTest() {
           </div>
         </div>
 
-        <div className="mic-volume-wrap">
-          <span>Input level</span>
-          <div className="mic-volume-track" aria-hidden="true">
-            <div className="mic-volume-fill" style={{ width: `${volume}%` }} />
-          </div>
-        </div>
-
         {error && <p className="mic-error">{error}</p>}
 
-        {!speechRecognitionSupported && (
+        {!browserSupported && (
           <p className="mic-note">
-            Live transcript is not supported in this browser. Use Chrome or Edge
-            for speech-to-text.
+            Live transcript is not supported in this browser. Please use Chrome
+            on Android or Safari on iOS.
           </p>
         )}
       </div>
