@@ -1,45 +1,64 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const subscriptionSchema = new mongoose.Schema({
+const subscriptionSchema = new mongoose.Schema(
+  {
     user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-        unique: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
     },
     tier: {
-        type: String,
-        enum: ['Free', 'Student Flash', 'Placement Pro', 'Infinite Elite'],
-        default: 'Free'
+      type: String,
+      enum: ["Free", "Student Flash", "Placement Pro", "Infinite Elite"],
+      default: "Free",
     },
     credits: {
-        type: Number,
-        default: 30
+      type: Number,
+      default: 30,
     },
     planExpiry: {
-        type: Date
+      type: Date,
     },
     leftoverFreeCredits: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
     topupCredits: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
     billingCycle: {
-        type: String,
-        enum: ['monthly', 'yearly', null],
-        default: null
+      type: String,
+      enum: ["monthly", "yearly", null],
+      default: null,
     },
     lastPaymentAt: {
-        type: Date
+      type: Date,
+    },
+    codingExecution: {
+      cycleKey: {
+        type: String,
+        default: null,
+      },
+      count: {
+        type: Number,
+        default: 0,
+      },
+      updatedAt: {
+        type: Date,
+        default: null,
+      },
     },
     // References to Order documents — full details live in Order collection
-    paymentHistory: [{
+    paymentHistory: [
+      {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Order'
-    }]
-}, { timestamps: true });
+        ref: "Order",
+      },
+    ],
+  },
+  { timestamps: true },
+);
 
-module.exports = mongoose.model('Subscription', subscriptionSchema);
+module.exports = mongoose.model("Subscription", subscriptionSchema);

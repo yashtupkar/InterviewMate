@@ -206,11 +206,16 @@ const InterviewSession = () => {
       if (!text) continue;
 
       // 1. Primary: [CODE_QUESTION] tags with JSON
-      const tagMatch = text.match(/\[CODE_QUESTION\]([\s\S]*?)\[\/CODE_QUESTION\]/i);
+      const tagMatch = text.match(
+        /\[CODE_QUESTION\]([\s\S]*?)\[\/CODE_QUESTION\]/i,
+      );
       if (tagMatch) {
         try {
           let jsonStr = tagMatch[1].trim();
-          jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+          jsonStr = jsonStr
+            .replace(/```json/gi, "")
+            .replace(/```/g, "")
+            .trim();
           const taskData = JSON.parse(jsonStr);
           if (taskData.question) {
             console.log("[CodingQ] Detected via tags:", taskData);
@@ -219,7 +224,10 @@ const InterviewSession = () => {
           }
         } catch (e) {
           const fuzzyTask = extractFuzzyTask(tagMatch[1]);
-          if (fuzzyTask) { setCodingPopupTask(fuzzyTask); return; }
+          if (fuzzyTask) {
+            setCodingPopupTask(fuzzyTask);
+            return;
+          }
         }
       }
 
@@ -227,17 +235,25 @@ const InterviewSession = () => {
       if (
         text.toLowerCase().includes("coding question") ||
         text.toLowerCase().includes("write a function") ||
-        (text.toLowerCase().includes("language") && text.toLowerCase().includes("time limit"))
+        (text.toLowerCase().includes("language") &&
+          text.toLowerCase().includes("time limit"))
       ) {
         const jsonMatch = text.match(/\{[\s\S]*?\}/);
         if (jsonMatch) {
           try {
             const taskData = JSON.parse(jsonMatch[0].trim());
-            if (taskData.question && taskData.language) { setCodingPopupTask(taskData); return; }
+            if (taskData.question && taskData.language) {
+              setCodingPopupTask(taskData);
+              return;
+            }
           } catch (e) {}
         }
         const fuzzyTask = extractFuzzyTask(text);
-        if (fuzzyTask) { console.log("[CodingQ] Fuzzy detection:", fuzzyTask); setCodingPopupTask(fuzzyTask); return; }
+        if (fuzzyTask) {
+          console.log("[CodingQ] Fuzzy detection:", fuzzyTask);
+          setCodingPopupTask(fuzzyTask);
+          return;
+        }
       }
     }
   }, [transcript, activeCodingTask, codingPopupTask]);
@@ -267,9 +283,13 @@ const InterviewSession = () => {
     if (!codingPopupTask) return;
     // Mute mic while editing code (wrapped in try-catch — some SDK versions differ)
     if (vapi.current && !isMuted) {
-      try { vapi.current.mute(); } catch (e) {
+      try {
+        vapi.current.mute();
+      } catch (e) {
         console.warn("[CodingQ] vapi.mute() unavailable, trying setMuted:", e);
-        try { vapi.current.setMuted(true); } catch (e2) {}
+        try {
+          vapi.current.setMuted(true);
+        } catch (e2) {}
       }
       setIsMuted(true);
       setIsMicEnabled(false);
@@ -298,33 +318,41 @@ const InterviewSession = () => {
 
     // Unmute mic and resume interview
     if (vapi.current && isMuted) {
-      try { vapi.current.unmute(); } catch (e) {}
+      try {
+        vapi.current.unmute();
+      } catch (e) {}
       setIsMuted(false);
       setIsMicEnabled(true);
     }
 
     setActiveCodingTask(null);
-    toast.success(isAutoSubmit ? "Time up! Code submitted. Interview continues…" : "Code submitted! Interview continues…");
+    toast.success(
+      isAutoSubmit
+        ? "Time up! Code submitted. Interview continues…"
+        : "Code submitted! Interview continues…",
+    );
   };
 
   // Helper to extract task details from unstructured text
   const extractFuzzyTask = (text) => {
     const lowerText = text.toLowerCase();
-    
+
     // Look for language
-    const languages = ['javascript', 'html', 'python', 'java', 'cpp', 'css'];
-    const language = languages.find(l => lowerText.includes(l));
-    
+    const languages = ["javascript", "html", "python", "java", "cpp", "css"];
+    const language = languages.find((l) => lowerText.includes(l));
+
     // Look for time limit (e.g., "300 seconds", "5 minutes", "limit 300")
     let timeLimit = 300;
     const timeMatch = text.match(/(?:time|limit|duration).*?(\d+)/i);
     if (timeMatch) timeLimit = parseInt(timeMatch[1]);
     else if (lowerText.includes("5 minute")) timeLimit = 300;
-    
+
     // Try to isolate the question
     // Usually starts after "Question:" or "write a function to"
     let question = "";
-    const questionMatch = text.match(/(?:question|task|challenge)[:\s]+(.*?)(?=\n|Language|Time|$)/i);
+    const questionMatch = text.match(
+      /(?:question|task|challenge)[:\s]+(.*?)(?=\n|Language|Time|$)/i,
+    );
     if (questionMatch) question = questionMatch[1].trim();
     else if (lowerText.includes("write a function")) {
       const idx = lowerText.indexOf("write a function");
@@ -333,10 +361,11 @@ const InterviewSession = () => {
 
     if (language && (question || text.length > 50)) {
       return {
-        question: question || "Please refer to the conversation for instructions.",
+        question:
+          question || "Please refer to the conversation for instructions.",
         language: language,
         timeLimit: timeLimit,
-        initialCode: ""
+        initialCode: "",
       };
     }
     return null;
@@ -410,12 +439,12 @@ const InterviewSession = () => {
     try {
       const response = await axios.post(
         `${backend_URL}/api/vapi-interview/generate-report`,
-        { 
-          sessionId: currentSessionId, 
+        {
+          sessionId: currentSessionId,
           transcript: finalTranscript,
-          duration: Math.round(interviewDuration / 60) // Send minutes to keep backend consistent
+          duration: Math.round(interviewDuration / 60), // Send minutes to keep backend consistent
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (response.data.status === "completed" && response.data.report) {
@@ -476,7 +505,7 @@ const InterviewSession = () => {
         }
 
         vapi.current = globalVapiInstance;
-        
+
         // Wait for any pending stop operation to complete before proceeding
         if (globalVapiStopPromise) {
           console.log("Waiting for pending Vapi stop operation to complete...");
@@ -487,7 +516,7 @@ const InterviewSession = () => {
           }
           globalVapiStopPromise = null;
         }
-        
+
         if (!isMounted) return;
 
         vapi.current.removeAllListeners("call-start");
@@ -553,27 +582,33 @@ const InterviewSession = () => {
 
         vapi.current.on("error", async (error) => {
           console.error("Vapi error:", error);
-          
+
           // Check for quota/credit errors (Vapi error messages usually contain these keywords)
           const errorMsg = error?.message?.toLowerCase() || "";
-          if (errorMsg.includes("quota") || errorMsg.includes("credit") || errorMsg.includes("insufficient")) {
-             toast.loading("Current key exhausted. Rotating to a new key...", { duration: 3000 });
-             
-             try {
-               const token = await getToken();
-               await axios.post(
-                 `${backend_URL}/api/vapi-interview/report-failure`,
-                 { publicKey: vapi.current.publicKey }, // Correctly access current key if possible or use the one we have
-                 { headers: { Authorization: `Bearer ${token}` } }
-               );
-               
-               // After reporting, we tell the user to restart or we could try to auto-refresh
-               setTimeout(() => {
-                 window.location.reload(); // Simplest way to pick up the new key from backend for a fresh session
-               }, 2000);
-             } catch (rotError) {
-               console.error("Failed to rotate key:", rotError);
-             }
+          if (
+            errorMsg.includes("quota") ||
+            errorMsg.includes("credit") ||
+            errorMsg.includes("insufficient")
+          ) {
+            toast.loading("Current key exhausted. Rotating to a new key...", {
+              duration: 3000,
+            });
+
+            try {
+              const token = await getToken();
+              await axios.post(
+                `${backend_URL}/api/vapi-interview/report-failure`,
+                { publicKey: vapi.current.publicKey }, // Correctly access current key if possible or use the one we have
+                { headers: { Authorization: `Bearer ${token}` } },
+              );
+
+              // After reporting, we tell the user to restart or we could try to auto-refresh
+              setTimeout(() => {
+                window.location.reload(); // Simplest way to pick up the new key from backend for a fresh session
+              }, 2000);
+            } catch (rotError) {
+              console.error("Failed to rotate key:", rotError);
+            }
           }
 
           setCallStatus("inactive");
@@ -712,7 +747,10 @@ const InterviewSession = () => {
               );
 
               // FIX: Don't end if a coding task was JUST detected or is active
-              const containsCodingTask = normalized.includes("coding question") || normalized.includes("write a function") || normalized.includes("[code_question]");
+              const containsCodingTask =
+                normalized.includes("coding question") ||
+                normalized.includes("write a function") ||
+                normalized.includes("[code_question]");
 
               if (shouldEnd && !containsCodingTask && !activeCodingTask) {
                 console.log("End phrase detected:", normalized);
@@ -732,10 +770,15 @@ const InterviewSession = () => {
             model: "nova-2",
             language: "en-US",
             smartFormat: true,
-            keywords: [user?.fullName, user?.firstName, user?.lastName, "PlaceMateAI"]
+            keywords: [
+              user?.fullName,
+              user?.firstName,
+              user?.lastName,
+              "PlaceMateAI",
+            ]
               .filter(Boolean)
-              .flatMap(name => name.split(/\s+/))
-              .filter(word => word.length > 0),
+              .flatMap((name) => name.split(/\s+/))
+              .filter((word) => word.length > 0),
           },
           model: {
             provider: "openai",
@@ -783,7 +826,7 @@ const InterviewSession = () => {
         vapi.current.removeAllListeners("volume-level");
         vapi.current.removeAllListeners("error");
         vapi.current.removeAllListeners("message");
-        
+
         // Track the stopping process so any immediate restart waits for it
         try {
           const stopOp = vapi.current.stop();
@@ -791,11 +834,15 @@ const InterviewSession = () => {
             globalVapiStopPromise = stopOp;
           } else {
             // Provide a small buffer time for Daily JS to safely destroy iframe
-            globalVapiStopPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+            globalVapiStopPromise = new Promise((resolve) =>
+              setTimeout(resolve, 1000),
+            );
           }
         } catch (e) {
           console.error("Error stopping VAPI instance:", e);
-          globalVapiStopPromise = new Promise((resolve) => setTimeout(resolve, 1000));
+          globalVapiStopPromise = new Promise((resolve) =>
+            setTimeout(resolve, 1000),
+          );
         }
 
         vapi.current = null;
@@ -878,13 +925,13 @@ const InterviewSession = () => {
 
   return (
     <div className="min-h-screen bg-background dark:text-zinc-100 text-gray-900 font-sans overflow-hidden">
-
       {/* ── Full-Screen CodingSpace (after Attempt clicked) ───────────────── */}
       {activeCodingTask && (
         <div className="fixed inset-0 z-[120] flex flex-col animate-in fade-in duration-300">
           <CodingSpace
             task={activeCodingTask}
             disableCopyPaste={true}
+            showTimer={true}
             onSubmit={handleCodingSubmit}
           />
         </div>
@@ -935,12 +982,14 @@ const InterviewSession = () => {
 
         <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6">
           <div className="flex flex-col gap-6 min-w-0">
-            <div className={`relative aspect-video dark:bg-surface-alt/40 bg-gray-100/40 rounded-[28px] overflow-hidden border dark:border-[#bef264] border-black/5 transition-all duration-700 ${activeCodingTask ? 'scale-95 blur-xl' : 'scale-100 blur-0 shadow-[0_0_60px_rgba(24,24,27,0.7)]'}`}>
+            <div
+              className={`relative aspect-video dark:bg-surface-alt/40 bg-gray-100/40 rounded-[28px] overflow-hidden border dark:border-[#bef264] border-black/5 transition-all duration-700 ${activeCodingTask ? "scale-95 blur-xl" : "scale-100 blur-0 shadow-[0_0_60px_rgba(24,24,27,0.7)]"}`}
+            >
               <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
                 {callStatus === "active" && !activeCodingTask && (
                   <div className="absolute inset-0 dark:bg-zinc-800 bg-gray-100 blur-[90px] animate-pulse-slow pointer-events-none" />
                 )}
-                
+
                 {hasCallEnded && !isProcessing && (
                   <div className="absolute inset-0 dark:bg-black/80 bg-white/80 backdrop-blur-md flex items-center justify-center z-40">
                     <div className="text-center w-full max-w-sm px-6">
@@ -980,36 +1029,48 @@ const InterviewSession = () => {
                 )}
 
                 {/* Interviewer View / Speaker Indicator */}
-                <div className={`relative w-full h-full flex items-center justify-center transition-all duration-700 ${activeCodingTask ? 'scale-75' : 'scale-100'}`}>
-                   {!isUserFocus && (
-                     <div className="relative flex items-center justify-center">
-                        <div
-                          ref={agentVolumeCircleRef}
-                          className={`absolute inset-0 rounded-full bg-blue-900/40 transition-transform duration-75 ease-out pointer-events-none ${isAgentSpeaking ? "opacity-100" : "opacity-0"}`}
-                          style={{ transform: "scale(1)" }}
-                        />
-                        <div
-                          className={`relative w-28 h-28 md:w-32 md:h-32 rounded-full dark:bg-zinc-900/80 bg-gray-100/80 border ${isAgentSpeaking ? "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.6)]" : "dark:border-white/10 border-black/10"} shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden z-10 transition-all duration-300`}
-                        >
-                          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-indigo-500 border dark:border-white/10 border-black/10 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
-                            <img
-                              src={getAgentImage(displayData.agentName)}
-                              alt={displayData.agentName}
-                              className={`w-full h-full object-cover transition-transform duration-500 ${isAgentSpeaking ? 'scale-110' : 'scale-100'}`}
-                            />
-                          </div>
+                <div
+                  className={`relative w-full h-full flex items-center justify-center transition-all duration-700 ${activeCodingTask ? "scale-75" : "scale-100"}`}
+                >
+                  {!isUserFocus && (
+                    <div className="relative flex items-center justify-center">
+                      <div
+                        ref={agentVolumeCircleRef}
+                        className={`absolute inset-0 rounded-full bg-blue-900/40 transition-transform duration-75 ease-out pointer-events-none ${isAgentSpeaking ? "opacity-100" : "opacity-0"}`}
+                        style={{ transform: "scale(1)" }}
+                      />
+                      <div
+                        className={`relative w-28 h-28 md:w-32 md:h-32 rounded-full dark:bg-zinc-900/80 bg-gray-100/80 border ${isAgentSpeaking ? "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.6)]" : "dark:border-white/10 border-black/10"} shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden z-10 transition-all duration-300`}
+                      >
+                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-indigo-500 border dark:border-white/10 border-black/10 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
+                          <img
+                            src={getAgentImage(displayData.agentName)}
+                            alt={displayData.agentName}
+                            className={`w-full h-full object-cover transition-transform duration-500 ${isAgentSpeaking ? "scale-110" : "scale-100"}`}
+                          />
                         </div>
-                     </div>
-                   )}
-                   {isUserFocus && isVideoOn && (
-                     <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover rounded-[28px]" />
-                   )}
+                      </div>
+                    </div>
+                  )}
+                  {isUserFocus && isVideoOn && (
+                    <video
+                      ref={localVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover rounded-[28px]"
+                    />
+                  )}
                 </div>
 
                 <div className="absolute top-6 left-6 z-20 flex items-center gap-2">
-                   <div className="px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 text-[10px] font-bold text-white uppercase tracking-wider">
-                     {isAgentSpeaking ? `${displayData.agentName} is speaking...` : isAiThinking ? "AI is thinking..." : "Interviewer"}
-                   </div>
+                  <div className="px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/5 text-[10px] font-bold text-white uppercase tracking-wider">
+                    {isAgentSpeaking
+                      ? `${displayData.agentName} is speaking...`
+                      : isAiThinking
+                        ? "AI is thinking..."
+                        : "Interviewer"}
+                  </div>
                 </div>
               </div>
 
@@ -1153,8 +1214,8 @@ const InterviewSession = () => {
                       <div className="bg-emerald-400 h-full rounded-full animate-progress"></div>
                     </div>
                   </div>
-               </div>
-            )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -1291,20 +1352,28 @@ const InterviewSession = () => {
                         <FiCode size={15} className="text-primary" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Coding Challenge</p>
-                        <p className="text-[13px] font-black text-white truncate">{codingPopupTask.title || "Coding Question"}</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                          Coding Challenge
+                        </p>
+                        <p className="text-[13px] font-black text-white truncate">
+                          {codingPopupTask.title || "Coding Question"}
+                        </p>
                       </div>
                     </div>
                     {/* Badges */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       {codingPopupTask.difficulty && (
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                          codingPopupTask.difficulty === 'Easy'
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                            : codingPopupTask.difficulty === 'Medium'
-                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                            : 'bg-red-500/10 border-red-500/20 text-red-400'
-                        }`}>{codingPopupTask.difficulty}</span>
+                        <span
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                            codingPopupTask.difficulty === "Easy"
+                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                              : codingPopupTask.difficulty === "Medium"
+                                ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                                : "bg-red-500/10 border-red-500/20 text-red-400"
+                          }`}
+                        >
+                          {codingPopupTask.difficulty}
+                        </span>
                       )}
                       {codingPopupTask.language && (
                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 uppercase">
@@ -1321,7 +1390,8 @@ const InterviewSession = () => {
 
                   {/* Question snippet */}
                   <p className="text-[11px] text-zinc-400 leading-relaxed line-clamp-2 mb-3">
-                    {codingPopupTask.question || "The interviewer has posed a coding question."}
+                    {codingPopupTask.question ||
+                      "The interviewer has posed a coding question."}
                   </p>
 
                   {/* Action buttons */}
@@ -1338,7 +1408,9 @@ const InterviewSession = () => {
                     >
                       Skip
                     </button>
-                    <p className="ml-auto text-[9px] text-zinc-600 font-medium">⚠ Copy/paste disabled during attempt</p>
+                    <p className="ml-auto text-[9px] text-zinc-600 font-medium">
+                      ⚠ Copy/paste disabled during attempt
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1384,10 +1456,18 @@ const InterviewSession = () => {
                 ) : (
                   transcript.map((msg) => (
                     <div key={msg.id} className="group animate-message-in">
-                      <div className={`flex items-center gap-2 mb-1.5 ${msg.isAgent ? "" : "flex-row-reverse"}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden ${msg.isAgent ? "bg-indigo-500/90" : "dark:bg-zinc-800 bg-gray-100"}`}>
+                      <div
+                        className={`flex items-center gap-2 mb-1.5 ${msg.isAgent ? "" : "flex-row-reverse"}`}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden ${msg.isAgent ? "bg-indigo-500/90" : "dark:bg-zinc-800 bg-gray-100"}`}
+                        >
                           {msg.isAgent ? (
-                            <img src={getAgentImage(displayData.agentName)} alt={msg.speaker} className="w-full h-full object-cover" />
+                            <img
+                              src={getAgentImage(displayData.agentName)}
+                              alt={msg.speaker}
+                              className="w-full h-full object-cover"
+                            />
                           ) : user?.avatar ? (
                             <img
                               src={user.avatar}
@@ -1402,8 +1482,12 @@ const InterviewSession = () => {
                           {msg.speaker} • {msg.timestamp}
                         </span>
                       </div>
-                      <div className={`flex ${msg.isAgent ? "justify-start" : "justify-end"}`}>
-                        <div className={`p-3 rounded-2xl text-[13px] w-[85%] transition-all ${msg.isAgent ? "dark:bg-zinc-800/80 bg-gray-200/80 dark:text-zinc-200 text-gray-800 rounded-tl-none" : "bg-indigo-500 text-white rounded-tr-none"}`}>
+                      <div
+                        className={`flex ${msg.isAgent ? "justify-start" : "justify-end"}`}
+                      >
+                        <div
+                          className={`p-3 rounded-2xl text-[13px] w-[85%] transition-all ${msg.isAgent ? "dark:bg-zinc-800/80 bg-gray-200/80 dark:text-zinc-200 text-gray-800 rounded-tl-none" : "bg-indigo-500 text-white rounded-tr-none"}`}
+                        >
                           {msg.text}
                         </div>
                       </div>
@@ -1423,7 +1507,6 @@ const InterviewSession = () => {
                 </span>
               </div>
             </div>
-
           </div>
         </div>
       </div>

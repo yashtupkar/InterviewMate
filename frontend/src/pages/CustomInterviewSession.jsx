@@ -92,6 +92,7 @@ const CustomInterviewSession = () => {
           <CodingSpace
             task={activeCodingTask}
             disableCopyPaste={false}
+            showTimer={true}
             onSubmit={handleCodingSubmit}
           />
         </div>

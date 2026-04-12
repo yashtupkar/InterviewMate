@@ -1,7 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const codingController = require('../controllers/codingController');
+const codingController = require("../controllers/codingController");
+const { clerkAuth } = require("../middleware/auth");
 
-router.post('/execute', codingController.executeCode);
+router.post("/execute", clerkAuth, codingController.executeCode);
 
 module.exports = router;
