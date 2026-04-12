@@ -26,7 +26,6 @@ import {
 } from "react-icons/io5";
 import { MdZoomIn, MdZoomOut } from "react-icons/md";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useReactToPrint } from "react-to-print";
 import { useResume } from "../context/ResumeContext";
 import toast from "react-hot-toast";
 
@@ -66,6 +65,7 @@ const ResumeBuilder = () => {
   const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
   const [previewPageCount, setPreviewPageCount] = useState(1);
   const resumeRef = useRef();
+  const exportResumeRef = useRef();
 
   // Load resume data based on URL parameter
   React.useEffect(() => {
@@ -84,10 +84,132 @@ const ResumeBuilder = () => {
     setResumeData((prev) => ({ ...prev, template }));
   };
 
-  const handlePrint = useReactToPrint({
-    contentRef: resumeRef,
-    documentTitle: resumeData.title || "Resume",
-  });
+  const handleDownloadPdf = async () => {
+    const exportNode = exportResumeRef.current || resumeRef.current;
+    if (!exportNode) {
+      toast.error("Resume preview is not ready yet.");
+      return;
+    }
+
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+      const pageFormat =
+        resumeData?.customizations?.pageFormat === "Letter" ? "letter" : "a4";
+
+      if (exportNode.offsetWidth === 0 || exportNode.offsetHeight === 0) {
+        toast.error("Resume is still rendering. Please try again.");
+        return;
+      }
+
+      const safeTitle = (resumeData.title || "Resume")
+        .replace(/[^a-z0-9\s-_]/gi, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .toLowerCase();
+
+      const fileName = `${safeTitle || "resume"}.pdf`;
+
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      const canvas = await html2canvas(exportNode, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        scrollX: 0,
+        scrollY: 0,
+      });
+
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: pageFormat,
+        orientation: "portrait",
+        compress: true,
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const renderWidth = pageWidth;
+      const renderHeight = (canvas.height * pageWidth) / canvas.width;
+
+      if (previewPageCount === 1) {
+        const imageData = canvas.toDataURL("image/jpeg", 0.98);
+        const offsetY = Math.max(0, (pageHeight - renderHeight) / 2);
+
+        pdf.addImage(
+          imageData,
+          "JPEG",
+          0,
+          offsetY,
+          renderWidth,
+          renderHeight,
+          undefined,
+          "FAST",
+        );
+        pdf.save(fileName);
+        return;
+      }
+
+      const pageHeightInCanvas = Math.max(
+        1,
+        Math.floor((canvas.width * pageHeight) / pageWidth),
+      );
+      let remainingHeight = canvas.height;
+      let sourceY = 0;
+      let pageIndex = 0;
+
+      while (remainingHeight > 0) {
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+
+        const sliceHeight = Math.min(pageHeightInCanvas, remainingHeight);
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeight;
+
+        const context = pageCanvas.getContext("2d");
+        context.drawImage(
+          canvas,
+          0,
+          sourceY,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight,
+        );
+
+        const pageImage = pageCanvas.toDataURL("image/jpeg", 0.98);
+        const renderPageHeight = (sliceHeight * pageWidth) / canvas.width;
+
+        pdf.addImage(
+          pageImage,
+          "JPEG",
+          0,
+          0,
+          renderWidth,
+          renderPageHeight,
+          undefined,
+          "FAST",
+        );
+
+        sourceY += sliceHeight;
+        remainingHeight -= sliceHeight;
+        pageIndex += 1;
+      }
+
+      pdf.save(fileName);
+    } catch (error) {
+      console.error("PDF download failed:", error);
+      toast.error("Failed to download PDF. Please try again.");
+    }
+  };
 
   const handleNewResume = (template) => {
     navigate(`/resume-builder/new?template=${template || "modern"}`);
@@ -277,7 +399,7 @@ const ResumeBuilder = () => {
           </button>
 
           <button
-            onClick={handlePrint}
+            onClick={handleDownloadPdf}
             className="hidden md:flex items-center gap-2 px-3 sm:px-5 py-2 bg-lime-400 hover:bg-lime-500 text-zinc-950 text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.2)] active:scale-95"
           >
             <IoDownload className="w-4 h-4" />
@@ -387,7 +509,7 @@ const ResumeBuilder = () => {
             <button
               onClick={() => {
                 setIsMobileSidebarOpen(false);
-                handlePrint();
+                handleDownloadPdf();
               }}
               className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-lime-400 text-zinc-950 py-2.5 text-sm font-bold hover:bg-lime-500 transition-colors"
             >
@@ -584,7 +706,7 @@ const ResumeBuilder = () => {
                 close
               </button>{" "}
               <button
-                onClick={handlePrint}
+                onClick={handleDownloadPdf}
                 className="w-[220px] flex items-center justify-center gap-2 py-3 bg-lime-400 hover:bg-lime-500 text-zinc-950 text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.2)]"
               >
                 <IoDownload className="w-4 h-4" />
@@ -593,6 +715,15 @@ const ResumeBuilder = () => {
             </div>
           </div>
         )}
+
+        {/* Dedicated Export Target (unscaled) */}
+        <div className="fixed top-0 -left-[10000px] z-[-1] pointer-events-none bg-white">
+          <PreviewSection
+            ref={exportResumeRef}
+            template={selectedTemplate}
+            exportMode
+          />
+        </div>
       </main>
     </div>
   );
