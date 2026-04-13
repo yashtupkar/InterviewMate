@@ -42,6 +42,19 @@ const jobTitles = [
   "Software Engineer",
 ];
 
+const presetSkills = [
+  "SQL",
+  "JavaScript",
+  "React",
+  "Node.js",
+  "Python",
+  "Java",
+  "Html/CSS",
+  "Python",
+  "C++",
+  "DSA",
+];
+
 const CreateInterview = () => {
   const {
     interviewData,
@@ -57,8 +70,12 @@ const CreateInterview = () => {
   const { user } = useUser();
   const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [interviewMode, setInterviewMode] = useState("roleBased"); // 'roleBased', 'skillsBased'
   const [inputType, setInputType] = useState("both"); // 'resume', 'jobDescription', 'both'
+  const [skillsSourceType, setSkillsSourceType] = useState("both"); // 'resume', 'jobDescription', 'both'
   const [jobDescription, setJobDescription] = useState("");
+  const [skills, setSkills] = useState([]);
+  const [skillInput, setSkillInput] = useState("");
   const [resumeContent, setResumeContent] = useState("");
   const [resumeFileName, setResumeFileName] = useState("");
   const [isParsingResume, setIsParsingResume] = useState(false);
@@ -71,6 +88,12 @@ const CreateInterview = () => {
     typeof window !== "undefined" ? window.innerWidth < 768 : false,
   );
   const { speakText, stopSpeaking } = usePollyTTS();
+
+  useEffect(() => {
+    if (interviewMode === "skillsBased") {
+      setInterviewData((prev) => ({ ...prev, interviewType: "technical" }));
+    }
+  }, [interviewMode, setInterviewData]);
 
   const playVoiceSample = async (agent, e = null) => {
     if (e) e.stopPropagation();
@@ -175,6 +198,69 @@ const CreateInterview = () => {
   const availableCredits =
     (subscription?.credits || 0) + (subscription?.topupCredits || 0);
 
+  const normalizeSkill = (value) =>
+    value
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/^,+|,+$/g, "");
+
+  const addSkill = (value) => {
+    const normalized = normalizeSkill(value);
+    if (!normalized) return;
+
+    setSkills((prev) => {
+      if (
+        prev.some((item) => item.toLowerCase() === normalized.toLowerCase())
+      ) {
+        return prev;
+      }
+      return [...prev, normalized];
+    });
+  };
+
+  const removeSkill = (value) => {
+    setSkills((prev) => prev.filter((item) => item !== value));
+  };
+
+  const handleSkillInputKeyDown = (event) => {
+    if (event.key !== "Enter" && event.key !== ",") {
+      return;
+    }
+
+    event.preventDefault();
+    if (!skillInput.trim()) {
+      return;
+    }
+
+    addSkill(skillInput);
+    setSkillInput("");
+  };
+
+  const addSkillFromInput = () => {
+    if (!skillInput.trim()) {
+      return;
+    }
+
+    const rawValues = skillInput.split(",");
+    rawValues.forEach((value) => addSkill(value));
+    setSkillInput("");
+  };
+
+  const togglePresetSkill = (value) => {
+    const exists = skills.some(
+      (item) => item.toLowerCase() === value.toLowerCase(),
+    );
+
+    if (exists) {
+      setSkills((prev) =>
+        prev.filter((item) => item.toLowerCase() !== value.toLowerCase()),
+      );
+      return;
+    }
+
+    addSkill(value);
+  };
+
   const startInterview = async () => {
     if (
       subscription &&
@@ -201,33 +287,83 @@ const CreateInterview = () => {
     const hasResumeContent = Boolean(resumeContent.trim());
     const hasJobDescription = Boolean(jobDescription.trim());
 
+    const hasSkills = skills.length > 0;
     let combinedContent = "";
-    if (inputType === "resume") {
-      if (!hasResumeContent) {
-        toast.error("Please upload and parse your resume PDF first.");
-        return;
+    let sourceType = "";
+
+    if (interviewMode === "roleBased") {
+      if (inputType === "resume") {
+        if (!hasResumeContent) {
+          toast.error("Please upload and parse your resume PDF first.");
+          return;
+        }
+        combinedContent = `Resume: ${resumeContent}`;
+        sourceType = "resume";
+      } else if (inputType === "jobDescription") {
+        if (!hasJobDescription) {
+          toast.error("Please provide job description content.");
+          return;
+        }
+        combinedContent = `Job Description: ${jobDescription}`;
+        sourceType = "job-description";
+      } else {
+        if (!hasResumeContent && !hasJobDescription) {
+          toast.error("Please provide resume or job description content.");
+          return;
+        }
+        if (hasResumeContent) combinedContent += `Resume: ${resumeContent}\n`;
+        if (hasJobDescription)
+          combinedContent += `Job Description: ${jobDescription}`;
+        sourceType = "resume-job-description";
       }
-      combinedContent = `Resume: ${resumeContent}`;
-    } else if (inputType === "jobDescription")
-      combinedContent = `Job Description: ${jobDescription}`;
-    else {
-      if (!hasResumeContent && !hasJobDescription) {
+
+      if (!combinedContent.trim()) {
         toast.error("Please provide resume or job description content.");
         return;
       }
-      if (hasResumeContent) combinedContent += `Resume: ${resumeContent}\n`;
-      if (hasJobDescription)
-        combinedContent += `Job Description: ${jobDescription}`;
-    }
+    } else {
+      if (!hasSkills) {
+        toast.error(
+          "Please add at least one skill for a skills-based interview.",
+        );
+        return;
+      }
 
-    if (!combinedContent.trim()) {
-      toast.error("Please provide resume or job description content.");
-      return;
+      const skillsLine = `Skills Focus: ${skills.join(", ")}`;
+
+      if (skillsSourceType === "resume") {
+        if (!hasResumeContent) {
+          toast.error("Please upload and parse your resume PDF first.");
+          return;
+        }
+        combinedContent = `${skillsLine}\n\nResume: ${resumeContent}`;
+        sourceType = "skills-resume";
+      } else if (skillsSourceType === "jobDescription") {
+        if (!hasJobDescription) {
+          toast.error("Please provide job description content.");
+          return;
+        }
+        combinedContent = `${skillsLine}\n\nJob Description: ${jobDescription}`;
+        sourceType = "skills-job-description";
+      } else {
+        if (!hasResumeContent && !hasJobDescription) {
+          toast.error("Please provide resume or job description content.");
+          return;
+        }
+        if (hasResumeContent) combinedContent += `Resume: ${resumeContent}\n`;
+        if (hasJobDescription)
+          combinedContent += `Job Description: ${jobDescription}`;
+        combinedContent = `${skillsLine}\n\n${combinedContent.trim()}`;
+        sourceType = "skills-resume-job-description";
+      }
     }
 
     const finalInterviewData = {
       ...interviewData,
       content: combinedContent,
+      interviewMode,
+      sourceType,
+      skills,
       userName: user?.firstName || "Candidate",
       duration: duration,
     };
@@ -516,6 +652,28 @@ const CreateInterview = () => {
             </div>
 
             <div className={isCompactMobileForm ? "space-y-4" : "space-y-6"}>
+              <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
+                  Interview mode
+                </label>
+                <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
+                  <button
+                    onClick={() => setInterviewMode("roleBased")}
+                    className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${interviewMode === "roleBased" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                  >
+                    Role-based
+                  </button>
+                  <button
+                    onClick={() => setInterviewMode("skillsBased")}
+                    className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${interviewMode === "skillsBased" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                  >
+                    Skills-based
+                  </button>
+                </div>
+              </div>
+
+              <hr className="dark:border-white/5 border-black/5" />
+
               {/* Job Title */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
@@ -579,8 +737,13 @@ const CreateInterview = () => {
                   className={`flex items-center justify-between ${isCompactMobileForm ? "mb-1" : "mb-2"}`}
                 >
                   <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
-                    Context source
+                    {interviewMode === "roleBased"
+                      ? "Context source"
+                      : "Skills & context source"}
                   </label>
+                </div>
+
+                {interviewMode === "roleBased" ? (
                   <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
                     <button
                       onClick={() => setInputType("jobDescription")}
@@ -601,12 +764,104 @@ const CreateInterview = () => {
                       Both
                     </button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="space-y-3 rounded-2xl border border-zinc-800 bg-black/40 p-3 sm:p-4">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                          Skills Focus
+                        </label>
+                        <span className="text-[10px] font-semibold text-zinc-500">
+                          Select preset or add custom
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {presetSkills.map((skill) => {
+                          const isSelected = skills.some(
+                            (item) =>
+                              item.toLowerCase() === skill.toLowerCase(),
+                          );
+                          return (
+                            <button
+                              key={skill}
+                              type="button"
+                              onClick={() => togglePresetSkill(skill)}
+                              className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all ${isSelected ? "bg-[#bef264]/10 border-[#bef264] text-[#bef264]" : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500"}`}
+                            >
+                              {skill}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          value={skillInput}
+                          onChange={(e) => setSkillInput(e.target.value)}
+                          onKeyDown={handleSkillInputKeyDown}
+                          placeholder="Add skills (e.g. SQL, joins, indexing)"
+                          className={`w-full ${isCompactMobileForm ? "px-4 py-3 text-xs" : "px-5 py-3 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none font-bold placeholder-gray-600 shadow-sm`}
+                        />
+                        <button
+                          type="button"
+                          onClick={addSkillFromInput}
+                          className="px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 text-[11px] font-black uppercase tracking-wider hover:border-zinc-500 transition-all"
+                        >
+                          Add
+                        </button>
+                      </div>
+
+                      {skills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {skills.map((skill) => (
+                            <button
+                              key={skill}
+                              type="button"
+                              onClick={() => removeSkill(skill)}
+                              className="px-3 py-1.5 rounded-full bg-[#bef264]/10 border border-[#bef264] text-[#bef264] text-[10px] font-black tracking-wider hover:bg-[#bef264]/20"
+                            >
+                              {skill} x
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] font-semibold text-zinc-500">
+                          No skills selected yet.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
+                      <button
+                        onClick={() => setSkillsSourceType("jobDescription")}
+                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${skillsSourceType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                      >
+                        JD
+                      </button>
+                      <button
+                        onClick={() => setSkillsSourceType("resume")}
+                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${skillsSourceType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                      >
+                        Resume
+                      </button>
+                      <button
+                        onClick={() => setSkillsSourceType("both")}
+                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${skillsSourceType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                      >
+                        Both
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 <div
                   className={isCompactMobileForm ? "space-y-3" : "space-y-4"}
                 >
-                  {(inputType === "jobDescription" || inputType === "both") && (
+                  {((interviewMode === "roleBased" &&
+                    (inputType === "jobDescription" || inputType === "both")) ||
+                    (interviewMode === "skillsBased" &&
+                      (skillsSourceType === "jobDescription" ||
+                        skillsSourceType === "both"))) && (
                     <div className="space-y-2">
                       <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                         Job Description
@@ -621,7 +876,11 @@ const CreateInterview = () => {
                     </div>
                   )}
 
-                  {(inputType === "resume" || inputType === "both") && (
+                  {((interviewMode === "roleBased" &&
+                    (inputType === "resume" || inputType === "both")) ||
+                    (interviewMode === "skillsBased" &&
+                      (skillsSourceType === "resume" ||
+                        skillsSourceType === "both"))) && (
                     <div className="space-y-2">
                       <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                         Resume PDF
@@ -921,35 +1180,42 @@ const CreateInterview = () => {
                     </div>
                   </button>
 
-                  {/* Behavioral */}
-                  <button
-                    onClick={() =>
-                      setInterviewData((p) => ({
-                        ...p,
-                        interviewType: "behavioral",
-                      }))
-                    }
-                    className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-4 py-3" : "px-5 py-4"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
-                  >
-                    <div
-                      className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
-                    />
-                    <div className="flex-1 text-left">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span
-                          className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "behavioral" ? "text-white" : "group-hover:text-zinc-200"}`}
-                        >
-                          Behavioral
-                        </span>
-                        <span className="text-[9px] px-2 py-0.5 rounded bg-[#bef264]/20 text-[#bef264] font-black uppercase tracking-widest">
-                          Soft skills
-                        </span>
+                  {interviewMode === "roleBased" && (
+                    <button
+                      onClick={() =>
+                        setInterviewData((p) => ({
+                          ...p,
+                          interviewType: "behavioral",
+                        }))
+                      }
+                      className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-4 py-3" : "px-5 py-4"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
+                    >
+                      <div
+                        className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
+                      />
+                      <div className="flex-1 text-left">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span
+                            className={`text-[13px] font-black transition-colors ${interviewData.interviewType === "behavioral" ? "text-white" : "group-hover:text-zinc-200"}`}
+                          >
+                            Behavioral
+                          </span>
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-[#bef264]/20 text-[#bef264] font-black uppercase tracking-widest">
+                            Soft skills
+                          </span>
+                        </div>
+                        <p className="text-[11px] font-bold text-zinc-400 leading-tight">
+                          Evaluate experiences and interpersonal skills
+                        </p>
                       </div>
-                      <p className="text-[11px] font-bold text-zinc-400 leading-tight">
-                        Evaluate experiences and interpersonal skills
-                      </p>
-                    </div>
-                  </button>
+                    </button>
+                  )}
+
+                  {interviewMode === "skillsBased" && (
+                    <p className="text-[11px] font-semibold text-zinc-500">
+                      Skills-based mode uses technical interview questions.
+                    </p>
+                  )}
                 </div>
               </div>
 

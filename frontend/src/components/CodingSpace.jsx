@@ -462,6 +462,7 @@ const CodingSpace = ({
   onSubmit,
   disableCopyPaste = false,
   showTimer = false,
+  enableTerminalInput = false,
 }) => {
   const getViewportWidth = () =>
     typeof window !== "undefined" ? window.innerWidth : 1024;
@@ -480,6 +481,7 @@ const CodingSpace = ({
     getTemplateForLanguage(task.language || "javascript"),
   );
   const [output, setOutput] = useState("");
+  const [terminalInput, setTerminalInput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(task.timeLimit || 1800);
   // preview mode: 'editor' | 'split' | 'preview' (html/css only)
@@ -501,6 +503,11 @@ const CodingSpace = ({
   const [panelWidth, setPanelWidth] = useState(40); // percent for left panel
   const [isDragging, setIsDragging] = useState(false);
   const [isResizingTerminal, setIsResizingTerminal] = useState(false);
+  const isInterviewMode = enableTerminalInput;
+
+  const supportedWorkspaceLanguages = Object.keys(LANG_TEMPLATES);
+  const isListedWorkspaceLanguage =
+    supportedWorkspaceLanguages.includes(language);
 
   const timerRef = useRef(null);
   const containerRef = useRef(null);
@@ -651,6 +658,8 @@ const CodingSpace = ({
 
   /* Language change */
   const handleLangChange = (lang) => {
+    if (isInterviewMode) return;
+
     setLanguage(lang);
     setCode(getTemplateForLanguage(lang));
     setOutput("");
@@ -1537,6 +1546,10 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
 
   /* Run Code */
   const handleRunCode = async () => {
+    if (!isListedWorkspaceLanguage) {
+      return;
+    }
+
     if (isWebLang(language)) {
       // For html/css, "Run" just ensures split-preview is visible
       setPreviewMode(isMobileView ? "preview" : "split");
@@ -1600,7 +1613,11 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ script: scriptToExecute, language }),
+        body: JSON.stringify({
+          script: scriptToExecute,
+          language,
+          stdin: enableTerminalInput ? terminalInput : "",
+        }),
       });
       const data = await resp.json();
 
@@ -1704,8 +1721,14 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
           <select
             value={language}
             onChange={(e) => handleLangChange(e.target.value)}
-            className="bg-transparent text-[10px] font-bold uppercase tracking-wide text-zinc-200 focus:outline-none"
+            disabled={isInterviewMode}
+            className={`bg-transparent text-[10px] font-bold uppercase tracking-wide text-zinc-200 focus:outline-none ${isInterviewMode ? "opacity-70 cursor-not-allowed" : ""}`}
           >
+            {!isListedWorkspaceLanguage && language ? (
+              <option value={language} className="bg-[#1a1a1e] text-zinc-200">
+                {language}
+              </option>
+            ) : null}
             {Object.keys(LANG_TEMPLATES).map((lang) => (
               <option
                 key={lang}
@@ -1768,18 +1791,21 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
 
           <div className="hidden md:block w-px h-5 bg-white/10" />
 
-          <button
-            onClick={handleRunCode}
-            disabled={isRunning}
-            className="hidden md:flex items-center gap-2 px-3 md:px-4 py-2 bg-[#1a1a1e] hover:bg-zinc-700 text-white rounded-lg text-xs font-bold border border-zinc-700 transition-all active:scale-95 disabled:opacity-50"
-          >
-            {isRunning ? (
-              <FiRefreshCw size={13} className="animate-spin" />
-            ) : (
-              <FiPlay size={13} className="fill-primary text-primary" />
-            )}
-            Run
-          </button>
+          {isListedWorkspaceLanguage && (
+            <button
+              onClick={handleRunCode}
+              disabled={isRunning}
+              className="hidden md:flex items-center gap-2 px-3 md:px-4 py-2 bg-[#1a1a1e] hover:bg-zinc-700 text-white rounded-lg text-xs font-bold border border-zinc-700 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isRunning ? (
+                <FiRefreshCw size={13} className="animate-spin" />
+              ) : (
+                <FiPlay size={13} className="fill-primary text-primary" />
+              )}
+              Run
+            </button>
+          )}
+
           <button
             onClick={() => handleSubmit(false)}
             className="hidden md:flex items-center gap-2 px-3 md:px-4 py-2 bg-primary hover:bg-[#a3e635] text-black rounded-lg text-xs font-black transition-all active:scale-95 shadow-lg shadow-primary/20"
@@ -2012,21 +2038,26 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
                         </div>
 
                         <div className="flex items-center gap-2 px-4">
-                          <button
-                            onClick={handleRunCode}
-                            disabled={isRunning}
-                            className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-[#1a1a1e] hover:bg-zinc-700 text-white rounded-lg text-xs font-bold border border-zinc-700 transition-all active:scale-95 disabled:opacity-50"
-                          >
-                            {isRunning ? (
-                              <FiRefreshCw size={13} className="animate-spin" />
-                            ) : (
-                              <FiPlay
-                                size={13}
-                                className="fill-primary text-primary"
-                              />
-                            )}
-                            Run
-                          </button>
+                          {isListedWorkspaceLanguage && (
+                            <button
+                              onClick={handleRunCode}
+                              disabled={isRunning}
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-[#1a1a1e] hover:bg-zinc-700 text-white rounded-lg text-xs font-bold border border-zinc-700 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                              {isRunning ? (
+                                <FiRefreshCw
+                                  size={13}
+                                  className="animate-spin"
+                                />
+                              ) : (
+                                <FiPlay
+                                  size={13}
+                                  className="fill-primary text-primary"
+                                />
+                              )}
+                              Run
+                            </button>
+                          )}
                           <button
                             onClick={() => handleSubmit(false)}
                             className="flex-1 flex items-center justify-center gap-2 px-3 py-1.5 bg-primary hover:bg-[#a3e635] text-black rounded-lg text-xs font-black transition-all active:scale-95 shadow-lg shadow-primary/20"
@@ -2084,128 +2115,162 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
                     </div>
 
                     {/* Terminal resize handle */}
-                    {terminalOpen && !isMobileView && (
-                      <div
-                        onMouseDown={handleTerminalMouseDown}
-                        className={`h-1 shrink-0 cursor-row-resize flex items-center justify-center group transition-colors
+                    {isListedWorkspaceLanguage &&
+                      terminalOpen &&
+                      !isMobileView && (
+                        <div
+                          onMouseDown={handleTerminalMouseDown}
+                          className={`h-1 shrink-0 cursor-row-resize flex items-center justify-center group transition-colors
                     ${isResizingTerminal ? "bg-primary/40" : "bg-white/5 hover:bg-primary/30"}`}
-                      >
-                        <div className="h-0.5 w-12 rounded-full bg-white/20 group-hover:bg-primary/60 transition-colors" />
-                      </div>
-                    )}
-
-                    {/* Terminal */}
-                    <div
-                      className="shrink-0 border-t border-white/5 overflow-hidden"
-                      style={{
-                        height: terminalOpen
-                          ? `${isMobileView ? Math.min(terminalHeight, 220) : terminalHeight}px`
-                          : "36px",
-                      }}
-                    >
-                      <div
-                        className="flex items-center justify-between px-4 py-2 bg-[#0f0f12] border-b border-white/5 cursor-pointer"
-                        onClick={() => setTerminalOpen(!terminalOpen)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <FiTerminal size={12} className="text-emerald-400" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                            Terminal
-                          </span>
-                          {isRunning && (
-                            <span className="flex items-center gap-1 text-amber-400 text-[9px] font-bold">
-                              <FiRefreshCw size={9} className="animate-spin" />
-                              Running
-                            </span>
-                          )}
-                          {output &&
-                            !isRunning &&
-                            (output.toLowerCase().includes("error") ? (
-                              <FiAlertCircle
-                                size={11}
-                                className="text-red-400"
-                              />
-                            ) : (
-                              <FiCheckCircle
-                                size={11}
-                                className="text-emerald-400"
-                              />
-                            ))}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOutput("");
-                            }}
-                            className="text-zinc-600 hover:text-zinc-400 text-[9px] font-bold uppercase"
-                          >
-                            Clear
-                          </button>
-                          {terminalOpen ? (
-                            <FiChevronDown
-                              size={13}
-                              className="text-zinc-500"
-                            />
-                          ) : (
-                            <FiChevronUp size={13} className="text-zinc-500" />
-                          )}
-                        </div>
-                      </div>
-
-                      {terminalOpen && (
-                        <div className="h-full overflow-y-auto custom-scrollbar bg-[#0d0d10] p-4 font-mono text-xs pb-8">
-                          <div className="flex items-center gap-2 mb-2 text-zinc-500">
-                            <span className="text-primary">➜</span>
-                            <span>~/workspace</span>
-                            <span className="text-zinc-600">$</span>
-                            <span className="text-zinc-400">
-                              {language === "javascript"
-                                ? "node"
-                                : language === "python"
-                                  ? "python3"
-                                  : language === "c"
-                                    ? "gcc"
-                                    : language === "cpp"
-                                      ? "./a.out"
-                                      : "java"}{" "}
-                              solution.
-                              {language === "javascript"
-                                ? "js"
-                                : language === "python"
-                                  ? "py"
-                                  : language === "c"
-                                    ? "c"
-                                    : language === "cpp"
-                                      ? "cpp"
-                                      : language}
-                            </span>
-                          </div>
-                          {output ? (
-                            output.split("\n").map((line, i) => {
-                              const isErr = /error|exception|traceback/i.test(
-                                line,
-                              );
-                              const isOk = /success|\[|\]|true|false/.test(
-                                line,
-                              );
-                              return (
-                                <div
-                                  key={i}
-                                  className={`leading-5 ${isErr ? "text-red-400" : isOk ? "text-emerald-400" : "text-zinc-300"}`}
-                                >
-                                  {line || "\u00A0"}
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <span className="text-zinc-600 italic">
-                              // Output will appear here after you click Run ▶
-                            </span>
-                          )}
+                        >
+                          <div className="h-0.5 w-12 rounded-full bg-white/20 group-hover:bg-primary/60 transition-colors" />
                         </div>
                       )}
-                    </div>
+
+                    {/* Terminal */}
+                    {isListedWorkspaceLanguage && (
+                      <div
+                        className="shrink-0 border-t border-white/5 overflow-hidden"
+                        style={{
+                          height: terminalOpen
+                            ? `${isMobileView ? Math.min(terminalHeight, 220) : terminalHeight}px`
+                            : "36px",
+                        }}
+                      >
+                        <div
+                          className="flex items-center justify-between px-4 py-2 bg-[#0f0f12] border-b border-white/5 cursor-pointer"
+                          onClick={() => setTerminalOpen(!terminalOpen)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <FiTerminal
+                              size={12}
+                              className="text-emerald-400"
+                            />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                              Terminal
+                            </span>
+                            {isRunning && (
+                              <span className="flex items-center gap-1 text-amber-400 text-[9px] font-bold">
+                                <FiRefreshCw
+                                  size={9}
+                                  className="animate-spin"
+                                />
+                                Running
+                              </span>
+                            )}
+                            {output &&
+                              !isRunning &&
+                              (output.toLowerCase().includes("error") ? (
+                                <FiAlertCircle
+                                  size={11}
+                                  className="text-red-400"
+                                />
+                              ) : (
+                                <FiCheckCircle
+                                  size={11}
+                                  className="text-emerald-400"
+                                />
+                              ))}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOutput("");
+                              }}
+                              className="text-zinc-600 hover:text-zinc-400 text-[9px] font-bold uppercase"
+                            >
+                              Clear
+                            </button>
+                            {terminalOpen ? (
+                              <FiChevronDown
+                                size={13}
+                                className="text-zinc-500"
+                              />
+                            ) : (
+                              <FiChevronUp
+                                size={13}
+                                className="text-zinc-500"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {terminalOpen && (
+                          <div className="h-full overflow-y-auto custom-scrollbar bg-[#0d0d10] p-4 font-mono text-xs pb-8">
+                            {enableTerminalInput && (
+                              <div className="mb-3 rounded-lg border border-white/10 bg-[#141417] p-2">
+                                <div className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1">
+                                  Stdin Input (optional)
+                                </div>
+                                <textarea
+                                  value={terminalInput}
+                                  onChange={(e) =>
+                                    setTerminalInput(e.target.value)
+                                  }
+                                  rows={2}
+                                  placeholder="Type input for your program here..."
+                                  className="w-full resize-y rounded-md bg-[#0d0d10] border border-zinc-700 p-2 text-[11px] text-zinc-200 outline-none focus:border-primary/60"
+                                />
+                                <p className="mt-1 text-[9px] text-zinc-500">
+                                  Input will be passed to execution as standard
+                                  input.
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2 mb-2 text-zinc-500">
+                              <span className="text-primary">➜</span>
+                              <span>~/workspace</span>
+                              <span className="text-zinc-600">$</span>
+                              <span className="text-zinc-400">
+                                {language === "javascript"
+                                  ? "node"
+                                  : language === "python"
+                                    ? "python3"
+                                    : language === "c"
+                                      ? "gcc"
+                                      : language === "cpp"
+                                        ? "./a.out"
+                                        : "java"}{" "}
+                                solution.
+                                {language === "javascript"
+                                  ? "js"
+                                  : language === "python"
+                                    ? "py"
+                                    : language === "c"
+                                      ? "c"
+                                      : language === "cpp"
+                                        ? "cpp"
+                                        : language}
+                              </span>
+                            </div>
+                            {output ? (
+                              output.split("\n").map((line, i) => {
+                                const isErr = /error|exception|traceback/i.test(
+                                  line,
+                                );
+                                const isOk = /success|\[|\]|true|false/.test(
+                                  line,
+                                );
+                                return (
+                                  <div
+                                    key={i}
+                                    className={`leading-5 ${isErr ? "text-red-400" : isOk ? "text-emerald-400" : "text-zinc-300"}`}
+                                  >
+                                    {line || "\u00A0"}
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <span className="text-zinc-600 italic">
+                                // Output will appear here after you click Run ▶
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -2397,7 +2462,7 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
                     </div>
                   </div>
 
-                  {terminalOpen && (
+                  {isListedWorkspaceLanguage && terminalOpen && (
                     <div
                       onMouseDown={handleTerminalMouseDown}
                       className={`h-1 shrink-0 cursor-row-resize flex items-center justify-center group transition-colors
@@ -2407,107 +2472,138 @@ ${testLines || '  printf("Error: No testcases available.\\n");'}
                     </div>
                   )}
 
-                  <div
-                    className="shrink-0 border-t border-white/5 overflow-hidden"
-                    style={{
-                      height: terminalOpen ? `${terminalHeight}px` : "36px",
-                    }}
-                  >
+                  {isListedWorkspaceLanguage && (
                     <div
-                      className="flex items-center justify-between px-4 py-2 bg-[#0f0f12] border-b border-white/5 cursor-pointer"
-                      onClick={() => setTerminalOpen(!terminalOpen)}
+                      className="shrink-0 border-t border-white/5 overflow-hidden"
+                      style={{
+                        height: terminalOpen ? `${terminalHeight}px` : "36px",
+                      }}
                     >
-                      <div className="flex items-center gap-2">
-                        <FiTerminal size={12} className="text-emerald-400" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                          Terminal
-                        </span>
-                        {isRunning && (
-                          <span className="flex items-center gap-1 text-amber-400 text-[9px] font-bold">
-                            <FiRefreshCw size={9} className="animate-spin" />
-                            Running
+                      <div
+                        className="flex items-center justify-between px-4 py-2 bg-[#0f0f12] border-b border-white/5 cursor-pointer"
+                        onClick={() => setTerminalOpen(!terminalOpen)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <FiTerminal size={12} className="text-emerald-400" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                            Terminal
                           </span>
-                        )}
-                        {output &&
-                          !isRunning &&
-                          (output.toLowerCase().includes("error") ? (
-                            <FiAlertCircle size={11} className="text-red-400" />
-                          ) : (
-                            <FiCheckCircle
-                              size={11}
-                              className="text-emerald-400"
-                            />
-                          ))}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOutput("");
-                          }}
-                          className="text-zinc-600 hover:text-zinc-400 text-[9px] font-bold uppercase"
-                        >
-                          Clear
-                        </button>
-                        {terminalOpen ? (
-                          <FiChevronDown size={13} className="text-zinc-500" />
-                        ) : (
-                          <FiChevronUp size={13} className="text-zinc-500" />
-                        )}
-                      </div>
-                    </div>
-
-                    {terminalOpen && (
-                      <div className="h-full overflow-y-auto custom-scrollbar bg-[#0d0d10] p-4 font-mono text-xs pb-8">
-                        <div className="flex items-center gap-2 mb-2 text-zinc-500">
-                          <span className="text-primary">➜</span>
-                          <span>~/workspace</span>
-                          <span className="text-zinc-600">$</span>
-                          <span className="text-zinc-400">
-                            {language === "javascript"
-                              ? "node"
-                              : language === "python"
-                                ? "python3"
-                                : language === "c"
-                                  ? "gcc"
-                                  : language === "cpp"
-                                    ? "./a.out"
-                                    : "java"}{" "}
-                            solution.
-                            {language === "javascript"
-                              ? "js"
-                              : language === "python"
-                                ? "py"
-                                : language === "c"
-                                  ? "c"
-                                  : language === "cpp"
-                                    ? "cpp"
-                                    : language}
-                          </span>
+                          {isRunning && (
+                            <span className="flex items-center gap-1 text-amber-400 text-[9px] font-bold">
+                              <FiRefreshCw size={9} className="animate-spin" />
+                              Running
+                            </span>
+                          )}
+                          {output &&
+                            !isRunning &&
+                            (output.toLowerCase().includes("error") ? (
+                              <FiAlertCircle
+                                size={11}
+                                className="text-red-400"
+                              />
+                            ) : (
+                              <FiCheckCircle
+                                size={11}
+                                className="text-emerald-400"
+                              />
+                            ))}
                         </div>
-                        {output ? (
-                          output.split("\n").map((line, i) => {
-                            const isErr = /error|exception|traceback/i.test(
-                              line,
-                            );
-                            const isOk = /success|\[|\]|true|false/.test(line);
-                            return (
-                              <div
-                                key={i}
-                                className={`leading-5 ${isErr ? "text-red-400" : isOk ? "text-emerald-400" : "text-zinc-300"}`}
-                              >
-                                {line || "\u00A0"}
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <span className="text-zinc-600 italic">
-                            // Output will appear here after you click Run ▶
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOutput("");
+                            }}
+                            className="text-zinc-600 hover:text-zinc-400 text-[9px] font-bold uppercase"
+                          >
+                            Clear
+                          </button>
+                          {terminalOpen ? (
+                            <FiChevronDown
+                              size={13}
+                              className="text-zinc-500"
+                            />
+                          ) : (
+                            <FiChevronUp size={13} className="text-zinc-500" />
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
+
+                      {terminalOpen && (
+                        <div className="h-full overflow-y-auto custom-scrollbar bg-[#0d0d10] p-4 font-mono text-xs pb-8">
+                          {enableTerminalInput && (
+                            <div className="mb-3 rounded-lg border border-white/10 bg-[#141417] p-2">
+                              <div className="text-[9px] font-black uppercase tracking-widest text-zinc-500 mb-1">
+                                Stdin Input (optional)
+                              </div>
+                              <textarea
+                                value={terminalInput}
+                                onChange={(e) =>
+                                  setTerminalInput(e.target.value)
+                                }
+                                rows={2}
+                                placeholder="Type input for your program here..."
+                                className="w-full resize-y rounded-md bg-[#0d0d10] border border-zinc-700 p-2 text-[11px] text-zinc-200 outline-none focus:border-primary/60"
+                              />
+                              <p className="mt-1 text-[9px] text-zinc-500">
+                                Input will be passed to execution as standard
+                                input.
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2 mb-2 text-zinc-500">
+                            <span className="text-primary">➜</span>
+                            <span>~/workspace</span>
+                            <span className="text-zinc-600">$</span>
+                            <span className="text-zinc-400">
+                              {language === "javascript"
+                                ? "node"
+                                : language === "python"
+                                  ? "python3"
+                                  : language === "c"
+                                    ? "gcc"
+                                    : language === "cpp"
+                                      ? "./a.out"
+                                      : "java"}{" "}
+                              solution.
+                              {language === "javascript"
+                                ? "js"
+                                : language === "python"
+                                  ? "py"
+                                  : language === "c"
+                                    ? "c"
+                                    : language === "cpp"
+                                      ? "cpp"
+                                      : language}
+                            </span>
+                          </div>
+                          {output ? (
+                            output.split("\n").map((line, i) => {
+                              const isErr = /error|exception|traceback/i.test(
+                                line,
+                              );
+                              const isOk = /success|\[|\]|true|false/.test(
+                                line,
+                              );
+                              return (
+                                <div
+                                  key={i}
+                                  className={`leading-5 ${isErr ? "text-red-400" : isOk ? "text-emerald-400" : "text-zinc-300"}`}
+                                >
+                                  {line || "\u00A0"}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <span className="text-zinc-600 italic">
+                              // Output will appear here after you click Run ▶
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>

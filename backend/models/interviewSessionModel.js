@@ -48,6 +48,14 @@ const interviewSessionSchema = new mongoose.Schema({
     level: { type: String },
     duration: { type: Number, default: 10 },
     agentName: { type: String, default: "Rohan" },
+    userName: { type: String, default: "Candidate" },
+    interviewMode: {
+      type: String,
+      enum: ["roleBased", "skillsBased"],
+      default: "roleBased",
+    },
+    sourceType: { type: String, default: "resume-job-description" },
+    skills: { type: [String], default: [] },
   },
   createdAt: {
     type: Date,

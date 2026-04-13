@@ -2,6 +2,8 @@ import React, { useRef, useEffect } from "react";
 import { useCustomInterview } from "../hooks/useCustomInterview";
 import CodingSpace from "../components/CodingSpace";
 import { FiBarChart2 } from "react-icons/fi";
+import ReloadSessionPrompt from "../components/interview/ReloadSessionPrompt";
+import useInterviewReloadProtection from "../hooks/useInterviewReloadProtection";
 
 // Components
 import InterviewHeader from "../components/interview/InterviewHeader";
@@ -9,7 +11,6 @@ import InterviewerSection from "../components/interview/InterviewerSection";
 import ControlBar from "../components/interview/ControlBar";
 import SessionOverviewCards from "../components/interview/SessionOverviewCards";
 import TranscriptView from "../components/interview/TranscriptView";
-import CodingTaskAlert from "../components/interview/CodingTaskAlert";
 
 const CustomInterviewSession = () => {
   const { state, refs, actions } = useCustomInterview();
@@ -28,7 +29,8 @@ const CustomInterviewSession = () => {
     isProcessing,
     connectionStatus,
     isUserFocus,
-    userName,
+    isPreview,
+    sessionId,
     agentName,
     displayInterviewData,
     interviewDuration,
@@ -48,7 +50,6 @@ const CustomInterviewSession = () => {
     handleSkipChallenge,
     handleCodingSubmit,
     formatDuration,
-    resetInterview,
     handleSaveAndExit,
   } = actions;
 
@@ -77,6 +78,18 @@ const CustomInterviewSession = () => {
 
   const getAgentImage = (name) =>
     agentImages[name] || "/assets/interviewers/male1.png";
+  const userAvatar =
+    user?.imageUrl || user?.profileImageUrl || user?.avatarUrl || "";
+
+  const isCodingActionDisabled = isAgentSpeaking;
+  const reloadGuard = useInterviewReloadProtection({
+    sessionId,
+    isSessionRunning: callStatus === "active" || callStatus === "connecting",
+    hasInterviewEnded: hasCallEnded,
+    isPreview,
+    enableInPreview: true,
+    resultPath: `/interview/result/${sessionId}`,
+  });
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans overflow-hidden relative">
@@ -93,10 +106,17 @@ const CustomInterviewSession = () => {
             task={activeCodingTask}
             disableCopyPaste={false}
             showTimer={true}
+            enableTerminalInput={true}
             onSubmit={handleCodingSubmit}
           />
         </div>
       )}
+
+      <ReloadSessionPrompt
+        open={reloadGuard.showReloadPrompt}
+        onConfirm={reloadGuard.confirmReload}
+        onCancel={reloadGuard.cancelReload}
+      />
 
       <div className="h-full flex flex-col min-h-screen relative z-10">
         <InterviewHeader
@@ -121,6 +141,10 @@ const CustomInterviewSession = () => {
                 isAiThinking={isAiThinking}
                 isUserFocus={isUserFocus}
                 isVideoOn={isVideoOn}
+                callStatus={callStatus}
+                connectionStatus={connectionStatus}
+                transcriptCount={transcript.length}
+                userAvatar={userAvatar}
                 agentName={agentName}
                 getAgentImage={getAgentImage}
                 localVideoRef={localVideoRef}
@@ -142,6 +166,23 @@ const CustomInterviewSession = () => {
                 toggleMute={toggleMute}
                 toggleVideo={toggleVideo}
                 handleEndCall={handleEndCall}
+              />
+            </div>
+
+            <div className="xl:hidden">
+              <TranscriptView
+                transcript={transcript}
+                user={user}
+                agentName={agentName}
+                getAgentImage={getAgentImage}
+                connectionStatus={connectionStatus}
+                transcriptEndRef={transcriptEndRef}
+                codingPopupTask={codingPopupTask}
+                showCodingPopup={!activeCodingTask}
+                isCodingActionDisabled={isCodingActionDisabled}
+                handleAttemptChallenge={handleAttemptChallenge}
+                handleSkipChallenge={handleSkipChallenge}
+                className="w-full"
               />
             </div>
 
@@ -167,13 +208,6 @@ const CustomInterviewSession = () => {
             )}
 
             <div className="space-y-4">
-              {codingPopupTask && !activeCodingTask && (
-                <CodingTaskAlert
-                  codingPopupTask={codingPopupTask}
-                  handleAttemptChallenge={handleAttemptChallenge}
-                  handleSkipChallenge={handleSkipChallenge}
-                />
-              )}
               <SessionOverviewCards
                 timeLeft={timeLeft}
                 displayInterviewData={displayInterviewData}
@@ -183,7 +217,7 @@ const CustomInterviewSession = () => {
             </div>
           </div>
 
-          <aside className="flex flex-col min-w-0 h-full">
+          <aside className="hidden xl:flex flex-col min-w-0 h-full">
             <TranscriptView
               transcript={transcript}
               user={user}
@@ -191,6 +225,11 @@ const CustomInterviewSession = () => {
               getAgentImage={getAgentImage}
               connectionStatus={connectionStatus}
               transcriptEndRef={transcriptEndRef}
+              codingPopupTask={codingPopupTask}
+              showCodingPopup={!activeCodingTask}
+              isCodingActionDisabled={isCodingActionDisabled}
+              handleAttemptChallenge={handleAttemptChallenge}
+              handleSkipChallenge={handleSkipChallenge}
             />
           </aside>
         </main>

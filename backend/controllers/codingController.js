@@ -98,7 +98,7 @@ exports.executeCode = async (req, res) => {
       });
     }
 
-    const { script, language } = req.body;
+    const { script, language, stdin } = req.body;
 
     if (!script || !language) {
       return res
@@ -119,6 +119,7 @@ exports.executeCode = async (req, res) => {
       script: script,
       language: config.script,
       versionIndex: config.versionIndex,
+      stdin: typeof stdin === "string" ? stdin : "",
     };
 
     const response = await axios.post(

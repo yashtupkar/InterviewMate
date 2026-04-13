@@ -70,6 +70,9 @@ const startCustomSession = async (req, res) => {
       role,
       level,
       content,
+      interviewMode,
+      sourceType,
+      skills,
       agentName,
       userName,
       duration,
@@ -90,17 +93,50 @@ const startCustomSession = async (req, res) => {
       });
     }
 
+    const normalizedSkills = Array.isArray(skills)
+      ? [...new Set(skills.map((item) => `${item}`.trim()).filter(Boolean))]
+      : [];
+    const resolvedInterviewMode =
+      interviewMode === "skillsBased" ? "skillsBased" : "roleBased";
+    const skillsContext = normalizedSkills.length
+      ? `Skills Focus: ${normalizedSkills.join(", ")}`
+      : "";
+
+    let uploadedInfo = (content || "").trim();
+    let resolvedSourceType = sourceType;
+
+    // Use user-provided sourceType if available, otherwise default based on interview mode
+    if (!resolvedSourceType) {
+      resolvedSourceType =
+        resolvedInterviewMode === "skillsBased"
+          ? "skills-only"
+          : "resume-job-description";
+    }
+
+    if (resolvedInterviewMode === "skillsBased") {
+      if (resolvedSourceType === "skills-only") {
+        uploadedInfo = skillsContext;
+      } else {
+        uploadedInfo = [skillsContext, uploadedInfo]
+          .filter(Boolean)
+          .join("\n\n");
+      }
+    }
+
     // 1. Create a new session in DB
     const session = new InterviewSession({
       userId,
       interviewType,
       metadata: {
-        uploadedInfo: content,
+        uploadedInfo,
         role,
         level,
         duration: duration || 10,
         agentName: agentName || "Sophia",
         userName: userName || "Candidate",
+        interviewMode: resolvedInterviewMode,
+        sourceType: resolvedSourceType,
+        skills: normalizedSkills,
       },
     });
 
@@ -145,9 +181,18 @@ const startCustomSession = async (req, res) => {
       
       Candidate Name: ${userName || "Candidate"}
       Candidate Context/Resume:
-      ${content}
+      ${uploadedInfo}
+
+      Candidate Skill Focus:
+      ${normalizedSkills.length ? normalizedSkills.join(", ") : "Not specified"}
 
       ${typeSpecificInstructions}
+
+      ${
+        resolvedInterviewMode === "skillsBased"
+          ? "SKILLS-BASED MODE: Prioritize questions around the candidate's selected skills while keeping interview depth aligned to the selected level."
+          : ""
+      }
       
       Operating Rules:
       1. CRITICAL: Your FIRST message MUST be a warm welcome and an invitation for the candidate to introduce themselves. DO NOT ask technical or behavioral questions in the first message.

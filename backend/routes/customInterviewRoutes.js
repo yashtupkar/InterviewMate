@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const customInterviewController = require("../controllers/customInterviewController");
+const validateInterviewPayload = require("../middleware/validateInterviewPayload");
 const { clerkAuth: userAuth } = require("../middleware/auth");
 
 const upload = multer({
@@ -17,7 +18,12 @@ const upload = multer({
 });
 
 // 1. Start Custom Session (Generation of Prompt & DB Entry)
-router.post("/start", userAuth, customInterviewController.startCustomSession);
+router.post(
+  "/start",
+  userAuth,
+  validateInterviewPayload,
+  customInterviewController.startCustomSession,
+);
 
 // 2. Get Chat Response (LLM)
 router.post("/chat", userAuth, customInterviewController.getChatResponse);

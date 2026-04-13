@@ -27,6 +27,8 @@ import { useInterview } from "../context/InterviewContext";
 import { AppContext } from "../context/AppContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import CodingSpace from "../components/CodingSpace";
+import ReloadSessionPrompt from "../components/interview/ReloadSessionPrompt";
+import useInterviewReloadProtection from "../hooks/useInterviewReloadProtection";
 
 const vapiSpeechConfig = {
   responseDelaySeconds: 1.5,
@@ -80,6 +82,15 @@ const InterviewSession = () => {
   // Visit /session?preview=true to design UI without a real call.
   const isPreview =
     new URLSearchParams(location.search).get("preview") === "true";
+
+  const reloadGuard = useInterviewReloadProtection({
+    sessionId: sessionId || urlSessionId || null,
+    isSessionRunning: callStatus === "active" || callStatus === "connecting",
+    hasInterviewEnded: hasCallEnded,
+    isPreview,
+    enableInPreview: true,
+    resultPath: `/interview/result/${sessionId || urlSessionId}`,
+  });
 
   const MOCK_INTERVIEW_DATA = {
     interviewType: "Technical",
@@ -604,7 +615,7 @@ const InterviewSession = () => {
 
               // After reporting, we tell the user to restart or we could try to auto-refresh
               setTimeout(() => {
-                window.location.reload(); // Simplest way to pick up the new key from backend for a fresh session
+                reloadGuard.forceReload();
               }, 2000);
             } catch (rotError) {
               console.error("Failed to rotate key:", rotError);
@@ -932,10 +943,17 @@ const InterviewSession = () => {
             task={activeCodingTask}
             disableCopyPaste={true}
             showTimer={true}
+            enableTerminalInput={true}
             onSubmit={handleCodingSubmit}
           />
         </div>
       )}
+
+      <ReloadSessionPrompt
+        open={reloadGuard.showReloadPrompt}
+        onConfirm={reloadGuard.confirmReload}
+        onCancel={reloadGuard.cancelReload}
+      />
 
       <div className="h-full flex flex-col min-h-[90vh]">
         <header className="px-4 md:px-6 py-3 flex items-center justify-between bg-zinc-950/80 border-b dark:border-white/5 border-black/5 backdrop-blur-xl sticky top-0 z-40">
@@ -1437,7 +1455,7 @@ const InterviewSession = () => {
                     <input
                       type="text"
                       placeholder="Search transcript"
-                      className="w-full dark:bg-zinc-800/80 bg-gray-200/80 dark:text-zinc-200 text-gray-800 placeholder:dark:text-zinc-500 text-gray-500 text-[11px] px-3 py-2 rounded-xl border dark:border-white/5 border-black/5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      className="w-full dark:bg-zinc-800/80 bg-gray-200/80 dark:text-zinc-200 text-gray-800 placeholder:dark:text-zinc-500 placeholder:text-gray-500 text-[11px] px-3 py-2 rounded-xl border dark:border-white/5 border-black/5 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                     />
                   </div>
                   <button className="px-3 py-2 rounded-xl dark:bg-zinc-800/80 bg-gray-200/80 dark:text-zinc-300 text-gray-700 text-[10px] font-semibold border dark:border-white/5 border-black/5">

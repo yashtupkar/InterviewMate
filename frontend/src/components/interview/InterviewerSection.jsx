@@ -1,5 +1,5 @@
 import React from "react";
-import { FiCheckCircle, FiUser } from "react-icons/fi";
+import { FiCheckCircle, FiMic, FiUser, FiVideo } from "react-icons/fi";
 
 const InterviewerSection = ({
   activeCodingTask,
@@ -9,6 +9,10 @@ const InterviewerSection = ({
   isAiThinking,
   isUserFocus,
   isVideoOn,
+  callStatus,
+  connectionStatus,
+  transcriptCount,
+  userAvatar,
   agentName,
   getAgentImage,
   localVideoRef,
@@ -17,10 +21,19 @@ const InterviewerSection = ({
   handleGenerateReport,
   handleExitSession,
 }) => {
+  const isConnecting =
+    connectionStatus !== "Connected" ||
+    callStatus === "loading" ||
+    callStatus === "connecting";
+
+  const isWaitingToStart = !isConnecting && transcriptCount === 0;
+
   return (
     <div
       className={`relative aspect-video bg-zinc-900/40 rounded-[28px] overflow-hidden border border-white/5 transition-all duration-700 ${activeCodingTask ? "scale-95 blur-xl" : "scale-100 blur-0 shadow-[0_0_50px_rgba(0,0,0,0.3)]"}`}
     >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(190,242,100,0.14),transparent_45%),radial-gradient(circle_at_78%_20%,rgba(59,130,246,0.14),transparent_48%),linear-gradient(to_bottom,rgba(9,9,11,0.2),rgba(9,9,11,0.9))]" />
+
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
         {!activeCodingTask && !hasCallEnded && (
           <div className="absolute inset-0 bg-primary/5 blur-[100px] animate-pulse-slow pointer-events-none" />
@@ -59,6 +72,21 @@ const InterviewerSection = ({
           className={`relative w-full h-full flex items-center justify-center transition-all duration-700 ${activeCodingTask ? "scale-75" : "scale-100"}`}
         >
           {!isUserFocus && (
+            <div
+              className="absolute inset-0 opacity-75"
+              style={{
+                backgroundImage: "url('/assets/background/Agent-bg.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            />
+          )}
+
+          {!isUserFocus && (
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/55" />
+          )}
+
+          {!isUserFocus && (
             <div className="relative flex items-center justify-center">
               {/* Pulsing circles behind the avatar */}
               {isAgentSpeaking && (
@@ -90,6 +118,54 @@ const InterviewerSection = ({
               </div>
             </div>
           )}
+
+          {!isUserFocus && isConnecting && (
+            <div className="absolute left-4 right-4 bottom-4 z-20 rounded-2xl border border-white/10 bg-black/30 backdrop-blur-md p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.18em] text-primary">
+                    Connecting Session
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-zinc-300 mt-1">
+                    Initializing voice engine and live transcript...
+                  </p>
+                </div>
+                <div className="h-8 w-8 rounded-full border border-primary/30 border-t-primary animate-spin" />
+              </div>
+            </div>
+          )}
+
+          {!isUserFocus && isWaitingToStart && (
+            <div className="absolute left-4 right-4 bottom-4 z-20 rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md p-3 sm:p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="rounded-xl bg-zinc-900/70 border border-white/10 px-3 py-2.5">
+                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-primary mb-1">
+                    Interview Tip
+                  </p>
+                  <p className="text-[11px] text-zinc-200 leading-relaxed">
+                    Keep answers structured: context, action, and impact.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-zinc-900/70 border border-white/10 px-3 py-2.5">
+                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-blue-300 mb-1">
+                    Audio Check
+                  </p>
+                  <p className="text-[11px] text-zinc-200 leading-relaxed">
+                    Speak naturally. Pause briefly after each answer.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-zinc-900/70 border border-white/10 px-3 py-2.5">
+                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-300 mb-1">
+                    Camera Framing
+                  </p>
+                  <p className="text-[11px] text-zinc-200 leading-relaxed">
+                    Keep your face centered for better feedback quality.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isUserFocus && isVideoOn && (
             <div className="w-full h-full p-2">
               <video
@@ -99,6 +175,33 @@ const InterviewerSection = ({
                 muted
                 className="w-full h-full object-cover rounded-2xl shadow-2xl border border-white/5"
               />
+            </div>
+          )}
+
+          {isUserFocus && !isVideoOn && (
+            <div className="absolute inset-0 p-4 sm:p-6 z-10">
+              <div className="h-full w-full rounded-2xl border border-white/10 bg-zinc-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-center px-4">
+                {userAvatar ? (
+                  <div className="w-16 h-16 rounded-2xl bg-zinc-800/80 border border-white/10 overflow-hidden mb-3">
+                    <img
+                      src={userAvatar}
+                      alt="You"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-zinc-800/80 border border-white/10 flex items-center justify-center mb-3">
+                    <FiVideo className="text-zinc-300" size={24} />
+                  </div>
+                )}
+                <p className="text-sm font-bold text-white tracking-tight mb-1.5">
+                  Camera is off
+                </p>
+                <p className="text-[11px] text-zinc-400 max-w-sm">
+                  Turn on video to improve communication cues and posture
+                  analysis.
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -153,8 +256,21 @@ const InterviewerSection = ({
               className="w-full h-full object-cover mirror"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-600">
-              <FiUser className="text-2xl" />
+            <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-600 gap-1">
+              {userAvatar ? (
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 bg-zinc-800/60">
+                  <img
+                    src={userAvatar}
+                    alt="You"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <FiUser className="text-xl" />
+              )}
+              <span className="text-[8px] font-bold uppercase tracking-[0.14em] text-zinc-500">
+                Camera Off
+              </span>
             </div>
           )}
           <div className="absolute bottom-1.5 left-2 flex items-center gap-1">

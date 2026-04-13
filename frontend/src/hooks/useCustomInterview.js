@@ -53,8 +53,24 @@ export const useCustomInterview = () => {
   const [isUserFocus, setIsUserFocus] = useState(false);
 
   const userName = user?.firstName || "Candidate";
-  const isPreview =
-    new URLSearchParams(location.search).get("preview") === "true";
+  const searchParams = new URLSearchParams(location.search);
+  const isPreview = searchParams.get("preview") === "true";
+  const isDebugEnabled = isPreview || searchParams.get("debug") === "true";
+  const debugCodingAlert = searchParams.get("codingAlert") === "true";
+  const debugCodingSpace = searchParams.get("codingSpace") === "true";
+  const debugAgentSpeaking = searchParams.get("agentSpeaking") === "true";
+  const debugAiThinking = searchParams.get("aiThinking") === "true";
+  const debugProcessing = searchParams.get("processing") === "true";
+  const debugEnded = searchParams.get("ended") === "true";
+  const debugTranscript = (searchParams.get("transcript") || "default")
+    .toLowerCase()
+    .trim();
+  const debugCodingLanguage =
+    searchParams.get("codingLanguage") || "javascript";
+  const debugCodingQuestion =
+    searchParams.get("codingQuestion") ||
+    "Write a JavaScript function to check if a given string is a palindrome.";
+  const debugCodingTimeRaw = Number(searchParams.get("codingTime"));
 
   // AWS Polly TTS Hook
   const { speakText, stopSpeaking } = usePollyTTS();
@@ -93,6 +109,17 @@ export const useCustomInterview = () => {
   const displayInterviewData = isPreview ? MOCK_INTERVIEW_DATA : interviewData;
 
   const SILENCE_THRESHOLD = 2000;
+  const SUPPORTED_CODING_LANGUAGES = [
+    "javascript",
+    "html",
+    "python",
+    "java",
+    "cpp",
+    "css",
+    "typescript",
+    "react",
+    "sql",
+  ];
 
   const formatDuration = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -100,20 +127,195 @@ export const useCustomInterview = () => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const cleanTaskText = (text = "") =>
+    text
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .replace(/\[\/?CODE_QUESTION\]/gi, "")
+      .replace(/\r/g, "")
+      .trim();
+
+  const normalizeLanguage = (language = "") => {
+    const lowered = String(language).toLowerCase().trim();
+    if (!lowered) return "javascript";
+    if (lowered === "react") return "javascript";
+    return SUPPORTED_CODING_LANGUAGES.includes(lowered)
+      ? lowered
+      : "javascript";
+  };
+
+  const extractQuestionFromText = (sourceText = "") => {
+    const cleaned = cleanTaskText(sourceText);
+    if (!cleaned) return "";
+
+    const metadataKeywords = [
+      "language",
+      "time\\s*limit",
+      "time\\s*allotted",
+      "duration",
+      "constraints?",
+      "examples?",
+      "inputs?",
+      "outputs?",
+      "notes?",
+      "hints?",
+      "you\\s+have\\s+\\d+",
+    ];
+    const metadataLookahead = `(?=(?:\\n\\s*(?:${metadataKeywords.join("|")})\\b)|(?:\\s+(?:${metadataKeywords.join("|")}):)|$)`;
+
+    const questionPatterns = [
+      // Explicit markers: "Question: ...", "Task: ...", "[CODE_QUESTION] ..."
+      new RegExp(
+        `(?:question|task|challenge|problem)[:\\s]+([\\s\\S]*?)${metadataLookahead}`,
+        "i",
+      ),
+      // Introductory phrases: "Here is your first coding question: ..."
+      new RegExp(
+        `(?:here is|here's)(?: your)?(?: first)?(?: coding)?(?: question|task|challenge)[:.\\s]+([\\s\\S]*?)${metadataLookahead}`,
+        "i",
+      ),
+      // Action verbs: "Write a function that...", "Create a script to..."
+      new RegExp(
+        `((?:make|write|implement|create|develop|construct)\\s+(?:an?|the)?\\s*function\\s+(?:for|to|that)\\s+[\\s\\S]*?)${metadataLookahead}`,
+        "i",
+      ),
+      // Catch-all phrase: "I'd like you to [action]..."
+      new RegExp(
+        `((?:i'd like you to|please|could you)\\s+(?:make|write|implement|create|develop|construct)\\s+[\\s\\S]*?)${metadataLookahead}`,
+        "i",
+      ),
+    ];
+
+    for (const pattern of questionPatterns) {
+      const match = cleaned.match(pattern);
+      if (match && match[1]) {
+        let extracted = match[1].trim();
+        // Clean up leading "is: " or "to: " if present
+        extracted = extracted.replace(/^(?:is|to)[:\s]*/i, "").trim();
+
+        if (extracted.length > 12) {
+          return extracted;
+        }
+      }
+    }
+
+    // Fallback: search for the first sentence that looks like an instruction
+    const sentences = cleaned
+      .split(/[.!?\n]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 10);
+    const instructionVerbs = [
+      "write",
+      "create",
+      "implement",
+      "make",
+      "design",
+      "develop",
+      "find",
+      "calculate",
+    ];
+
+    for (const sentence of sentences) {
+      const lower = sentence.toLowerCase();
+      if (
+        instructionVerbs.some((verb) => lower.includes(verb)) &&
+        !lower.includes("language") &&
+        !lower.includes("time limit")
+      ) {
+        return sentence;
+      }
+    }
+
+    // Ultimate fallback: first 3 sentences but more robustly
+    const sentenceMatches = cleaned.match(/[^.!?\n]+[.!?]?/g) || [];
+    let fallbackText = "";
+    let count = 0;
+    const fallbackMetadataRegex = new RegExp(
+      `^(?:${metadataKeywords.join("|")})[:\\s]`,
+      "i",
+    );
+
+    for (const s of sentenceMatches) {
+      const trimmed = s.trim();
+      if (trimmed.length < 5) continue;
+      if (fallbackMetadataRegex.test(trimmed)) break;
+      fallbackText += (fallbackText ? " " : "") + trimmed;
+      count++;
+      if (count >= 3) break;
+    }
+
+    return fallbackText.trim();
+  };
+
+  const isValidQuestionText = (question = "") => {
+    const normalized = question.replace(/\s+/g, " ").trim();
+    if (normalized.length < 12 || normalized.length > 420) return false;
+
+    const lineBreaks = (question.match(/\n/g) || []).length;
+    if (lineBreaks > 4) return false;
+
+    const noisyPhrases = [
+      "before we get to the coding question",
+      "before the coding question",
+      "as your interviewer",
+      "thanks for",
+      "introduce yourself",
+      "let us continue",
+      "conversation",
+      "transcript",
+    ];
+    const lowered = normalized.toLowerCase();
+    return !noisyPhrases.some((phrase) => lowered.includes(phrase));
+  };
+
+  const hasCodingTaskStructure = (text = "") => {
+    const normalized = cleanTaskText(text).toLowerCase();
+    const hasLanguage = SUPPORTED_CODING_LANGUAGES.some((language) =>
+      normalized.includes(language),
+    );
+    const hasTimeLimit =
+      /(?:time\s*limit|time\s*limits?|limit|duration|you\s+have|you've\s+got|take)\s*(?:of\s*)?(?:is\s*)?\d+\s*(?:min(?:ute)?s?|mins?|sec(?:ond)?s?|seconds?)?/i.test(
+        normalized,
+      ) ||
+      /\b\d+\s*(?:min(?:ute)?s?|mins?|sec(?:ond)?s?|seconds?)\b/i.test(
+        normalized,
+      );
+    const hasExplicitTask =
+      /(?:\[code_question\]|question\s*:|task\s*:|challenge\s*:|first coding question|coding question|coding task|coding challenge)/i.test(
+        normalized,
+      ) ||
+      /(?:write|implement|create|make)\s+(?:an?|the)?\s*function\b/i.test(
+        normalized,
+      );
+
+    return hasLanguage && hasTimeLimit && hasExplicitTask;
+  };
+
+  const normalizeCodingTask = (task, sourceText = "") => {
+    if (!task) return null;
+
+    const question = extractQuestionFromText(task.question || sourceText);
+    if (!isValidQuestionText(question)) return null;
+
+    let timeLimit = Number(task.timeLimit);
+    if (!Number.isFinite(timeLimit) || timeLimit <= 0) {
+      timeLimit = 300;
+    }
+    timeLimit = Math.min(Math.max(Math.round(timeLimit), 60), 1800);
+
+    return {
+      question,
+      language: normalizeLanguage(task.language),
+      timeLimit,
+      initialCode: typeof task.initialCode === "string" ? task.initialCode : "",
+    };
+  };
+
   const extractFuzzyTask = (text) => {
     const lowerText = text.toLowerCase();
-    const languages = [
-      "javascript",
-      "html",
-      "python",
-      "java",
-      "cpp",
-      "css",
-      "typescript",
-      "react",
-      "sql",
-    ];
-    const language = languages.find((l) => lowerText.includes(l));
+    const language = SUPPORTED_CODING_LANGUAGES.find((l) =>
+      lowerText.includes(l),
+    );
 
     let timeLimit = 300;
     const timeMatch = text.match(
@@ -133,29 +335,16 @@ export const useCustomInterview = () => {
       timeLimit = 300;
     }
 
-    let question = "";
-    const questionPatterns = [
-      /(?:question|task|challenge)[:\s]+(.*?)(?=\n\n|Language|Time|Limit|$)/is,
-      /(?:make|write|implement|create)\s+a\s+function\s+(?:for|to|that)\s+(.*?)(?=[.!\n]\s*[A-Z]|Language|Time|Limit|$)/is,
-      /here is(?: your)?(?: coding)? question[:\s]+(.*?)(?=[.!\n]\s*[A-Z]|Language|Time|Limit|$)/is,
-      /here it is[:\s]+(.*?)(?=[.!\n]\s*[A-Z]|Language|Time|Limit|$)/is,
-    ];
-
-    for (const pattern of questionPatterns) {
-      const match = text.match(pattern);
-      if (match && match[1].trim().length > 10) {
-        question = match[1].trim();
-        break;
-      }
-    }
-
-    if (language && (question || text.length > 30)) {
-      return {
-        question: question || text.replace(/\[\/?CODE_QUESTION\]/gi, "").trim(),
-        language: language,
-        timeLimit: timeLimit,
-        initialCode: "",
-      };
+    if (language && text.length > 30) {
+      return normalizeCodingTask(
+        {
+          question: extractQuestionFromText(text),
+          language,
+          timeLimit,
+          initialCode: "",
+        },
+        text,
+      );
     }
     return null;
   };
@@ -321,6 +510,10 @@ export const useCustomInterview = () => {
   const detectCodingQuestion = (text) => {
     if (activeCodingTaskRef.current || codingPopupTask) return;
 
+    if (!hasCodingTaskStructure(text)) {
+      return;
+    }
+
     const tagMatch = text.match(
       /\[CODE_QUESTION\]([\s\S]*?)\[\/CODE_QUESTION\]/i,
     );
@@ -331,8 +524,8 @@ export const useCustomInterview = () => {
           .replace(/```json/gi, "")
           .replace(/```/g, "")
           .trim();
-        const taskData = JSON.parse(jsonStr);
-        if (taskData.question) {
+        const taskData = normalizeCodingTask(JSON.parse(jsonStr), tagMatch[1]);
+        if (taskData) {
           setCodingPopupTask(taskData);
           return;
         }
@@ -363,8 +556,11 @@ export const useCustomInterview = () => {
       const jsonMatch = text.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
         try {
-          const taskData = JSON.parse(jsonMatch[0].trim());
-          if (taskData.question && taskData.language) {
+          const taskData = normalizeCodingTask(
+            JSON.parse(jsonMatch[0].trim()),
+            text,
+          );
+          if (taskData) {
             setCodingPopupTask(taskData);
             return;
           }
@@ -842,9 +1038,18 @@ export const useCustomInterview = () => {
     // No need to load voices - using AWS Polly for TTS now
 
     if (isPreview) {
-      setCallStatus("active");
-      setConnectionStatus("Connected");
-      setContextTranscript([
+      const previewCodingTime = Number.isFinite(debugCodingTimeRaw)
+        ? Math.max(1, Math.min(60, Math.round(debugCodingTimeRaw)))
+        : 5;
+      const previewCodingTask = {
+        title: "Technical Assessment",
+        question: debugCodingQuestion,
+        language: normalizeLanguage(debugCodingLanguage),
+        timeLimit: previewCodingTime * 60,
+        initialCode: "",
+      };
+
+      const defaultTranscript = [
         {
           id: 1,
           role: "assistant",
@@ -861,7 +1066,50 @@ export const useCustomInterview = () => {
           timestamp: "10:01 AM",
           isAgent: false,
         },
-      ]);
+      ];
+
+      const codingTranscript = [
+        ...defaultTranscript,
+        {
+          id: 3,
+          role: "assistant",
+          speaker: "Rohan",
+          text: `Here is your coding question. ${previewCodingTask.question} You have ${previewCodingTime} minutes.`,
+          timestamp: "10:02 AM",
+          isAgent: true,
+        },
+      ];
+
+      setCallStatus("active");
+      setConnectionStatus("Connected");
+      setHasCallEnded(debugEnded);
+      setIsAiThinking(debugAiThinking);
+      setIsProcessing(debugProcessing);
+      setIsAgentSpeaking(debugAgentSpeaking);
+      isAgentSpeakingRef.current = debugAgentSpeaking;
+
+      if (debugTranscript === "empty") {
+        setContextTranscript([]);
+      } else if (debugTranscript === "coding") {
+        setContextTranscript(codingTranscript);
+      } else {
+        setContextTranscript(defaultTranscript);
+      }
+
+      if (isDebugEnabled && debugCodingSpace) {
+        activeCodingTaskRef.current = previewCodingTask;
+        setActiveCodingTask(previewCodingTask);
+        setCodingPopupTask(null);
+      } else if (isDebugEnabled && debugCodingAlert) {
+        activeCodingTaskRef.current = null;
+        setActiveCodingTask(null);
+        setCodingPopupTask(previewCodingTask);
+      } else {
+        activeCodingTaskRef.current = null;
+        setActiveCodingTask(null);
+        setCodingPopupTask(null);
+      }
+
       return;
     }
     setTimeout(startSTT, 1000);
@@ -884,6 +1132,7 @@ export const useCustomInterview = () => {
   const toggleVideoFocus = () => setIsUserFocus(!isUserFocus);
 
   const handleAttemptChallenge = () => {
+    if (isAgentSpeakingRef.current || !codingPopupTask) return;
     activeCodingTaskRef.current = codingPopupTask;
     setActiveCodingTask(codingPopupTask);
     setCodingPopupTask(null);
@@ -894,6 +1143,7 @@ export const useCustomInterview = () => {
   };
 
   const handleSkipChallenge = () => {
+    if (isAgentSpeakingRef.current || !codingPopupTask) return;
     setCodingPopupTask(null);
     activeCodingTaskRef.current = null;
     const skipMsg =
@@ -952,6 +1202,8 @@ export const useCustomInterview = () => {
       isProcessing,
       connectionStatus,
       isUserFocus,
+      isPreview,
+      sessionId,
       userName,
       agentName,
       displayInterviewData,
