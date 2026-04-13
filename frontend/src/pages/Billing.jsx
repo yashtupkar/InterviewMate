@@ -370,32 +370,10 @@ const Billing = () => {
                         </div>
                     </div>
                 </div>
+                
             </div>
 
-                    {/* Footer Info / Support - TermSection style from Referrals */}
-                    <div className="pt-12 border-t border-white/5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                             <div className="space-y-4">
-                                <h4 className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em]">Support & Policy</h4>
-                                <ul className="space-y-3">
-                                    <li className="flex gap-3 text-xs text-zinc-500 font-medium leading-relaxed">
-                                        <span className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full bg-[#bef264]/40"></span>
-                                        Full refund within 24h if &lt;10% credits used.
-                                    </li>
-                                    <li className="flex gap-3 text-xs text-zinc-500 font-medium leading-relaxed">
-                                        <span className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full bg-[#bef264]/40"></span>
-                                        Secure payment processing via Razorpay.
-                                    </li>
-                                </ul>
-                             </div>
-                             <div className="space-y-4">
-                                <h4 className="text-white text-[10px] font-black uppercase tracking-[0.3em]">Payment Issues?</h4>
-                                <p className="text-zinc-500 text-xs font-bold leading-relaxed underline underline-offset-4 decoration-white/10 cursor-pointer hover:text-white transition-all">
-                                    reach out to support@placemate.ai for instant resolution.
-                                </p>
-                             </div>
-                        </div>
-                    </div>
+                    
                 
            
 

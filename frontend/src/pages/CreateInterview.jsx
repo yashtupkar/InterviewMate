@@ -17,6 +17,9 @@ import {
   FiArrowRight,
   FiCreditCard,
   FiVolume2,
+  FiUpload,
+  FiFileText,
+  FiCheckCircle,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
@@ -57,6 +60,8 @@ const CreateInterview = () => {
   const [inputType, setInputType] = useState("both"); // 'resume', 'jobDescription', 'both'
   const [jobDescription, setJobDescription] = useState("");
   const [resumeContent, setResumeContent] = useState("");
+  const [resumeFileName, setResumeFileName] = useState("");
+  const [isParsingResume, setIsParsingResume] = useState(false);
   const [duration, setDuration] = useState(10); // 5, 10, 15, 20 minutes
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] =
@@ -193,17 +198,25 @@ const CreateInterview = () => {
       return;
     }
 
+    const hasResumeContent = Boolean(resumeContent.trim());
+    const hasJobDescription = Boolean(jobDescription.trim());
+
     let combinedContent = "";
-    if (inputType === "resume") combinedContent = `Resume: ${resumeContent}`;
-    else if (inputType === "jobDescription")
+    if (inputType === "resume") {
+      if (!hasResumeContent) {
+        toast.error("Please upload and parse your resume PDF first.");
+        return;
+      }
+      combinedContent = `Resume: ${resumeContent}`;
+    } else if (inputType === "jobDescription")
       combinedContent = `Job Description: ${jobDescription}`;
     else {
-      if (!resumeContent && !jobDescription) {
+      if (!hasResumeContent && !hasJobDescription) {
         toast.error("Please provide resume or job description content.");
         return;
       }
-      if (resumeContent) combinedContent += `Resume: ${resumeContent}\n`;
-      if (jobDescription)
+      if (hasResumeContent) combinedContent += `Resume: ${resumeContent}\n`;
+      if (hasJobDescription)
         combinedContent += `Job Description: ${jobDescription}`;
     }
 
@@ -249,6 +262,58 @@ const CreateInterview = () => {
     }
   };
 
+  const handleResumeUpload = async (event) => {
+    const selectedFile = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!selectedFile) {
+      return;
+    }
+
+    if (selectedFile.type !== "application/pdf") {
+      toast.error("Please upload a PDF file only.");
+      return;
+    }
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      toast.error("Resume PDF must be 5MB or smaller.");
+      return;
+    }
+
+    try {
+      setIsParsingResume(true);
+      setResumeFileName(selectedFile.name);
+      setResumeContent("");
+
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("resume", selectedFile);
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/parse-resume`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      setResumeContent(response.data.resumeText || "");
+      setResumeFileName(response.data.fileName || selectedFile.name);
+      toast.success("Resume parsed successfully.");
+    } catch (error) {
+      setResumeContent("");
+      setResumeFileName("");
+      toast.error(
+        error?.response?.data?.message || "Failed to parse resume PDF.",
+      );
+    } finally {
+      setIsParsingResume(false);
+    }
+  };
+
   const scrollSlider = (direction) => {
     if (jobTitleSliderRef.current) {
       const scrollAmount = 200;
@@ -263,6 +328,7 @@ const CreateInterview = () => {
 
   const canProceedToForm = isCameraEnabled && isMicEnabled;
   const isCompactMobileForm = isSmallScreen && mobileStage === 2;
+  const hasParsedResume = Boolean(resumeContent.trim()) && !isParsingResume;
 
   const handleNextStage = () => {
     if (!canProceedToForm) {
@@ -296,7 +362,7 @@ const CreateInterview = () => {
                 Ace your <span className="text-[#bef264] italic">Job</span>{" "}
                 Interview
               </h1>
-              <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-md">
+              <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-md">
                 Prepare for your dream job with real-time AI feedback. Practice
                 speaking in a professional environment with our advanced AI
                 interviewers.
@@ -359,7 +425,7 @@ const CreateInterview = () => {
 
               <div className="absolute top-1 sm:top-6 left-1 sm:left-6 flex items-center space-x-2 bg-zinc-900/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10">
                 <div
-                  className={`w-2 h-2 rounded-full ${isCameraEnabled && isMicEnabled ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}
+                  className={`w-2 h-2 rounded-full ${isCameraEnabled && isMicEnabled ? "bg-[#bef264] animate-pulse" : "bg-red-500"}`}
                 ></div>
                 <span className="text-[8px] sm:text-[10px] font-black tracking-widest text-white uppercase opacity-90">
                   {isCameraEnabled && isMicEnabled
@@ -396,7 +462,7 @@ const CreateInterview = () => {
               <button
                 onClick={handleNextStage}
                 disabled={!canProceedToForm}
-                className={`w-full py-3 rounded-2xl  font-black  tracking-wider text-sm transition-all ${canProceedToForm ? "bg-[#bef264] text-black shadow-xl shadow-[#bef264]/20" : "bg-zinc-800 text-zinc-500 cursor-not-allowed"}`}
+                className={`w-full py-3 rounded-2xl  font-black  tracking-wider text-sm transition-all ${canProceedToForm ? "bg-[#bef264] text-black shadow-xl shadow-[#bef264]/20" : "bg-zinc-800 text-zinc-400 cursor-not-allowed"}`}
               >
                 {canProceedToForm
                   ? "Proceed to Interview Details"
@@ -409,7 +475,7 @@ const CreateInterview = () => {
                 <FiShield className="mr-3 text-[#bef264] text-xl" />
                 Professional Environment
               </h3>
-              <p className="text-[13px] dark:text-zinc-500 text-gray-600 leading-relaxed font-medium">
+              <p className="text-[13px] dark:text-zinc-400 text-gray-600 leading-relaxed font-medium">
                 Ensure you are in a quiet room with good lighting. Our AI
                 interviewer will analyze both your tone and content to provide
                 detailed feedback.
@@ -443,7 +509,7 @@ const CreateInterview = () => {
                 Interview details
               </h2>
               <p
-                className={`dark:text-zinc-500 text-gray-500 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium`}
+                className={`dark:text-zinc-400 text-gray-500 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium`}
               >
                 Give the job details you want to apply for
               </p>
@@ -452,7 +518,7 @@ const CreateInterview = () => {
             <div className={isCompactMobileForm ? "space-y-4" : "space-y-6"}>
               {/* Job Title */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                   Job title
                 </label>
                 <input
@@ -512,25 +578,25 @@ const CreateInterview = () => {
                 <div
                   className={`flex items-center justify-between ${isCompactMobileForm ? "mb-1" : "mb-2"}`}
                 >
-                  <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                  <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                     Context source
                   </label>
                   <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
                     <button
                       onClick={() => setInputType("jobDescription")}
-                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
                     >
                       JD
                     </button>
                     <button
                       onClick={() => setInputType("resume")}
-                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
                     >
                       Resume
                     </button>
                     <button
                       onClick={() => setInputType("both")}
-                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-500 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
                     >
                       Both
                     </button>
@@ -542,7 +608,7 @@ const CreateInterview = () => {
                 >
                   {(inputType === "jobDescription" || inputType === "both") && (
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+                      <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
                         Job Description
                       </label>
                       <textarea
@@ -557,16 +623,79 @@ const CreateInterview = () => {
 
                   {(inputType === "resume" || inputType === "both") && (
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-black text-zinc-600 uppercase tracking-widest">
-                        Resume Content
+                      <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                        Resume PDF
                       </label>
-                      <textarea
-                        value={resumeContent}
-                        onChange={(e) => setResumeContent(e.target.value)}
-                        rows={isCompactMobileForm ? 3 : 4}
-                        placeholder="Paste your core resume points here..."
-                        className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 transition-all outline-none resize-none font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm`}
-                      ></textarea>
+                      <label
+                        className={`w-full flex items-start justify-between gap-3 ${isCompactMobileForm ? "p-3" : "p-4"} bg-black border rounded-xl transition-all cursor-pointer ${hasParsedResume ? "border-[#bef264]/50" : "border-zinc-800 hover:border-zinc-700"}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${hasParsedResume ? "bg-[#bef264]/20" : "bg-[#bef264]/10"}`}
+                          >
+                            <FiUpload
+                              className={`${hasParsedResume ? "text-[#bef264]" : "text-[#bef264]"}`}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[12px] font-bold text-zinc-200 leading-tight">
+                              {isParsingResume
+                                ? "Parsing your resume"
+                                : hasParsedResume
+                                  ? "Resume parsed successfully"
+                                  : "Upload Resume PDF"}
+                            </p>
+                            <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wide">
+                              {resumeFileName
+                                ? resumeFileName
+                                : "PDF only, maximum 5MB"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {isParsingResume ? (
+                          <div className="w-4 h-4 border-2 border-zinc-600 border-t-[#bef264] rounded-full animate-spin mt-1" />
+                        ) : hasParsedResume ? (
+                          <FiCheckCircle className="text-[#bef264] mt-1" />
+                        ) : null}
+
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={handleResumeUpload}
+                          disabled={isParsingResume}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {!hasParsedResume && (
+                        <div className="flex items-center gap-2 text-[10px]  text-zinc-400 font-semibold">
+                          <FiFileText className="text-zinc-700" />
+                          <span>
+                            Parsed resume data will appear after upload.
+                          </span>
+                        </div>
+                      )}
+
+                      {hasParsedResume && (
+                        <div className="space-y-2 animate-fade-in">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-[10px] font-black text-[#bef264] uppercase tracking-widest">
+                              Parsed Resume Data
+                            </label>
+                            <span className="text-[10px] font-semibold text-zinc-400">
+                              Ready for interview context
+                            </span>
+                          </div>
+                          <textarea
+                            value={resumeContent}
+                            readOnly
+                            rows={isCompactMobileForm ? 3 : 4}
+                            placeholder="Parsed resume content"
+                            className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-4 text-[13px]"} bg-black border custom-scrollbar border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/40 transition-all outline-none resize-none font-medium shadow-sm`}
+                          ></textarea>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -579,7 +708,7 @@ const CreateInterview = () => {
                 className={`relative ${isCompactMobileForm ? "space-y-3" : "space-y-4"}`}
                 ref={experienceDropdownRef}
               >
-                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                   Experience level
                 </label>
                 <button
@@ -603,7 +732,7 @@ const CreateInterview = () => {
                     }
                   </span>
                   <FiChevronDown
-                    className={`transition-transform duration-300 text-zinc-500 ${isExperienceDropdownOpen ? "rotate-180" : ""}`}
+                    className={`transition-transform duration-300 text-zinc-400 ${isExperienceDropdownOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
@@ -642,7 +771,7 @@ const CreateInterview = () => {
               {/* Interviewer Selection */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                  <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                     Select Interviewer
                   </label>
                   <button
@@ -736,14 +865,14 @@ const CreateInterview = () => {
                               className={`p-2 rounded-xl transition-all ${
                                 interviewData.agentName === agent.name
                                   ? "bg-white/10 text-white hover:bg-white/20"
-                                  : "bg-zinc-800/50 text-zinc-500 hover:text-white hover:bg-zinc-800"
+                                  : "bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-800"
                               }`}
                               title="Play sample"
                             >
                               <FiVolume2 size={14} />
                             </button>
                           </div>
-                          <p className="text-[10px] dark:text-zinc-500 text-gray-500 font-black uppercase tracking-widest mt-0.5">
+                          <p className="text-[10px] dark:text-zinc-400 text-gray-500 font-black uppercase tracking-widest mt-0.5">
                             {agent.label} Voice
                           </p>
                         </div>
@@ -756,7 +885,7 @@ const CreateInterview = () => {
 
               {/* Interview Types */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                   Interview Type
                 </label>
                 <div
@@ -786,7 +915,7 @@ const CreateInterview = () => {
                           Problem solving
                         </span>
                       </div>
-                      <p className="text-[11px] font-bold text-zinc-500 leading-tight">
+                      <p className="text-[11px] font-bold text-zinc-400 leading-tight">
                         Test your domain expertise and logic
                       </p>
                     </div>
@@ -812,11 +941,11 @@ const CreateInterview = () => {
                         >
                           Behavioral
                         </span>
-                        <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-black uppercase tracking-widest">
+                        <span className="text-[9px] px-2 py-0.5 rounded bg-[#bef264]/20 text-[#bef264] font-black uppercase tracking-widest">
                           Soft skills
                         </span>
                       </div>
-                      <p className="text-[11px] font-bold text-zinc-500 leading-tight">
+                      <p className="text-[11px] font-bold text-zinc-400 leading-tight">
                         Evaluate experiences and interpersonal skills
                       </p>
                     </div>
@@ -828,7 +957,7 @@ const CreateInterview = () => {
 
               {/* Interview Duration */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                   Interview Duration
                 </label>
                 <div className="flex bg-black rounded-xl p-1 border border-zinc-800 shadow-sm">
@@ -839,7 +968,7 @@ const CreateInterview = () => {
                       className={`flex-1 ${isCompactMobileForm ? "py-2 text-[10px]" : "py-2.5 text-[11px]"} font-black uppercase tracking-wider rounded-lg transition-all ${
                         duration === mins
                           ? "bg-[#bef264] text-black shadow-lg"
-                          : "text-zinc-500 hover:text-zinc-300"
+                          : "text-zinc-400 hover:text-zinc-300"
                       }`}
                     >
                       {mins} Min

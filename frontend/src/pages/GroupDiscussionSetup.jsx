@@ -227,7 +227,7 @@ const GroupDiscussionSetup = () => {
                 Master the <span className="text-[#bef264] italic">GD</span>{" "}
                 Dynamics
               </h1>
-              <p className="text-zinc-500 text-sm font-medium leading-relaxed max-w-md">
+              <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-md">
                 Prepare for group discussions with 4 unique AI personas. They
                 interact naturally, allowing you to simulate a high-pressure
                 corporate GD environment.
@@ -237,7 +237,7 @@ const GroupDiscussionSetup = () => {
             {/* Discussion Panel Preview */}
             <div className=" p-4 sm:p-8 bg-zinc-950 rounded-xl sm:rounded-[2rem] border-y border-[#bef264] shadow-2xl shadow-[#bef264]/5 relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#bef264]/5 rounded-full blur-3xl -mr-10 -mt-10" />
-              <h3 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-2 sm:mb-6 relative z-10">
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest mb-2 sm:mb-6 relative z-10">
                 Discussion Panel
               </h3>
               <div className="grid grid-cols-2 gap-2 md:gap-6 relative z-10">
@@ -307,7 +307,7 @@ const GroupDiscussionSetup = () => {
                   </div>
                   <div>
                     <p className="text-xs font-black text-white">You</p>
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
                       Candidate
                     </p>
                   </div>
@@ -331,7 +331,7 @@ const GroupDiscussionSetup = () => {
               <button
                 onClick={handleNextStage}
                 disabled={!canProceedToForm}
-                className={`w-full py-3 rounded-2xl font-black tracking-wider text-sm transition-all ${canProceedToForm ? "bg-[#bef264] text-black shadow-xl shadow-[#bef264]/20" : "bg-zinc-800 text-zinc-500 cursor-not-allowed"}`}
+                className={`w-full py-3 rounded-2xl font-black tracking-wider text-sm transition-all ${canProceedToForm ? "bg-[#bef264] text-black shadow-xl shadow-[#bef264]/20" : "bg-zinc-800 text-zinc-400 cursor-not-allowed"}`}
               >
                 {canProceedToForm
                   ? "Proceed to Session Details"
@@ -344,7 +344,7 @@ const GroupDiscussionSetup = () => {
                 <FiMessageSquare className="mr-3 text-[#bef264] text-lg" /> GD
                 Dynamics
               </h3>
-              <p className="text-[13px] dark:text-zinc-500 text-gray-600 leading-relaxed font-medium capitalize">
+              <p className="text-[13px] dark:text-zinc-400 text-gray-600 leading-relaxed font-medium capitalize">
                 Participants will open the floor, jump in with counter-points,
                 and conclude based on collective input. speak clearly to ensure
                 the AI understands your contribution.
@@ -378,7 +378,7 @@ const GroupDiscussionSetup = () => {
                 Session Configuration
               </h2>
               <p
-                className={`dark:text-zinc-500 text-gray-500 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium`}
+                className={`dark:text-zinc-400 text-gray-500 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium`}
               >
                 Configure your group discussion environment
               </p>
@@ -387,7 +387,7 @@ const GroupDiscussionSetup = () => {
             <div className={isCompactMobileForm ? "space-y-4" : "space-y-6"}>
               {/* Duration Select */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                   Time Limit
                 </label>
                 <div className="grid grid-cols-5 gap-2 bg-black rounded-xl p-1 border border-zinc-800 shadow-sm">
@@ -398,7 +398,7 @@ const GroupDiscussionSetup = () => {
                       className={`${isCompactMobileForm ? "py-2 text-[10px]" : "py-2.5 text-[11px]"} rounded-lg font-black uppercase tracking-wider transition-all ${
                         timeLimit === min
                           ? "bg-[#bef264] text-black shadow-lg"
-                          : "text-zinc-500 hover:text-zinc-300"
+                          : "text-zinc-400 hover:text-zinc-300"
                       }`}
                     >
                       {min}m
@@ -414,10 +414,10 @@ const GroupDiscussionSetup = () => {
                 className={`flex items-center justify-between ${isCompactMobileForm ? "p-3" : "p-4"} bg-black rounded-xl border border-zinc-800 shadow-sm transition-all hover:border-zinc-700`}
               >
                 <div className="space-y-0.5">
-                  <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                  <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                     Topic Preparation
                   </label>
-                  <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">
+                  <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
                     1 minute countdown before starting
                   </p>
                 </div>
@@ -440,7 +440,7 @@ const GroupDiscussionSetup = () => {
 
               {/* Category Select */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                   Category
                 </label>
                 <div
@@ -457,12 +457,12 @@ const GroupDiscussionSetup = () => {
                       }`}
                     >
                       <div
-                        className={`p-2 rounded-xl transition-colors ${selectedCategory === key ? "bg-[#bef264] text-black" : "bg-zinc-900 text-zinc-500"}`}
+                        className={`p-2 rounded-xl transition-colors ${selectedCategory === key ? "bg-[#bef264] text-black" : "bg-zinc-900 text-zinc-400"}`}
                       >
                         <Icon size={14} />
                       </div>
                       <span
-                        className={`text-[11px] font-black uppercase tracking-widest ${selectedCategory === key ? "text-white" : "text-zinc-500"}`}
+                        className={`text-[11px] font-black uppercase tracking-widest ${selectedCategory === key ? "text-white" : "text-zinc-400"}`}
                       >
                         {label}
                       </span>
@@ -475,7 +475,7 @@ const GroupDiscussionSetup = () => {
 
               {/* Topic List */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest">
+                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                   Select Topic
                 </label>
                 <div className="p-1 bg-black rounded-2xl border border-zinc-800 overflow-hidden shadow-sm">
@@ -594,7 +594,7 @@ const GroupDiscussionSetup = () => {
                   <div
                     className={`w-2 h-2 rounded-full ${micReady ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}
                   />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
                     {micReady ? "Microphone Ready" : "Microphone Required"}
                   </span>
                 </div>

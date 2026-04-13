@@ -1,6 +1,9 @@
 const { OpenAI } = require("openai");
+const pdfParse = require("pdf-parse");
 const InterviewSession = require("../models/interviewSessionModel");
-const { AnalyzeFullTranscript } = require("../services/InterviewResponseAnalyzer");
+const {
+  AnalyzeFullTranscript,
+} = require("../services/InterviewResponseAnalyzer");
 const CreditService = require("../services/creditService");
 const { SERVICE_CREDITS } = require("../config/pricingConfig");
 
@@ -28,13 +31,49 @@ const getTTSClient = () => {
 
 const openai = getOpenAIClient();
 
+const parseResumePdf = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Resume PDF file is required." });
+    }
+
+    const pdfData = await pdfParse(req.file.buffer);
+    const resumeText = (pdfData?.text || "").trim();
+
+    if (!resumeText) {
+      return res.status(400).json({
+        message: "No text could be extracted from the uploaded PDF.",
+      });
+    }
+
+    return res.status(200).json({
+      resumeText,
+      fileName: req.file.originalname,
+    });
+  } catch (error) {
+    console.error("Custom Interview Resume Parse Error:", error);
+    return res.status(400).json({
+      message:
+        "Failed to parse resume PDF. Please upload a valid text-based PDF.",
+    });
+  }
+};
+
 /**
  * Start a Custom AI Interview Session
  * Generates the dynamic system prompt and saves initial session metadata
  */
 const startCustomSession = async (req, res) => {
   try {
-    const { interviewType, role, level, content, agentName, userName, duration } = req.body;
+    const {
+      interviewType,
+      role,
+      level,
+      content,
+      agentName,
+      userName,
+      duration,
+    } = req.body;
     const userId = req.user?._id || req.body.userId;
 
     if (!userId) {
@@ -44,10 +83,10 @@ const startCustomSession = async (req, res) => {
     // ── Credit Deduction Upfront ──
     const deduction = await CreditService.deduct(userId, "mock_interview");
     if (!deduction.success) {
-      return res.status(402).json({ 
+      return res.status(402).json({
         message: `Insufficient credits to start an interview. ${SERVICE_CREDITS.mock_interview} credits required.`,
         needed: SERVICE_CREDITS.mock_interview,
-        available: deduction.available
+        available: deduction.available,
       });
     }
 
@@ -61,7 +100,7 @@ const startCustomSession = async (req, res) => {
         level,
         duration: duration || 10,
         agentName: agentName || "Sophia",
-        userName: userName || "Candidate"
+        userName: userName || "Candidate",
       },
     });
 
@@ -125,7 +164,7 @@ const startCustomSession = async (req, res) => {
       sessionId: session._id,
       systemPrompt,
       duration: duration || 10,
-      isCustom: true
+      isCustom: true,
     });
   } catch (error) {
     console.error("Start Custom Session Error:", error);
@@ -145,15 +184,14 @@ const customInterviewController = {
       const { sessionId, messages, systemPrompt } = req.body;
 
       if (!openai) {
-        return res.status(500).json({ message: "OpenRouter API Key not configured" });
+        return res
+          .status(500)
+          .json({ message: "OpenRouter API Key not configured" });
       }
 
       const response = await openai.chat.completions.create({
         model: "google/gemini-2.0-flash-lite-001", // Highly optimized for low-latency
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages
-        ],
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
         temperature: 0.7,
       });
 
@@ -164,7 +202,7 @@ const customInterviewController = {
       res.status(500).json({ message: "AI response failed" });
     }
   },
-  
+
   // 2. Save Transcript Only
   saveTranscriptOnly: async (req, res) => {
     try {
@@ -176,10 +214,15 @@ const customInterviewController = {
       }
 
       if (!sessionId || !Array.isArray(transcript)) {
-        return res.status(400).json({ message: "Session ID and transcript array are required" });
+        return res
+          .status(400)
+          .json({ message: "Session ID and transcript array are required" });
       }
 
-      const session = await InterviewSession.findOne({ _id: sessionId, userId });
+      const session = await InterviewSession.findOne({
+        _id: sessionId,
+        userId,
+      });
       if (!session) {
         return res.status(404).json({ message: "Session not found" });
       }
@@ -187,14 +230,15 @@ const customInterviewController = {
       const formattedTranscript = transcript
         .filter((message) => message && message.text)
         .map((message) => {
-          const speaker = message.speaker || (message.isAgent ? "Interviewer" : "Candidate");
+          const speaker =
+            message.speaker || (message.isAgent ? "Interviewer" : "Candidate");
           return `${speaker}: ${message.text}`;
         })
         .join("\n");
 
       session.transcript = formattedTranscript;
       session.actualDuration = actualDuration || 0;
-      session.status = "analysis_pending"; 
+      session.status = "analysis_pending";
       await session.save();
 
       res.status(200).json({ message: "Transcript saved successfully" });
@@ -202,10 +246,11 @@ const customInterviewController = {
       console.error("Error saving transcript:", error);
       res.status(500).json({ message: "Error saving transcript" });
     }
-  }
+  },
 };
 
 module.exports = {
   ...customInterviewController,
-  startCustomSession
+  startCustomSession,
+  parseResumePdf,
 };
