@@ -1,6 +1,7 @@
 const axios = require("axios");
 const Subscription = require("../models/Subscription");
 const User = require("../models/User");
+const { TIER_LIMITS, getCycleKey } = require("../config/pricingConfig");
 
 const languageMap = {
   javascript: { script: "nodejs", versionIndex: "4" },
@@ -10,24 +11,14 @@ const languageMap = {
   c: { script: "c", versionIndex: "5" },
 };
 
-const STUDENT_FLASH_MONTHLY_LIMIT = Number(
-  process.env.CODING_FLASH_MONTHLY_LIMIT || 300,
-);
-
 const CODING_EXECUTION_LIMITS = {
   Free: { blocked: true, monthlyLimit: 0 },
   "Student Flash": {
     blocked: false,
-    monthlyLimit: STUDENT_FLASH_MONTHLY_LIMIT,
+    monthlyLimit: TIER_LIMITS["Student Flash"].codingMonthlyExecution,
   },
   "Placement Pro": { blocked: false, monthlyLimit: Infinity },
   "Infinite Elite": { blocked: false, monthlyLimit: Infinity },
-};
-
-const getCycleKey = (date = new Date()) => {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
 };
 
 const ensureSubscription = async (userId) => {

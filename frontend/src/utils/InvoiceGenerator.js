@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { plans } from "../components/home/PricingSection";
+import { pricingPlans } from "../constants/pricing";
 
 /**
  * Loads an image from a URL, applies rounded corners using a canvas,
@@ -169,7 +169,7 @@ export const generateInvoicePDF = async (order, user = null) => {
     }
 
     // ---------- ITEMS TABLE ----------
-    const matchingPlan = plans.find((p) => p.name === planLabel || p.monthlyPlanId === order.planId || p.yearlyPlanId === order.planId);
+    const matchingPlan = pricingPlans.find((p) => p.name === planLabel || p.monthlyPlanId === order.planId || p.yearlyPlanId === order.planId);
     let description = planLabel;
     
     if (matchingPlan) {

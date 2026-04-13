@@ -22,6 +22,7 @@ import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import usePollyTTS from "../hooks/usePollyTTS";
+import { FEATURE_COSTS } from "../constants/pricing";
 
 import { interviewAgents } from "../constants/agents";
 
@@ -166,14 +167,17 @@ const CreateInterview = () => {
     setInterviewData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const availableCredits =
+    (subscription?.credits || 0) + (subscription?.topupCredits || 0);
+
   const startInterview = async () => {
     if (
       subscription &&
       subscription.tier !== "Infinite Elite" &&
-      (subscription.credits || 0) < 10
+      availableCredits < FEATURE_COSTS.mockInterview
     ) {
       toast.error(
-        "You need at least 10 credits to start an interview. Redirecting to billing...",
+        `You need at least ${FEATURE_COSTS.mockInterview} credits to start an interview. Redirecting to billing...`,
       );
       setTimeout(() => navigate("/billing"), 2000);
       return;
@@ -848,7 +852,7 @@ const CreateInterview = () => {
                 <button
                   onClick={startInterview}
                   disabled={loading}
-                  className={`w-full ${isCompactMobileForm ? "px-6 py-3.5 text-sm" : "px-10 py-4"} ${subscription && subscription.tier !== "Infinite Elite" && subscription.credits <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95 group`}
+                  className={`w-full ${isCompactMobileForm ? "px-6 py-3.5 text-sm" : "px-10 py-4"} ${subscription && subscription.tier !== "Infinite Elite" && availableCredits <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95 group`}
                 >
                   {loading ? (
                     <>
@@ -857,7 +861,7 @@ const CreateInterview = () => {
                     </>
                   ) : subscription &&
                     subscription.tier !== "Infinite Elite" &&
-                    subscription.credits < 10 ? (
+                    availableCredits < FEATURE_COSTS.mockInterview ? (
                     <>
                       Get Credits
                       <FiCreditCard

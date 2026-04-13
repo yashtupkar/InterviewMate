@@ -31,6 +31,7 @@ import PaymentStatusModal from '../components/modals/PaymentStatusModal';
 import PaymentStatusContent from '../components/common/PaymentStatusContent';
 import Background from '../components/common/Background';
 import WaitlistSection from '../components/home/WaitlistSection';
+import { pricingPlans } from '../constants/pricing';
 
 const LandingHome = ({ backendStatus }) => {
   const location = useLocation();
@@ -180,78 +181,7 @@ const LandingHome = ({ backendStatus }) => {
     }
   ];
 
-  const plans = [
-    {
-      name: "Student Flash",
-      monthlyPlanId: "student_flash_monthly",
-      yearlyPlanId: "student_flash_yearly",
-      monthlyPrice: "199",
-      yearlyPrice: "1,999",
-      credits: "200 Credits",
-      description: "Perfect for a quick preparation boost.",
-      features: [
-        "Mock Interviews (10 Credits)",
-        "GD Sessions (8 Credits)",
-        "Expert AI Feedback",
-        "Practice Coding Problems",
-        "24/7 AI Mentor Access",
-      ],
-      recommended: false,
-    },
-    {
-      name: "Placement Pro",
-      monthlyPlanId: "placement_pro_monthly",
-      yearlyPlanId: "placement_pro_yearly",
-      monthlyPrice: "499",
-      yearlyPrice: "4,999",
-      credits: "600 Credits",
-      description: "Complete package for serious job seekers.",
-      features: [
-        "Mock Interviews (10 Credits)",
-        "GD Sessions (8 Credits)",
-        "Expert AI Feedback",
-        "LinkedIn & Resume Tools",
-        "Priority AI Processing",
-        "Career Analytics Pro",
-        "Advanced Flash 2.0 AI",
-      ],
-      recommended: true,
-    },
-    {
-      name: "Infinite Elite",
-      monthlyPlanId: "infinite_elite_monthly",
-      yearlyPlanId: "infinite_elite_yearly",
-      monthlyPrice: "899",
-      yearlyPrice: "8,999",
-      credits: "1,200 Credits",
-      description: "The ultimate unlimited preparation experience.",
-      features: [
-        "Mock Interviews (10 Credits)",
-        "GD Sessions (8 Credits)",
-        "LinkedIn & Resume Pro",
-        "WhatsApp Career Support",
-        "Early Access to Features",
-        "Expert AI Mock Reviews",
-      ],
-      recommended: false,
-    },
-    {
-      name: "Free",
-      monthlyPlanId: null,
-      yearlyPlanId: null,
-      monthlyPrice: "0",
-      yearlyPrice: "0",
-      credits: "30 Credits",
-      description: "Get started with PlaceMateAI.",
-      features: [
-        "Mock Interviews (10 Credits)", 
-        "GD Sessions (8 Credits)", 
-        "Basic Feedback", 
-        "Practice Coding Problems"
-      ],
-      recommended: false,
-    },
-  ];
+  const plans = pricingPlans;
 
   const testimonials = [
     {

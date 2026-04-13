@@ -8,6 +8,7 @@ const {
 } = require("../services/GDAnalyzer");
 const { rewardReferrer } = require("./referralController");
 const CreditService = require("../services/creditService");
+const { SERVICE_CREDITS } = require("../config/pricingConfig");
 
 // ── Agent Roster ──────────────────────────────────────────────────────────────
 const AGENT_ROSTER = [
@@ -170,8 +171,8 @@ const startGDSession = async (req, res) => {
     const deduction = await CreditService.deduct(userId, "gd_session");
     if (!deduction.success) {
       return res.status(402).json({ 
-        message: "Insufficient credits to start a GD session. 8 credits required.",
-        needed: 8,
+        message: `Insufficient credits to start a GD session. ${SERVICE_CREDITS.gd_session} credits required.`,
+        needed: SERVICE_CREDITS.gd_session,
         available: deduction.available
       });
     }

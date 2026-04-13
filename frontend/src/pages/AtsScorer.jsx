@@ -10,6 +10,7 @@ import { FiArrowRight, FiShield, FiShare2 } from "react-icons/fi";
 import { Helmet } from "react-helmet-async";
 import { BsFillCloudUploadFill } from "react-icons/bs";
 import { IoSparkles } from "react-icons/io5";
+import { FEATURE_COSTS } from "../constants/pricing";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -243,7 +244,7 @@ const AtsScorer = () => {
                       <div className="flex items-center gap-1.5 bg-[#bef264]/10 px-3 py-1 rounded-full border border-[#bef264]/20">
                         <IoSparkles className="text-[#bef264] text-xs" />
                         <span className="text-[#bef264] text-[10px] font-black uppercase tracking-wider">
-                          5 Credits
+                          {FEATURE_COSTS.atsScanner} Credits
                         </span>
                       </div>
                     </div>

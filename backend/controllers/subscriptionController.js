@@ -9,6 +9,12 @@ const {
   issueRefund,
   fetchPaymentDetails,
 } = require("../services/razorpayService");
+const {
+  TIER_LIMITS,
+  getCycleKey,
+  getServiceCost,
+  isUnlimitedTierService,
+} = require("../config/pricingConfig");
 const mongoose = require("mongoose");
 
 // ─── Helper: check and handle plan expiry ─────────────────────────────────────
@@ -22,11 +28,11 @@ const checkSubscriptionExpiry = async (subscription) => {
       `[Subscription] Plan expired for user ${subscription.user}. Reverting to Free tier.`,
     );
 
-    // Restore leftover free credits or default to 30
+    // Restore leftover free credits or fallback to current Free-tier config.
     subscription.credits =
       subscription.leftoverFreeCredits > 0
         ? subscription.leftoverFreeCredits
-        : 30;
+        : TIER_LIMITS.Free.credits;
     subscription.leftoverFreeCredits = 0; // Reset after restoration
 
     subscription.tier = "Free";
@@ -55,33 +61,6 @@ const ensureSubscription = async (clerkId) => {
   await checkSubscriptionExpiry(subscription);
 
   return { user, subscription };
-};
-
-const TIER_LIMITS = {
-  Free: { credits: 30, resumeLimit: 1, codingMonthlyExecution: 0 },
-  "Student Flash": {
-    credits: 200,
-    resumeLimit: 4,
-    codingMonthlyExecution: Number(
-      process.env.CODING_FLASH_MONTHLY_LIMIT || 300,
-    ),
-  },
-  "Placement Pro": {
-    credits: 600,
-    resumeLimit: Infinity,
-    codingMonthlyExecution: Infinity,
-  },
-  "Infinite Elite": {
-    credits: 1200,
-    resumeLimit: Infinity,
-    codingMonthlyExecution: Infinity,
-  },
-};
-
-const getCycleKey = (date = new Date()) => {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
 };
 
 // ─── Helper: extract payment metadata ─────────────────────────────────────────
@@ -171,12 +150,23 @@ const getSubscriptionStatus = async (req, res) => {
       ? PLAN_CONFIG[planKey].amountPaise / 100
       : 0;
 
+    // Convert Infinity to null for JSON serialization compatibility
+    const limitsForResponse = {
+      ...tierLimit,
+      resumeLimit: Number.isFinite(tierLimit.resumeLimit)
+        ? tierLimit.resumeLimit
+        : null,
+      codingMonthlyExecution: Number.isFinite(tierLimit.codingMonthlyExecution)
+        ? tierLimit.codingMonthlyExecution
+        : null,
+    };
+
     res.json({
       tier: subscription.tier,
       credits: subscription.credits,
       topupCredits: subscription.topupCredits || 0,
       role: user.role, // Added role
-      limits: tierLimit,
+      limits: limitsForResponse,
       planExpiry: subscription.planExpiry,
       billingCycle: subscription.billingCycle,
       lastPaymentAt: subscription.lastPaymentAt,
@@ -293,11 +283,9 @@ const createOrder = async (req, res) => {
       console.warn(
         `[Order] Duplicate create attempt (E11000) for user ${req.auth?.userId || "unknown"} — plan ${planId}`,
       );
-      return res
-        .status(400)
-        .json({
-          message: "Your order is currently processing. Please wait a moment.",
-        });
+      return res.status(400).json({
+        message: "Your order is currently processing. Please wait a moment.",
+      });
     }
     console.error("[Order] Create order failed:", error);
     res
@@ -568,11 +556,9 @@ const requestRefund = async (req, res) => {
 
     // ── Check: no existing refund ──
     if (order.refund && order.refund.razorpayRefundId) {
-      return res
-        .status(400)
-        .json({
-          message: "A refund has already been initiated for this order.",
-        });
+      return res.status(400).json({
+        message: "A refund has already been initiated for this order.",
+      });
     }
 
     // ── Check: within 24 hours ──
@@ -625,7 +611,7 @@ const requestRefund = async (req, res) => {
 
       // Downgrade to Free
       subscription.tier = "Free";
-      subscription.credits = 25;
+      subscription.credits = TIER_LIMITS.Free.credits;
       subscription.planExpiry = null;
       subscription.billingCycle = null;
       // Remove this order from history
@@ -664,34 +650,45 @@ const requestRefund = async (req, res) => {
 // ─── Helper: perform actual deduction ─────────────────────────────────────────
 const internalDeductCredits = async (clerkId, amount, service) => {
   const { subscription } = await ensureSubscription(clerkId);
-  let finalAmount = amount;
+  const normalizedService =
+    typeof service === "string" ? service.trim().toLowerCase() : null;
 
-  // Custom Logic for ATS Scanner
-  if (service === "ats_scanner") {
-    if (
-      subscription.tier === "Placement Pro" ||
-      subscription.tier === "Infinite Elite"
-    ) {
-      return {
-        success: true,
-        message: "ATS Scan included in your plan",
-        credits: subscription.credits,
-        topupCredits: subscription.topupCredits,
-      };
+  // Prefer centralized pricing config when service is provided.
+  const configuredAmount = normalizedService
+    ? getServiceCost(normalizedService, subscription.tier)
+    : null;
+
+  let finalAmount = configuredAmount;
+
+  // Backward compatibility for older clients calling with explicit amount only.
+  if (finalAmount === null || Number.isNaN(finalAmount)) {
+    finalAmount = Number(amount);
+    if (!Number.isFinite(finalAmount) || finalAmount < 0) {
+      throw Object.assign(new Error("Invalid amount for credit deduction"), {
+        statusCode: 400,
+      });
     }
-    finalAmount = 5; // Fixed cost for Free/Flash
   }
 
   if (
-    subscription.tier === "Infinite Elite" &&
-    service !== "tools" &&
-    service !== "ats_scanner"
+    normalizedService &&
+    isUnlimitedTierService(subscription.tier, normalizedService)
   ) {
     return {
       success: true,
-      message: `Unlimited credits for ${service} on Infinite Elite`,
+      message: `Unlimited credits for ${normalizedService} on Infinite Elite`,
       credits: subscription.credits,
       topupCredits: subscription.topupCredits,
+    };
+  }
+
+  if (normalizedService && finalAmount === 0) {
+    return {
+      success: true,
+      message: `${normalizedService} included in your plan`,
+      credits: subscription.credits,
+      topupCredits: subscription.topupCredits,
+      deducted: 0,
     };
   }
 
@@ -701,7 +698,7 @@ const internalDeductCredits = async (clerkId, amount, service) => {
   if (totalAvailable < finalAmount) {
     throw Object.assign(
       new Error(
-        `Insufficient credits for ${service}. Need ${finalAmount}, have ${totalAvailable.toFixed(1)}`,
+        `Insufficient credits for ${normalizedService || "requested service"}. Need ${finalAmount}, have ${totalAvailable.toFixed(1)}`,
       ),
       { statusCode: 400 },
     );
@@ -714,7 +711,7 @@ const internalDeductCredits = async (clerkId, amount, service) => {
     // Use all main credits and deduct remainder from topup credits
     const remainder = finalAmount - subscription.credits;
     subscription.credits = 0;
-    subscription.topupCredits -= remainder;
+    subscription.topupCredits = (subscription.topupCredits || 0) - remainder;
   }
 
   await subscription.save();
@@ -799,7 +796,7 @@ const cancelSubscription = async (req, res) => {
       subscription.credits =
         subscription.leftoverFreeCredits > 0
           ? subscription.leftoverFreeCredits
-          : 25;
+          : TIER_LIMITS.Free.credits;
       subscription.leftoverFreeCredits = 0;
       subscription.topupCredits = 0; // Remove top-ups on cancellation
       subscription.planExpiry = null;

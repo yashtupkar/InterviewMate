@@ -10,6 +10,7 @@ const {
     deductCredits,
     cancelSubscription,
 } = require('../controllers/subscriptionController');
+const { PLAN_CONFIG, SERVICE_CREDITS, TIER_LIMITS } = require('../config/pricingConfig');
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 
@@ -49,6 +50,14 @@ const refundRateLimit = rateLimit({
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 router.get('/status', ClerkExpressRequireAuth(), getSubscriptionStatus);
+
+router.get('/pricing-catalog', (req, res) => {
+    res.json({
+        plans: PLAN_CONFIG,
+        serviceCredits: SERVICE_CREDITS,
+        tierLimits: TIER_LIMITS,
+    });
+});
 
 router.post('/create-order',    ClerkExpressRequireAuth(), createOrder);
 router.post('/verify-payment',  ClerkExpressRequireAuth(), verifyPayment);

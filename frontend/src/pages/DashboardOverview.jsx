@@ -100,11 +100,11 @@ const DashboardOverview = () => {
   const avgScore =
     totalSessions > 0
       ? Math.round(
-        [...completedInterviews, ...completedGDs].reduce(
-          (acc, curr) => acc + (curr.report?.overallScore || 0),
-          0,
-        ) / ([...completedInterviews, ...completedGDs].length || 1),
-      )
+          [...completedInterviews, ...completedGDs].reduce(
+            (acc, curr) => acc + (curr.report?.overallScore || 0),
+            0,
+          ) / ([...completedInterviews, ...completedGDs].length || 1),
+        )
       : 0;
 
   const skillMatrix = React.useMemo(() => {
@@ -182,6 +182,12 @@ const DashboardOverview = () => {
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
+  const mainCredits = subscription?.credits || 0;
+  const creditLimit = subscription?.limits?.credits || 200;
+  const topupCredits = subscription?.topupCredits || 0;
+  const isMainCreditsLow =
+    mainCredits <= Math.max(10, Math.round(creditLimit * 0.15));
+
   // Removed global loading check to support skeleton loaders
 
   return (
@@ -223,8 +229,11 @@ const DashboardOverview = () => {
                 Performance Overview
               </span>
               <h2 className="text-2xl md:text-4xl font-black tracking-tighter text-white">
-                Welcome, <span className="text-[#bef264] capitalize">{user?.firstName}</span>.{" "}
-                <span className="text-3xl md:text-4xl animate-wave">👋</span>
+                Welcome,{" "}
+                <span className="text-[#bef264] capitalize">
+                  {user?.firstName}
+                </span>
+                . <span className="text-3xl md:text-4xl animate-wave">👋</span>
               </h2>
               <p className="text-zinc-400 text-sm md:text-base mt-2 max-w-lg">
                 You're making great progress in your interview preparations.
@@ -235,8 +244,8 @@ const DashboardOverview = () => {
               {loading ? (
                 <Skeleton className="min-w-[280px] h-[140px] rounded-2xl" />
               ) : subscription ? (
-                <div className="bg-[#bef264] rounded-2xl p-3 md:p-6 flex flex-col gap-5 shadow-[0_20px_50px_-12px_rgba(190,242,100,0.4)] w-full md:min-w-[280px] group transition-all duration-500 hover:scale-[1.02]">
-                  <div className="flex items-center justify-between px-1">
+                <div className="relative bg-[#bef264] rounded-2xl p-3 md:p-6 flex flex-col gap-5 shadow-[0_20px_50px_-12px_rgba(190,242,100,0.4)] w-full md:min-w-[280px] group transition-all duration-500 ">
+                  <div className="flex items-center justify-between ">
                     <span className="text-[11px] font-black text-black uppercase tracking-[0.2em] leading-none shrink-0 opacity-80">
                       {subscription.tier}
                     </span>
@@ -249,26 +258,76 @@ const DashboardOverview = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center text-[11px] font-black tracking-[0.15em] text-black">
-                      <span className="uppercase opacity-60">Usage</span>
-                      <span className="text-black text-sm italic">
-                        {Math.round(subscription.credits || 0)}{" "}
-                        <span className="text-black/30 mx-0.5 not-italic">
-                          /
-                        </span>{" "}
-                        {subscription.limits.credits || 200}
-                      </span>
+                    <div className="relative flex items-center justify-between gap-3 text-black ">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-black/60 ">
+                          Main Credits
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[12px] leading-none font-black italic mt-1">
+                          {Math.round(mainCredits)}
+                          <span className="text-black/35 mx-1 not-italic">
+                            /
+                          </span>
+                          {creditLimit}
+                        </p>
+                      </div>
+
+                      <div className="absolute right-0 top-11 z-30 w-48 rounded-lg border border-black/15 bg-[#d7f6a7] shadow-xl px-3 py-2.5 space-y-1.5 text-[10px] font-black tracking-[0.18em] text-black opacity-0 pointer-events-none translate-y-1 transition-all duration-150 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0">
+                        <div className="flex items-center justify-between">
+                          <span className="uppercase opacity-60">
+                            Available
+                          </span>
+                          <span className="italic">
+                            {Math.round(mainCredits + topupCredits)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="uppercase opacity-60">Main</span>
+                          <span className="italic">
+                            {Math.round(mainCredits)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="uppercase opacity-60">Top-up</span>
+                          <span className="italic">
+                            {Math.round(topupCredits)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="h-2.5 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5 shadow-inner">
+
+                    <div className="h-2 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5 shadow-inner">
                       <div
                         className="h-full bg-black rounded-full transition-all duration-1000 ease-out relative"
                         style={{
-                          width: `${Math.min(100, ((subscription.credits || 0) / (subscription.limits.credits || 200)) * 100)}%`,
+                          width: `${Math.min(100, (mainCredits / creditLimit) * 100)}%`,
                         }}
                       >
                         <div className="absolute inset-0 bg-white/10 animate-shimmer"></div>
                       </div>
                     </div>
+
+                    {topupCredits > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between  font-black uppercase tracking-[0.18em] text-black/60">
+                          <span className="text-[10px]">Top-up Credits</span>
+                          <span className="text-[12px] text-black">
+                            {Math.round(topupCredits)}
+                          </span>
+                        </div>
+                        {/* <div className="h-1.5 w-full bg-black/10 rounded-full overflow-hidden p-[1px] border border-black/5 shadow-inner">
+                          <div
+                            className="h-full bg-black/70 rounded-full transition-all duration-1000 ease-out"
+                            style={{
+                              width: `${Math.min(100, (topupCredits / Math.max(mainCredits + topupCredits, 1)) * 100)}%`,
+                            }}
+                          />
+                        </div> */}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -289,7 +348,7 @@ const DashboardOverview = () => {
                     <span className="text-2xl font-black text-black italic">
                       Free Tier
                     </span>
-                    <div className="px-2 py-0.5 rounded bg-black/10 text-[9px] font-black text-black uppercase tracking-widest border border-black/5 uppercase italic">
+                    <div className="px-2 py-0.5 rounded bg-black/10 text-[9px] font-black text-black uppercase tracking-widest border border-black/5 italic">
                       Limited Access
                     </div>
                   </div>
@@ -307,109 +366,114 @@ const DashboardOverview = () => {
           </div>
         </section>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2  lg:grid-cols-5 gap-2 md:gap-4">
-          {loading ? (
-            Array(5)
-              .fill(0)
-              .map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full rounded-2xl glass-panel" />
-              ))
-          ) : (
-            <>
-              <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
-              <FaClock size={24} />
-            </div>
-            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
-              Total Prep Time
-            </p>
-            <h3 className="text-2xl font-black text-white">
-              {formatPrepTime(totalPrepTime)}
-            </h3>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
-                <FiActivity size={12} /> {totalSessions} Sessions
-              </span>
-           
-            </div>
-          </div>
-
-          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
-              <FaCheckCircle size={24} />
-            </div>
-            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
-              Mocks Completed
-            </p>
-            <h3 className="text-2xl font-black text-white">
-              {completedInterviews.length}
-            </h3>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
-                <FiCheck size={12} />{" "}
-                {
-                  completedInterviews.filter(
-                    (i) =>
-                      new Date(i.createdAt) > new Date(Date.now() - 86400000),
-                  ).length
-                }{" "}
-                today
-              </span>
-            
-            </div>
-          </div>
-
-          <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-            <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
-              <FaUsers size={24} />
-            </div>
-            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
-              GD Sessions
-            </p>
-            <h3 className="text-2xl font-black text-white">{gds.length}</h3>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
-                <FiCheck size={12} />{" "}
-                {
-                  completedGDs.filter(
-                    (i) =>
-                      new Date(i.createdAt) > new Date(Date.now() - 86400000),
-                  ).length
-                }{" "}
-                today
-              </span>
-             
-            </div>
-          </div>
-
-              <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
-                <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
-                  <FiTarget size={24} />
+        <section>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {loading ? (
+              Array(4)
+                .fill(0)
+                .map((_, i) => (
+                  <Skeleton
+                    key={i}
+                    className="h-32 w-full rounded-2xl glass-panel"
+                  />
+                ))
+            ) : (
+              <>
+                <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+                  <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+                    <FaClock size={24} />
+                  </div>
+                  <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                    Total Prep Time
+                  </p>
+                  <h3 className="text-2xl font-black text-white">
+                    {formatPrepTime(totalPrepTime)}
+                  </h3>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
+                      <FiActivity size={12} /> {totalSessions} Sessions
+                    </span>
+                  </div>
                 </div>
-                <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
-                  Avg Session Score
-                </p>
-                <h3 className="text-2xl font-black text-white">
-                  {avgScore > 0 ? avgScore : 0}
-                  <span className="text-lg text-zinc-500">%</span>
-                </h3>
-                <div className="mt-3 flex items-center gap-2">
-                  <span
-                    className={`text-xs font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${avgScore > 70 ? "bg-emerald-500/10 text-emerald-400" : "bg-[#bef264]/10 text-[#bef264]"}`}
-                  >
-                    <FiTrendingUp size={12} />{" "}
-                    {avgScore > 75
-                      ? "Excellent"
-                      : avgScore > 50
-                        ? "Steady"
-                        : "Improving"}
-                  </span>
+
+                <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+                  <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+                    <FaCheckCircle size={24} />
+                  </div>
+                  <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                    Mocks Completed
+                  </p>
+                  <h3 className="text-2xl font-black text-white">
+                    {completedInterviews.length}
+                  </h3>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
+                      <FiCheck size={12} />{" "}
+                      {
+                        completedInterviews.filter(
+                          (i) =>
+                            new Date(i.createdAt) >
+                            new Date(Date.now() - 86400000),
+                        ).length
+                      }{" "}
+                      today
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
+
+                <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+                  <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+                    <FaUsers size={24} />
+                  </div>
+                  <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                    GD Sessions
+                  </p>
+                  <h3 className="text-2xl font-black text-white">
+                    {gds.length}
+                  </h3>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-[#bef264] text-xs font-bold flex items-center gap-1 bg-[#bef264]/10 px-2 py-0.5 rounded-md">
+                      <FiCheck size={12} />{" "}
+                      {
+                        completedGDs.filter(
+                          (i) =>
+                            new Date(i.createdAt) >
+                            new Date(Date.now() - 86400000),
+                        ).length
+                      }{" "}
+                      today
+                    </span>
+                  </div>
+                </div>
+
+                <div className="glass-panel p-4 rounded-2xl relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 border border-white/5 hover:border-[#bef264]/20">
+                  <div className="absolute top-6 md:top-0  right-0 p-4 text-[#bef264] opacity-6 group-hover:opacity-40 transition-opacity">
+                    <FiTarget size={24} />
+                  </div>
+                  <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">
+                    Avg Session Score
+                  </p>
+                  <h3 className="text-2xl font-black text-white">
+                    {avgScore > 0 ? avgScore : 0}
+                    <span className="text-lg text-zinc-500">%</span>
+                  </h3>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span
+                      className={`text-xs font-bold flex items-center gap-1 px-2 py-0.5 rounded-md ${avgScore > 70 ? "bg-emerald-500/10 text-emerald-400" : "bg-[#bef264]/10 text-[#bef264]"}`}
+                    >
+                      <FiTrendingUp size={12} />{" "}
+                      {avgScore > 75
+                        ? "Excellent"
+                        : avgScore > 50
+                          ? "Steady"
+                          : "Improving"}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
 
         {/* Activity Grid - Asymmetric Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 md:gap-8 items-start">
@@ -423,7 +487,7 @@ const DashboardOverview = () => {
                 to="/paths"
                 className="text-[#bef264] text-xs font-black uppercase tracking-widest hover:text-[#dcfc9f] transition-colors"
               >
-                View all 
+                View all
               </Link>
             </div>
 
@@ -438,78 +502,79 @@ const DashboardOverview = () => {
                 <>
                   {/* Featured Activity */}
                   <div
-                onClick={() => navigate("/dashboard/setup")}
-                className="md:col-span-2 glass-panel p-8 rounded-[2rem] group cursor-pointer border border-[#bef264]/10 hover:border-[#bef264]/40 transition-all duration-500 relative overflow-hidden shadow-[0_0_40px_rgba(190,242,100,0.05)]"
-              >
-                <div className="absolute top-0 right-0 w-80 h-80 bg-[#bef264]/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-[#bef264]/20 transition-colors duration-700"></div>
-                <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
-                  <div className="w-full md:w-1/2">
-                    <h4 className="text-2xl font-black text-white mb-3">
-                      Voice Mock Interview
+                    onClick={() => navigate("/dashboard/setup")}
+                    className="md:col-span-2 glass-panel p-8 rounded-[2rem] group cursor-pointer border border-[#bef264]/10 hover:border-[#bef264]/40 transition-all duration-500 relative overflow-hidden shadow-[0_0_40px_rgba(190,242,100,0.05)]"
+                  >
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-[#bef264]/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-[#bef264]/20 transition-colors duration-700"></div>
+                    <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+                      <div className="w-full md:w-1/2">
+                        <h4 className="text-2xl font-black text-white mb-3">
+                          Voice Mock Interview
+                        </h4>
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="bg-[#bef264]/10 text-[#bef264] text-[9px] font-black px-2 py-0.5 rounded border border-[#bef264]/20 uppercase tracking-widest">
+                            10 Credits / Interview
+                          </span>
+                        </div>
+                        <p className="text-zinc-400 mb-8 text-sm leading-relaxed font-medium">
+                          Engage with our advanced AI behavioral model. Get
+                          real-time sentiment analysis and body language
+                          feedback.
+                        </p>
+                        <button className="bg-[#bef264] text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-transform flex items-center gap-3">
+                          Start Session <FiArrowRight />
+                        </button>
+                      </div>
+                      <div className="w-full md:w-1/2 bg-black/40 p-6 rounded-[2rem] border border-white/5">
+                        <p className="text-[10px] uppercase font-black text-zinc-500 mb-6 tracking-widest">
+                          Live Feedback Preview
+                        </p>
+                        <div className="space-y-5">
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-xs font-bold">
+                              <span className="text-white">Confidence</span>
+                              <span className="text-[#bef264]">85%</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-[#bef264] w-[85%] shadow-[0_0_10px_#bef264]"></div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-xs font-bold">
+                              <span className="text-white">Pacing</span>
+                              <span className="text-zinc-500">40%</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-zinc-500 w-[40%]"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Secondary Activities */}
+                  <div
+                    onClick={() => navigate("/gd/setup")}
+                    className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10"
+                  >
+                    <h4 className="text-lg font-black text-white mb-1">
+                      GD Simulator
                     </h4>
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="bg-[#bef264]/10 text-[#bef264] text-[9px] font-black px-2 py-0.5 rounded border border-[#bef264]/20 uppercase tracking-widest">
-                        10 Credits / Interview
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">
+                        8 Credits / GD
                       </span>
                     </div>
-                    <p className="text-zinc-400 mb-8 text-sm leading-relaxed font-medium">
-                      Engage with our advanced AI behavioral model. Get
-                      real-time sentiment analysis and body language feedback.
+                    <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">
+                      Practice group dynamics with 5 AI personas. Master the art
+                      of leading and listening.
                     </p>
-                    <button className="bg-[#bef264] text-black px-8 py-3.5 rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-transform flex items-center gap-3">
-                      Start Session <FiArrowRight />
-                    </button>
-                  </div>
-                  <div className="w-full md:w-1/2 bg-black/40 p-6 rounded-[2rem] border border-white/5">
-                    <p className="text-[10px] uppercase font-black text-zinc-500 mb-6 tracking-widest">
-                      Live Feedback Preview
-                    </p>
-                    <div className="space-y-5">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs font-bold">
-                          <span className="text-white">Confidence</span>
-                          <span className="text-[#bef264]">85%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#bef264] w-[85%] shadow-[0_0_10px_#bef264]"></div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs font-bold">
-                          <span className="text-white">Pacing</span>
-                          <span className="text-zinc-500">40%</span>
-                        </div>
-                        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-zinc-500 w-[40%]"></div>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2 text-amber-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                      <span>Join simulator</span>
+                      <FiChevronRight size={14} />
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Secondary Activities */}
-              <div
-                onClick={() => navigate("/gd/setup")}
-                className="glass-panel p-6 rounded-[2rem] group hover:bg-zinc-800/80 transition-colors cursor-pointer border border-transparent hover:border-white/10"
-              >
-                <h4 className="text-lg font-black text-white mb-1">
-                  GD Simulator
-                </h4>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-widest">
-                    8 Credits / GD
-                  </span>
-                </div>
-                <p className="text-zinc-400 text-xs font-medium mb-8 leading-relaxed">
-                  Practice group dynamics with 5 AI personas. Master the art of
-                  leading and listening.
-                </p>
-                <div className="flex items-center gap-2 text-amber-500 font-black text-[10px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
-                  <span>Join simulator</span>
-                  <FiChevronRight size={14} />
-                </div>
-              </div>
 
                   <div
                     onClick={() => navigate("/billing")}
@@ -574,7 +639,11 @@ const DashboardOverview = () => {
                       <PolarGrid stroke="rgba(255,255,255,0.05)" />
                       <PolarAngleAxis
                         dataKey="subject"
-                        tick={{ fill: "#71717a", fontSize: 10, fontWeight: 800 }}
+                        tick={{
+                          fill: "#71717a",
+                          fontSize: 10,
+                          fontWeight: 800,
+                        }}
                       />
                       <PolarRadiusAxis
                         angle={30}
@@ -624,8 +693,8 @@ const DashboardOverview = () => {
                       <p className="text-sm font-black text-[#bef264]">
                         {avgScore > 0
                           ? skillMatrix.reduce((a, b) =>
-                            a.Interview + a.GD > b.Interview + b.GD ? a : b,
-                          ).subject
+                              a.Interview + a.GD > b.Interview + b.GD ? a : b,
+                            ).subject
                           : "Pending"}
                       </p>
                     </div>
@@ -698,7 +767,8 @@ const DashboardOverview = () => {
                     <>
                       {[...completedInterviews, ...completedGDs]
                         .sort(
-                          (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+                          (a, b) =>
+                            new Date(b.createdAt) - new Date(a.createdAt),
                         )
                         .slice(0, 5)
                         .map((session, idx) => (
@@ -746,13 +816,16 @@ const DashboardOverview = () => {
                                 new Date(),
                                 new Date(session.createdAt),
                               ) < 12
-                                ? formatDistanceToNow(new Date(session.createdAt), {
-                                  addSuffix: true,
-                                })
+                                ? formatDistanceToNow(
+                                    new Date(session.createdAt),
+                                    {
+                                      addSuffix: true,
+                                    },
+                                  )
                                 : format(
-                                  new Date(session.createdAt),
-                                  "MMM d, yyyy",
-                                )}
+                                    new Date(session.createdAt),
+                                    "MMM d, yyyy",
+                                  )}
                             </td>
                             <td className="px-5 py-3">
                               <span className="text-base font-black text-white group-hover:text-[#bef264] transition-colors">

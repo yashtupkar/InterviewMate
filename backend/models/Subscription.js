@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 
+const toNumber = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const subscriptionSchema = new mongoose.Schema(
   {
     user: {
@@ -15,7 +20,7 @@ const subscriptionSchema = new mongoose.Schema(
     },
     credits: {
       type: Number,
-      default: 30,
+      default: toNumber(process.env.CREDITS_FREE_PLAN, 60),
     },
     planExpiry: {
       type: Date,

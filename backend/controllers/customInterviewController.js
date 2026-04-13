@@ -2,6 +2,7 @@ const { OpenAI } = require("openai");
 const InterviewSession = require("../models/interviewSessionModel");
 const { AnalyzeFullTranscript } = require("../services/InterviewResponseAnalyzer");
 const CreditService = require("../services/creditService");
+const { SERVICE_CREDITS } = require("../config/pricingConfig");
 
 // Initialize OpenAI client for OpenRouter (LLM)
 const getOpenAIClient = () => {
@@ -44,8 +45,8 @@ const startCustomSession = async (req, res) => {
     const deduction = await CreditService.deduct(userId, "mock_interview");
     if (!deduction.success) {
       return res.status(402).json({ 
-        message: "Insufficient credits to start an interview. 10 credits required.",
-        needed: 10,
+        message: `Insufficient credits to start an interview. ${SERVICE_CREDITS.mock_interview} credits required.`,
+        needed: SERVICE_CREDITS.mock_interview,
         available: deduction.available
       });
     }

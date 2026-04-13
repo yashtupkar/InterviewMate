@@ -3,7 +3,7 @@ const ApiError = require("../utils/ApiError");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Subscription = require("../models/Subscription");
-const { TIER_LIMITS } = require("./subscriptionController");
+const { TIER_LIMITS } = require("../config/pricingConfig");
 
 exports.getAllResumes = async (req, res, next) => {
   try {

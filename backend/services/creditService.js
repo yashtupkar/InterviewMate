@@ -1,5 +1,9 @@
 const User = require("../models/User");
 const Subscription = require("../models/Subscription");
+const {
+  getServiceCost,
+  isUnlimitedTierService,
+} = require("../config/pricingConfig");
 
 /**
  * Centralized Credit Service
@@ -14,28 +18,31 @@ const CreditService = {
   deduct: async (userId, service, duration = 0) => {
     try {
       const user = await User.findById(userId).populate("subscription");
-      if (!user || !user.subscription) return { success: false, message: "No subscription found" };
+      if (!user || !user.subscription)
+        return { success: false, message: "No subscription found" };
 
       const sub = user.subscription;
 
-      // Infinite Elite gets free interviews and GDs
-      if (sub.tier === "Infinite Elite" && service !== "tools") {
-        return { success: true, message: "Infinite Elite: No deduction", credits: sub.credits };
+      // Infinite Elite gets free interviews and GD sessions only.
+      if (isUnlimitedTierService(sub.tier, service)) {
+        return {
+          success: true,
+          message: "Infinite Elite: No deduction",
+          credits: sub.credits,
+        };
       }
 
-      let amount = 0;
-      if (service === "mock_interview") {
-        amount = 10; // Flat 10 credits per interview
-      } else if (service === "gd_session") {
-        amount = 8; // Flat 8 credits per GD session
-      } else if (service === "tools") {
-        amount = 5; // Flat 5 credits for Resume/LinkedIn
-      }
+      const amount = getServiceCost(service, sub.tier);
 
       const totalAvailable = (sub.credits || 0) + (sub.topupCredits || 0);
 
       if (totalAvailable < amount) {
-        return { success: false, message: "Insufficient credits", needed: amount, available: totalAvailable };
+        return {
+          success: false,
+          message: "Insufficient credits",
+          needed: amount,
+          available: totalAvailable,
+        };
       }
 
       // Deduct from main credits first
@@ -49,11 +56,20 @@ const CreditService = {
 
       await sub.save();
 
-      return { 
-        success: true, 
-        amount, 
-        remaining: sub.credits, 
-        topupRemaining: sub.topupCredits 
+      // Centralized referral reward trigger: once user performs a paid action,
+      // mark pending referral as rewarded and credit the referrer.
+      try {
+        const { rewardReferrer } = require("../controllers/referralController");
+        await rewardReferrer(userId);
+      } catch (rewardError) {
+        console.error("Referral reward trigger error:", rewardError);
+      }
+
+      return {
+        success: true,
+        amount,
+        remaining: sub.credits,
+        topupRemaining: sub.topupCredits,
       };
     } catch (error) {
       console.error("CreditService Error:", error);
@@ -67,17 +83,15 @@ const CreditService = {
   hasBalance: async (userId, service, minMinutes = 5) => {
     const user = await User.findById(userId).populate("subscription");
     if (!user || !user.subscription) return false;
-    
-    if (user.subscription.tier === "Infinite Elite" && service !== "tools") return true;
 
-    let minAmount = 0;
-    if (service === "mock_interview") minAmount = 10; // Flat costs match deduct logic
-    else if (service === "gd_session") minAmount = 8;
-    else if (service === "tools") minAmount = 5;
+    if (isUnlimitedTierService(user.subscription.tier, service)) return true;
 
-    const totalAvailable = (user.subscription.credits || 0) + (user.subscription.topupCredits || 0);
+    const minAmount = getServiceCost(service, user.subscription.tier);
+
+    const totalAvailable =
+      (user.subscription.credits || 0) + (user.subscription.topupCredits || 0);
     return totalAvailable >= minAmount;
-  }
+  },
 };
 
 module.exports = CreditService;

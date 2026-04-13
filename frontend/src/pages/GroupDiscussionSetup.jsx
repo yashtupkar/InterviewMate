@@ -19,6 +19,7 @@ import {
   FiEdit,
 } from "react-icons/fi";
 import { AppContext } from "../context/AppContext";
+import { FEATURE_COSTS } from "../constants/pricing";
 
 const CATEGORIES = [
   { key: "general", label: "General / HR", icon: FiUsers, color: "#6366f1" },
@@ -140,14 +141,17 @@ const GroupDiscussionSetup = () => {
     setSelectedTopicIdx(null); // Always default to random when category changes for simplicity
   };
 
+  const availableCredits =
+    (subscription?.credits || 0) + (subscription?.topupCredits || 0);
+
   const handleStart = async () => {
     if (
       subscription &&
       subscription.tier !== "Infinite Elite" &&
-      (subscription.credits || 0) < 8
+      availableCredits < FEATURE_COSTS.gdSession
     ) {
       toast.error(
-        "You need at least 8 credits to start a GD session. Redirecting to billing...",
+        `You need at least ${FEATURE_COSTS.gdSession} credits to start a GD session. Redirecting to billing...`,
       );
       setTimeout(() => navigate("/billing"), 2000);
       return;
@@ -568,13 +572,13 @@ const GroupDiscussionSetup = () => {
                 <button
                   onClick={handleStart}
                   disabled={isStarting || !micReady}
-                  className={`w-full ${isCompactMobileForm ? "py-3.5 text-sm" : "py-4"} ${subscription && subscription.tier !== "Infinite Elite" && (subscription.credits || 0) <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} font-black rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50 active:scale-95`}
+                  className={`w-full ${isCompactMobileForm ? "py-3.5 text-sm" : "py-4"} ${subscription && subscription.tier !== "Infinite Elite" && availableCredits <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} font-black rounded-2xl transition-all shadow-xl shadow-[#bef264]/20 flex items-center justify-center gap-2 group disabled:opacity-50 active:scale-95`}
                 >
                   {isStarting ? (
                     <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                   ) : subscription &&
                     subscription.tier !== "Infinite Elite" &&
-                    (subscription.credits || 0) < 8 ? (
+                    availableCredits < FEATURE_COSTS.gdSession ? (
                     <>
                       Get Credits
                       <FiCreditCard className="group-hover:translate-x-1 transition-transform" />

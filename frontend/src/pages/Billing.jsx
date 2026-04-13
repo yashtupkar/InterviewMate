@@ -25,6 +25,7 @@ import toast from 'react-hot-toast';
 import useRazorpay from '../hooks/useRazorpay';
 import { generateInvoicePDF } from '../utils/InvoiceGenerator';
 import UniversalPopup from '../components/common/UniversalPopup';
+import { billingTopUps, FEATURE_COSTS } from '../constants/pricing';
 
 const Billing = () => {
     const { getToken } = useAuth();
@@ -64,15 +65,8 @@ const Billing = () => {
     // The user wants the popup on another route, so we'll redirect for EVERYTHING.
     const { isLoading: paymentLoading } = useRazorpay();
 
-    const topups = [
-        { planId: "student_test", name: "Student Test", price: "1", credits: "200", adminOnly: true },
-        { planId: "quick_boost", name: "Quick Boost", price: "29", credits: "30" },
-        { planId: "power_pack",  name: "Power Pack",  price: "49", credits: "70" },
-        { planId: "pro_master",  name: "Pro Master",  price: "99", credits: "200" },
-    ];
-
     const isExpired = subscription?.planExpiry && new Date(subscription.planExpiry) < new Date();
-    const isLowOnCredits = (subscription?.credits || 0) < 10;
+    const isLowOnCredits = (subscription?.credits || 0) < FEATURE_COSTS.mockInterview;
     const showTopUps = (subscription?.tier !== 'Free') || isExpired || isLowOnCredits;
     const userRole = subscription?.role || 'user';
 
@@ -108,7 +102,7 @@ const Billing = () => {
     };
 
     // Filter top-ups: hide adminOnly unless role is admin
-    const visibleTopups = topups.filter(t => !t.adminOnly || userRole === 'admin');
+    const visibleTopups = billingTopUps.filter(t => !t.adminOnly || userRole === 'admin');
 
     if (loading) {
         return (
@@ -152,7 +146,7 @@ const Billing = () => {
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center text-xs font-bold">
-                                        <span className="text-white uppercase tracking-wider">{Math.round(subscription?.credits || 0)} / {subscription?.limits?.credits || 200} credits used</span>
+                                        <span className="text-white uppercase tracking-wider">{Math.round(subscription?.credits || 0)} / {subscription?.limits?.credits || 260} credits used</span>
                                     </div>
                                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                                         <div 

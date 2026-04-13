@@ -45,7 +45,8 @@ const UpgradeModal = ({ isOpen, onClose, limit, tier }) => {
         </h2>
 
         <p className="text-zinc-400 text-sm font-medium mb-10 leading-relaxed pr-4">
-          Your {tier} plan allows up to {limit} {limit === 1 ? 'resume' : 'resumes'}. Upgrade to create more.
+          Your {tier} plan allows up to {limit}{" "}
+          {limit === 1 ? "resume" : "resumes"}. Upgrade to create more.
         </p>
 
         <button
@@ -107,7 +108,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
-  const [userTier, setUserTier] = useState({ tier: 'Free', limit: 1 });
+  const [userTier, setUserTier] = useState({ tier: "Free", limit: 1 });
   const { getToken, isSignedIn } = useAuth();
 
   useEffect(() => {
@@ -115,11 +116,18 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
       if (!isSignedIn) return;
       try {
         const token = await getToken();
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         const tier = res.data.tier;
-        const limit = res.data.limits?.resumeLimit || 1;
+        // Handle null (unlimited) by converting to Infinity for consistent comparison
+        const limit =
+          res.data.limits?.resumeLimit === null
+            ? Infinity
+            : res.data.limits?.resumeLimit || 1;
         setUserTier({ tier, limit });
       } catch (err) {
         console.error("Failed to fetch tier:", err);
@@ -188,7 +196,8 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                         className="bg-white text-zinc-950 px-6 py-2 rounded-xl font-black text-[10px] tracking-[0.2em] shadow-2xl border-b-4 border-zinc-200 active:border-b-0 active:translate-y-1 transition-all"
                         style={{ color: themeColor }}
                       >
-                        USE <span className="hidden md:block">THIS TEMPLATE</span>
+                        USE{" "}
+                        <span className="hidden md:block">THIS TEMPLATE</span>
                       </div>
                     </div>
                   </div>
@@ -226,9 +235,14 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
             <span className="text-[#bef264] italic">ATS Friendly</span> Resumes
           </h1>
           <p className="text-zinc-500 font-medium text-sm md:text-md mt-4">
-            Create professional, ATS-optimized resumes in minutes.
-            (
-            {resumes.length}/{userTier.limit} Used)
+            Create professional, ATS-optimized resumes in minutes. (
+            {resumes.length}/
+            {Number.isFinite(userTier.limit) ? userTier.limit : "∞"} Created)
+            {!Number.isFinite(userTier.limit) && (
+              <span className="text-lime-400 font-medium ml-1">
+                • Unlimited
+              </span>
+            )}
             <Link
               to={"/pricing"}
               className="text-lime-400 hover:underline ml-2"
@@ -283,8 +297,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
                     <span>
-                       {formatDistanceToNow(new Date(resume.updatedAt))}{" "}
-                      ago
+                      {formatDistanceToNow(new Date(resume.updatedAt))} ago
                     </span>
                     <span className="text-zinc-800">•</span>
                     <span>A4</span>
