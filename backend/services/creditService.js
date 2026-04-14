@@ -10,33 +10,46 @@ const {
  */
 const CreditService = {
   /**
-   * Deduct credits for a user based on service and duration
+   * Deduct credits for a user based on service or an explicit amount
    * @param {string} userId - Mongo ID of the user
    * @param {string} service - 'mock_interview', 'gd_session', or 'tools'
-   * @param {number} duration - Duration in minutes (for interviews/GDs)
+   * @param {number} explicitAmount - Optional: explicit amount to deduct (bypasses getServiceCost)
    */
-  deduct: async (userId, service, duration = 0) => {
+  deduct: async (userId, service, explicitAmount = null) => {
+    const mongoose = require("mongoose");
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
-      const user = await User.findById(userId).populate("subscription");
-      if (!user || !user.subscription)
+      const user = await User.findById(userId)
+        .populate("subscription")
+        .session(session);
+      if (!user || !user.subscription) {
+        await session.abortTransaction();
         return { success: false, message: "No subscription found" };
+      }
 
       const sub = user.subscription;
 
       // Infinite Elite gets free interviews and GD sessions only.
-      if (isUnlimitedTierService(sub.tier, service)) {
+      if (service && isUnlimitedTierService(sub.tier, service)) {
+        await session.abortTransaction();
         return {
           success: true,
           message: "Infinite Elite: No deduction",
-          credits: sub.credits,
+          amount: 0,
+          remaining: sub.credits,
+          topupRemaining: sub.topupCredits,
         };
       }
 
-      const amount = getServiceCost(service, sub.tier);
-
+      const amount =
+        explicitAmount !== null
+          ? explicitAmount
+          : getServiceCost(service, sub.tier);
       const totalAvailable = (sub.credits || 0) + (sub.topupCredits || 0);
 
       if (totalAvailable < amount) {
+        await session.abortTransaction();
         return {
           success: false,
           message: "Insufficient credits",
@@ -49,12 +62,13 @@ const CreditService = {
       if (sub.credits >= amount) {
         sub.credits -= amount;
       } else {
-        const remainder = amount - sub.credits;
+        const remainder = amount - (sub.credits || 0);
         sub.credits = 0;
         sub.topupCredits = (sub.topupCredits || 0) - remainder;
       }
 
-      await sub.save();
+      await sub.save({ session });
+      await session.commitTransaction();
 
       // Centralized referral reward trigger: once user performs a paid action,
       // mark pending referral as rewarded and credit the referrer.
@@ -72,8 +86,11 @@ const CreditService = {
         topupRemaining: sub.topupCredits,
       };
     } catch (error) {
+      await session.abortTransaction();
       console.error("CreditService Error:", error);
       return { success: false, message: error.message };
+    } finally {
+      session.endSession();
     }
   },
 

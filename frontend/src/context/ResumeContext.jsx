@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
 import axios from "axios";
 import { useUser } from "@clerk/clerk-react";
 import toast from "react-hot-toast";
@@ -112,8 +118,7 @@ const initialResumeState = {
   },
 };
 
-const API_BASE =
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
 export const ResumeProvider = ({ children }) => {
   const { user } = useUser();
@@ -258,13 +263,73 @@ export const ResumeProvider = ({ children }) => {
 
   const deleteResume = async (id) => {
     try {
-      const response = await axios.delete(`${API_BASE}/${id}`);
+      const response = await axios.delete(`${API_BASE}/api/resume/${id}`);
       if (response.data.success) {
         setResumes((prev) => prev.filter((r) => r._id !== id));
       }
     } catch (error) {
       console.error("Error deleting resume:", error);
       toast.error("Failed to delete resume.");
+    }
+  };
+
+  const duplicateResume = async (id, title) => {
+    if (!user?.id) return null;
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/resume/duplicate/${id}`,
+        {
+          clerkId: user.id,
+          title,
+        },
+      );
+
+      if (response.data.success) {
+        const duplicated = response.data.data;
+        setResumes((prev) => [duplicated, ...prev]);
+        return duplicated;
+      }
+
+      return null;
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        "Failed to duplicate resume. Please try again.";
+      toast.error(message);
+      return null;
+    }
+  };
+
+  const rewriteResumeContent = async ({
+    resumeId: targetResumeId,
+    mode = "section",
+    target = "summary",
+    content,
+    resumeData,
+    jobDescription,
+  }) => {
+    if (!user?.id) return null;
+    if (!targetResumeId) {
+      toast.error("Please sync your resume before using AI rewrite.");
+      return null;
+    }
+
+    try {
+      const response = await axios.post(
+        `${API_BASE}/api/resume/rewrite/${targetResumeId}`,
+        {
+          clerkId: user.id,
+          mode,
+          target,
+          content,
+          resumeData,
+          jobDescription,
+        },
+      );
+
+      return response.data;
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -452,6 +517,8 @@ export const ResumeProvider = ({ children }) => {
         createNewResume,
         saveResume,
         deleteResume,
+        duplicateResume,
+        rewriteResumeContent,
         updatePersonalInfo,
         updateProfiles,
         addProfile,

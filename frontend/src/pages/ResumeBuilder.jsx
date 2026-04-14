@@ -35,6 +35,7 @@ import FormSection from "../components/resume-builder/FormSection";
 // Placeholder Preview Pane component
 import PreviewSection from "../components/resume-builder/PreviewSection";
 import CustomizeSection from "../components/resume-builder/CustomizeSection";
+import AIToolsSection from "../components/resume-builder/AIToolsSection";
 
 import ResumeDashboard from "../components/resume-builder/ResumeDashboard";
 import { IoMdColorPalette } from "react-icons/io";
@@ -43,6 +44,7 @@ import ResumeCardPreview, {
 } from "../components/resume-builder/ResumeCardPreview";
 import { TEMPLATE_THEMES } from "../context/ResumeContext";
 import Logo from "../components/common/Logo";
+import AIUpgradePopup from "../components/common/AIUpgradePopup";
 
 const ResumeBuilder = () => {
   const { id } = useParams();
@@ -53,6 +55,8 @@ const ResumeBuilder = () => {
     isSaving,
     saveStatus,
     saveResume,
+    duplicateResume,
+    rewriteResumeContent,
     createNewResume,
     loadResume,
     resumeData,
@@ -65,7 +69,139 @@ const ResumeBuilder = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
   const [previewPageCount, setPreviewPageCount] = useState(1);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isFullRewriting, setIsFullRewriting] = useState(false);
+  const [showAIUpgrade, setShowAIUpgrade] = useState(false);
+  const [aiRewriteInsights, setAiRewriteInsights] = useState(null);
+  const [aiRewriteResult, setAiRewriteResult] = useState(null);
+  const [skillsAppliedForRewrite, setSkillsAppliedForRewrite] = useState(false);
   const resumeRef = useRef();
+
+  const createRewriteSnapshot = (data) => {
+    const source = data || {};
+    const role = source?.personalInfo?.jobTitle || "";
+    const summary =
+      (Array.isArray(source?.profiles)
+        ? source.profiles.find(
+            (item) => item && item.visible !== false && item.content,
+          )
+        : null
+      )?.content || "";
+    const experienceHighlights = Array.isArray(source?.experience)
+      ? source.experience
+          .filter((item) => item && item.visible !== false && item.description)
+          .slice(0, 2)
+          .map((item) => item.description)
+      : [];
+
+    return {
+      role,
+      summary,
+      experienceHighlights,
+    };
+  };
+
+  const SKILL_CATEGORY_KEYWORDS = {
+    "Programming Languages": [
+      "javascript",
+      "typescript",
+      "python",
+      "java",
+      "go",
+      "rust",
+      "c++",
+      "c#",
+      "c",
+    ],
+    Frontend: [
+      "react",
+      "next.js",
+      "vue",
+      "angular",
+      "tailwind",
+      "redux",
+      "html",
+      "css",
+    ],
+    Backend: [
+      "node.js",
+      "express",
+      "nestjs",
+      "django",
+      "flask",
+      "spring",
+      "graphql",
+      "rest api",
+    ],
+    Database: [
+      "mongodb",
+      "postgresql",
+      "mysql",
+      "redis",
+      "dynamodb",
+      "elasticsearch",
+    ],
+    "Cloud/DevOps": [
+      "aws",
+      "azure",
+      "gcp",
+      "docker",
+      "kubernetes",
+      "terraform",
+      "ci/cd",
+      "jenkins",
+    ],
+    Tools: ["git", "github", "gitlab", "jira", "postman", "figma", "vscode"],
+    Testing: [
+      "jest",
+      "pytest",
+      "cypress",
+      "selenium",
+      "unit testing",
+      "integration testing",
+    ],
+    Architecture: [
+      "microservices",
+      "system design",
+      "event-driven",
+      "serverless",
+      "scalability",
+    ],
+  };
+
+  const CATEGORY_ALIASES = {
+    language: "Programming Languages",
+    languages: "Programming Languages",
+    "programing language": "Programming Languages",
+    "programing languages": "Programming Languages",
+    "programming language": "Programming Languages",
+    "programming languages": "Programming Languages",
+  };
+
+  const normalizeCategory = (value = "") => {
+    const normalized = String(value).trim().toLowerCase();
+    if (CATEGORY_ALIASES[normalized]) return CATEGORY_ALIASES[normalized];
+
+    const category = Object.keys(SKILL_CATEGORY_KEYWORDS).find(
+      (item) => item.toLowerCase() === normalized,
+    );
+    return category || "Tools";
+  };
+
+  const resolveSkillCategory = (skill = "", providedCategory = "") => {
+    const fromProvided = normalizeCategory(providedCategory);
+    if (providedCategory && fromProvided !== "Tools") return fromProvided;
+
+    const lowered = String(skill || "").toLowerCase();
+    for (const [category, keywords] of Object.entries(
+      SKILL_CATEGORY_KEYWORDS,
+    )) {
+      if (keywords.some((keyword) => lowered.includes(keyword)))
+        return category;
+    }
+
+    return fromProvided;
+  };
 
   // Load resume data based on URL parameter
   React.useEffect(() => {
@@ -101,6 +237,202 @@ const ResumeBuilder = () => {
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.1, 0.5));
   const handleResetZoom = () => setZoom(0.85);
 
+  const handleDuplicateFromHeader = async () => {
+    if (isDuplicating) return;
+
+    setIsDuplicating(true);
+
+    try {
+      let sourceResumeId = id;
+
+      if (id === "new") {
+        const saved = await saveResume();
+        if (!saved?._id) {
+          toast.error("Please sync this resume before duplicating.");
+          return;
+        }
+        sourceResumeId = saved._id;
+        navigate(`/resume-builder/${saved._id}`, { replace: true });
+      }
+
+      const baseTitle =
+        typeof resumeData?.title === "string" && resumeData.title.trim()
+          ? resumeData.title.trim()
+          : "Untitled Resume";
+
+      const duplicated = await duplicateResume(
+        sourceResumeId,
+        `${baseTitle} (Copy)`,
+      );
+
+      if (duplicated?._id) {
+        toast.success("Resume duplicated successfully.");
+        navigate(`/resume-builder/${duplicated._id}`);
+      }
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
+  const handleFullRewriteFromHeader = async ({
+    withJobDescription = false,
+    jobDescription = "",
+  } = {}) => {
+    if (isFullRewriting) return;
+
+    setIsFullRewriting(true);
+    setAiRewriteResult(null);
+    setSkillsAppliedForRewrite(false);
+    const beforeSnapshot = createRewriteSnapshot(resumeData);
+
+    try {
+      let sourceResumeId = id;
+
+      if (id === "new") {
+        const saved = await saveResume();
+        if (!saved?._id) {
+          toast.error("Please sync this resume before AI full rewrite.");
+          return;
+        }
+        sourceResumeId = saved._id;
+        navigate(`/resume-builder/${saved._id}`, { replace: true });
+      }
+
+      const response = await rewriteResumeContent({
+        resumeId: sourceResumeId,
+        mode: "full",
+        target: "full_resume",
+        content: JSON.stringify(resumeData),
+        resumeData,
+        jobDescription: withJobDescription ? jobDescription : "",
+      });
+
+      const rewrittenResume = response?.data?.rewrittenResume;
+      if (rewrittenResume) {
+        setResumeData((prev) => ({ ...prev, ...rewrittenResume }));
+        const keywordSuggestions = response?.data?.keywordSuggestions || [];
+        const missingSkills = response?.data?.missingSkills || [];
+
+        setAiRewriteInsights({
+          mode: response?.data?.mode,
+          target: response?.data?.target,
+          keywordSuggestions,
+          missingSkills,
+          jdInsights: response?.data?.jdInsights || null,
+          tips: response?.data?.tips || [],
+        });
+
+        setAiRewriteResult({
+          before: beforeSnapshot,
+          after: createRewriteSnapshot({ ...resumeData, ...rewrittenResume }),
+          keywordSuggestions,
+          missingSkills,
+        });
+        toast.success("Full resume rewritten with AI.");
+        return response.data;
+      } else {
+        toast.error("AI rewrite did not return structured content.");
+      }
+    } catch (error) {
+      const status = error?.response?.status;
+      const message =
+        error?.response?.data?.message || "Failed to rewrite full resume.";
+
+      if (status === 403) {
+        setShowAIUpgrade(true);
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setIsFullRewriting(false);
+    }
+
+    return null;
+  };
+
+  const handleApplySuggestedSkills = (skills = []) => {
+    if (skillsAppliedForRewrite) return;
+
+    const normalizedSkills = (skills || [])
+      .map((entry) => {
+        if (typeof entry === "string") {
+          return { skill: entry.trim(), category: "" };
+        }
+
+        if (entry && typeof entry.skill === "string") {
+          return {
+            skill: entry.skill.trim(),
+            category:
+              typeof entry.category === "string" ? entry.category.trim() : "",
+          };
+        }
+
+        return { skill: "", category: "" };
+      })
+      .filter((entry) => entry.skill);
+
+    if (normalizedSkills.length === 0) return;
+
+    setResumeData((prev) => {
+      const currentSkills = Array.isArray(prev?.skills) ? [...prev.skills] : [];
+
+      normalizedSkills.forEach(({ skill, category }) => {
+        const resolvedCategory = resolveSkillCategory(skill, category);
+
+        const bucketIndex = currentSkills.findIndex(
+          (item) =>
+            String(item?.category || "").toLowerCase() ===
+            resolvedCategory.toLowerCase(),
+        );
+
+        if (bucketIndex >= 0) {
+          const currentList = String(
+            currentSkills[bucketIndex]?.subSkills || "",
+          )
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+          if (
+            !currentList.some(
+              (value) => value.toLowerCase() === skill.toLowerCase(),
+            )
+          ) {
+            currentList.push(skill);
+          }
+
+          currentSkills[bucketIndex] = {
+            ...currentSkills[bucketIndex],
+            subSkills: currentList.join(", "),
+            visible: true,
+          };
+
+          return;
+        }
+
+        currentSkills.push({
+          category: resolvedCategory,
+          subSkills: skill,
+          level: "Intermediate",
+          visible: true,
+        });
+      });
+
+      return {
+        ...prev,
+        skills: currentSkills,
+      };
+    });
+
+    setSkillsAppliedForRewrite(true);
+    toast.success("Suggested skills applied to categories.");
+  };
+
+  const handleDoneRewriteReview = () => {
+    setAiRewriteResult(null);
+    setAiRewriteInsights(null);
+    setSkillsAppliedForRewrite(false);
+  };
+
   if (showDashboard) {
     return (
       <div className="flex-1 max-w-6xl mx-auto flex flex-col font-sans overflow-hidden">
@@ -117,6 +449,7 @@ const ResumeBuilder = () => {
     { id: "content", label: "Content", icon: IoDocumentText },
     { id: "design", label: "Customize", icon: IoColorPalette },
     { id: "templates", label: "Templates", icon: IoLayers },
+    { id: "ai-tools", label: "AI Tools", icon: IoSparkles },
   ];
 
   return (
@@ -277,6 +610,30 @@ const ResumeBuilder = () => {
           </button>
 
           <button
+            onClick={handleDuplicateFromHeader}
+            disabled={isDuplicating}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl transition-all disabled:opacity-50 text-sm font-medium"
+            title="Duplicate Resume"
+          >
+            <IoCreate className="w-4 h-4" />
+            <span className="hidden sm:inline">
+              {isDuplicating ? "Duplicating..." : "Duplicate"}
+            </span>
+          </button>
+
+          <button
+            onClick={handleFullRewriteFromHeader}
+            disabled={isFullRewriting}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl transition-all disabled:opacity-50 text-sm font-medium"
+            title="AI Full Resume Rewrite"
+          >
+            <IoSparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">
+              {isFullRewriting ? "Rewriting..." : "AI Rewrite"}
+            </span>
+          </button>
+
+          <button
             onClick={handlePrint}
             className="hidden md:flex items-center gap-2 px-3 sm:px-5 py-2 bg-lime-400 hover:bg-lime-500 text-zinc-950 text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(190,242,100,0.2)] active:scale-95"
           >
@@ -411,6 +768,17 @@ const ResumeBuilder = () => {
             <div className="flex-1 overflow-y-auto custom-scrollbar">
               {activeTab === "content" && <FormSection />}
               {activeTab === "design" && <CustomizeSection />}
+              {activeTab === "ai-tools" && (
+                <AIToolsSection
+                  onFullRewrite={handleFullRewriteFromHeader}
+                  rewriteInsights={aiRewriteInsights}
+                  rewriteResult={aiRewriteResult}
+                  onApplySuggestedSkills={handleApplySuggestedSkills}
+                  skillsApplied={skillsAppliedForRewrite}
+                  onDoneRewrite={handleDoneRewriteReview}
+                  isRewriting={isFullRewriting}
+                />
+              )}
               {activeTab === "templates" && (
                 <div className="p-3 md:p-6">
                   <div className="mb-6">
@@ -594,6 +962,11 @@ const ResumeBuilder = () => {
           </div>
         )}
       </main>
+
+      <AIUpgradePopup
+        isOpen={showAIUpgrade}
+        onClose={() => setShowAIUpgrade(false)}
+      />
     </div>
   );
 };

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useResume } from "../../../context/ResumeContext";
 import AIUpgradePopup from "../../common/AIUpgradePopup";
+import { useAuth } from "@clerk/clerk-react";
+import axios from "axios";
+import toast from "react-hot-toast";
 import {
   Plus,
   Trash2,
@@ -13,11 +16,35 @@ import {
 } from "lucide-react";
 
 const ProfileForm = ({ onDone }) => {
-  const { resumeData, updateProfiles } = useResume();
+  const { resumeData, updateProfiles, rewriteResumeContent, resumeId } =
+    useResume();
+  const { getToken, isSignedIn } = useAuth();
   const { profiles = [] } = resumeData;
   const [editingIndex, setEditingIndex] = useState(null);
   const [editEntry, setEditEntry] = useState(null);
   const [showAIUpgrade, setShowAIUpgrade] = useState(false);
+  const [tier, setTier] = useState("Free");
+  const [isRewriting, setIsRewriting] = useState(false);
+
+  const canUseAiRewrite = tier !== "Free";
+
+  useEffect(() => {
+    const fetchTier = async () => {
+      if (!isSignedIn) return;
+      try {
+        const token = await getToken();
+        const res = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        setTier(res.data?.tier || "Free");
+      } catch (error) {
+        console.error("Failed to fetch subscription tier:", error);
+      }
+    };
+
+    fetchTier();
+  }, [getToken, isSignedIn]);
 
   useEffect(() => {
     if (profiles.length === 0 && editingIndex === null) {
@@ -67,6 +94,57 @@ const ProfileForm = ({ onDone }) => {
     updateProfiles(newProfiles);
   };
 
+  const handleAiRewrite = async () => {
+    if (!canUseAiRewrite) {
+      setShowAIUpgrade(true);
+      return;
+    }
+
+    if (!resumeId) {
+      toast.error("Please sync this resume before using AI rewrite.");
+      return;
+    }
+
+    const sourceText = editEntry?.content?.trim();
+    if (!sourceText) {
+      toast.error("Add some summary text first.");
+      return;
+    }
+
+    setIsRewriting(true);
+    try {
+      const response = await rewriteResumeContent({
+        resumeId,
+        mode: "section",
+        target: "profiles",
+        content: sourceText,
+      });
+
+      const rewritten = response?.data?.rewritten;
+      if (rewritten) {
+        setEditEntry((prev) => ({
+          ...prev,
+          content: rewritten,
+        }));
+        toast.success("Summary rewritten successfully.");
+      } else {
+        toast.error("No rewritten content returned.");
+      }
+    } catch (error) {
+      const status = error?.response?.status;
+      const message =
+        error?.response?.data?.message || "Failed to rewrite summary.";
+
+      if (status === 403) {
+        setShowAIUpgrade(true);
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setIsRewriting(false);
+    }
+  };
+
   if (editingIndex !== null) {
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -107,11 +185,12 @@ const ProfileForm = ({ onDone }) => {
             <div className="flex items-center justify-between mb-2">
               <button
                 type="button"
-                onClick={() => setShowAIUpgrade(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-lime-400 rounded-lg border border-zinc-800 text-[10px] font-black uppercase tracking-widest transition-all group"
+                onClick={handleAiRewrite}
+                disabled={isRewriting}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 disabled:cursor-not-allowed text-lime-400 rounded-lg border border-zinc-800 text-[10px] font-black uppercase tracking-widest transition-all group"
               >
                 <Sparkles className="w-3 h-3 group-hover:scale-110 transition-transform" />
-                Rewrite with AI
+                {isRewriting ? "Rewriting..." : "Rewrite with AI"}
               </button>
             </div>
             <textarea

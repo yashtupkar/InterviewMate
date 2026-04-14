@@ -157,6 +157,15 @@ const toNumber = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const parseTierList = (value, fallback) => {
+  if (!value || typeof value !== "string") return fallback;
+  const parsed = value
+    .split(",")
+    .map((tier) => tier.trim())
+    .filter(Boolean);
+  return parsed.length > 0 ? parsed : fallback;
+};
+
 const SERVICE_CREDITS = {
   mock_interview: toNumber(process.env.CREDITS_MOCK_INTERVIEW, 20),
   gd_session: toNumber(process.env.CREDITS_GD_SESSION, 30),
@@ -191,6 +200,23 @@ const TIER_LIMITS = {
     resumeLimit: Infinity,
     codingMonthlyExecution: Infinity,
   },
+};
+
+const RESUME_AI_REWRITE_CONFIG = {
+  enabled: process.env.RESUME_AI_REWRITE_ENABLED !== "false",
+  sectionRewriteTiers: parseTierList(
+    process.env.RESUME_AI_SECTION_REWRITE_TIERS,
+    ["Student Flash", "Placement Pro", "Infinite Elite"],
+  ),
+  fullRewriteTiers: parseTierList(process.env.RESUME_AI_FULL_REWRITE_TIERS, [
+    "Placement Pro",
+    "Infinite Elite",
+  ]),
+  sectionRewriteCost: toNumber(
+    process.env.CREDITS_RESUME_AI_SECTION_REWRITE,
+    6,
+  ),
+  fullRewriteCost: toNumber(process.env.CREDITS_RESUME_AI_FULL_REWRITE, 10),
 };
 
 const PLAN_CONFIG = {
@@ -334,6 +360,7 @@ module.exports = {
   PLAN_CONFIG,
   SERVICE_CREDITS,
   TIER_LIMITS,
+  RESUME_AI_REWRITE_CONFIG,
   getCycleKey,
   isUnlimitedTierService,
   getServiceCost,

@@ -102,14 +102,114 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
+const DuplicateResumeModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  value,
+  onChange,
+  isSubmitting,
+}) => {
+  return (
+    <UniversalPopup
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="max-w-md"
+      className="!bg-zinc-900 !border-zinc-800 !rounded-[2rem] shadow-2xl relative"
+      showClose={false}
+    >
+      <div className="flex flex-col items-start">
+        <h2 className="text-2xl font-black text-white mb-4 tracking-tight leading-tight">
+          Duplicate Resume
+        </h2>
+
+        <p className="text-zinc-400 text-sm font-medium mb-5 leading-relaxed pr-4">
+          Create a copy of this resume and start editing the new version.
+        </p>
+
+        <div className="w-full mb-6">
+          <label className="block text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-2">
+            New Resume Title
+          </label>
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            maxLength={120}
+            placeholder="Resume copy title"
+            className="w-full bg-zinc-800 border border-zinc-700 text-white rounded-xl px-4 py-3 text-sm outline-none focus:border-lime-400"
+          />
+        </div>
+
+        <div className="flex items-center gap-3 w-full">
+          <button
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            className="flex-1 bg-lime-400 hover:bg-lime-500 disabled:opacity-60 disabled:cursor-not-allowed text-zinc-950 py-3 rounded-xl font-black text-sm transition-all"
+          >
+            {isSubmitting ? "Duplicating..." : "Duplicate"}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-3 rounded-xl font-black text-sm transition-all disabled:opacity-60"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </UniversalPopup>
+  );
+};
+
 const ResumeDashboard = ({ onNew, onEdit }) => {
-  const { resumes, isLoading, deleteResume } = useResume();
+  const { resumes, isLoading, deleteResume, duplicateResume } = useResume();
   const [view, setView] = useState("dashboard"); // 'dashboard' or 'templates'
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [duplicatingResume, setDuplicatingResume] = useState(null);
+  const [duplicateTitle, setDuplicateTitle] = useState("");
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [userTier, setUserTier] = useState({ tier: "Free", limit: 1 });
   const { getToken, isSignedIn } = useAuth();
+
+  const openDuplicateModal = (resume) => {
+    const sourceTitle =
+      typeof resume?.title === "string" && resume.title.trim()
+        ? resume.title.trim()
+        : "Untitled Resume";
+    setDuplicatingResume(resume);
+    setDuplicateTitle(`${sourceTitle} (Copy)`);
+    setShowDuplicateModal(true);
+  };
+
+  const closeDuplicateModal = () => {
+    setShowDuplicateModal(false);
+    setDuplicatingResume(null);
+    setDuplicateTitle("");
+    setIsDuplicating(false);
+  };
+
+  const handleDuplicate = async () => {
+    if (!duplicatingResume?._id) return;
+
+    if (!duplicateTitle.trim()) {
+      return;
+    }
+
+    setIsDuplicating(true);
+    const duplicated = await duplicateResume(
+      duplicatingResume._id,
+      duplicateTitle.trim(),
+    );
+    setIsDuplicating(false);
+
+    if (duplicated?._id) {
+      closeDuplicateModal();
+      onEdit(duplicated._id);
+    }
+  };
 
   useEffect(() => {
     const fetchTier = async () => {
@@ -292,7 +392,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
 
               <div className="flex items-start justify-between px-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-black text-white truncate text-sm sm:text-lg leading-tight group-hover:text-lime-400 transition-colors uppercase tracking-tight capitalize">
+                  <h3 className="font-black text-white truncate text-sm sm:text-lg leading-tight group-hover:text-lime-400 transition-colors capitalize tracking-tight">
                     {resume.title || "Untitled"}
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
@@ -318,6 +418,13 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                     <button className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white rounded-lg transition-all">
                       <Download className="w-3.5 h-3.5 text-lime-400" />{" "}
                       Download PDF
+                    </button>
+                    <button
+                      onClick={() => openDuplicateModal(resume)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white rounded-lg transition-all"
+                    >
+                      <IoCreate className="w-3.5 h-3.5 text-lime-400" />
+                      Duplicate
                     </button>
                     <div className="h-px bg-zinc-800 my-1.5 mx-1"></div>
                     <button
@@ -357,6 +464,15 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
             setDeletingId(null);
           }
         }}
+      />
+
+      <DuplicateResumeModal
+        isOpen={showDuplicateModal}
+        onClose={closeDuplicateModal}
+        onConfirm={handleDuplicate}
+        value={duplicateTitle}
+        onChange={setDuplicateTitle}
+        isSubmitting={isDuplicating}
       />
     </div>
   );

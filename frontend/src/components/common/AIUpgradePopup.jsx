@@ -27,14 +27,14 @@ const AIUpgradePopup = ({ isOpen, onClose }) => {
 
         <p className="text-zinc-400 text-base font-medium mb-10 leading-relaxed text-left">
           Get help with writing suggestions, rewrites, and grammar corrections.
-          This feature is available with a Pro subscription.
+          This feature is available on paid plans.
         </p>
 
         <button
           className="bg-lime-400 hover:bg-lime-500 text-zinc-950 px-8 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-[0_10px_30px_rgba(190,242,100,0.1)]"
           onClick={() => (window.location.href = "/pricing")}
         >
-          Upgrade to Pro
+          Upgrade Plan
           <span className="text-lg">🚀</span>
         </button>
       </div>

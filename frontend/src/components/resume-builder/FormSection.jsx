@@ -280,12 +280,12 @@ const FormSection = () => {
             AI Writing Assistant
           </h4>
           <p className="text-zinc-400 text-xs leading-relaxed mb-4 relative z-10">
-            Need help with your bullet points? Our AI can help you write
-            professional descriptions.
+            Need help polishing your content? AI rewrite is now available in the
+            Summary editor for paid plans.
           </p>
-          <button className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-black tracking-widest uppercase rounded-xl border border-zinc-700 transition-all relative z-10">
-            Coming Soon
-          </button>
+          <div className="w-full py-2.5 bg-zinc-800/70 text-zinc-300 text-xs font-black tracking-widest uppercase rounded-xl border border-zinc-700 text-center relative z-10">
+            Open Summary to Use
+          </div>
         </div>
       </div>
     </div>
