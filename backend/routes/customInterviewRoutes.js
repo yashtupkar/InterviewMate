@@ -59,4 +59,18 @@ router.post(
   customInterviewController.parseResumePdf,
 );
 
+// 5. Interview Presets CRUD
+router.get("/presets", userAuth, customInterviewController.listPresets);
+router.post("/presets", userAuth, customInterviewController.createPreset);
+router.put(
+  "/presets/:presetId",
+  userAuth,
+  customInterviewController.updatePreset,
+);
+router.delete(
+  "/presets/:presetId",
+  userAuth,
+  customInterviewController.deletePreset,
+);
+
 module.exports = router;

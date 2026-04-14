@@ -7,6 +7,7 @@ import { useInterview } from "../context/InterviewContext";
 import { AppContext } from "../context/AppContext";
 import { interviewAgents } from "../constants/agents";
 import usePollyTTS from "./usePollyTTS";
+import { analyzeCodeSubmission } from "../utils/codeSubmissionUtils";
 
 export const useCustomInterview = () => {
   const {
@@ -51,6 +52,7 @@ export const useCustomInterview = () => {
   const [connectionStatus, setConnectionStatus] = useState("Initializing...");
   const [availableVoices, setAvailableVoices] = useState([]);
   const [isUserFocus, setIsUserFocus] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const userName = user?.firstName || "Candidate";
   const searchParams = new URLSearchParams(location.search);
@@ -830,6 +832,7 @@ export const useCustomInterview = () => {
   }, [handleAiChat, handleUserSpeech, updateUserTranscript, setCallStatus]);
 
   const handleEndCall = useCallback(() => {
+    setShowEndConfirm(false);
     hasCallEndedRef.current = true;
     setHasCallEnded(true);
     setCallStatus("ended");
@@ -871,6 +874,20 @@ export const useCustomInterview = () => {
     interviewDuration,
   ]);
 
+  const requestEndSession = useCallback(() => {
+    if (hasCallEndedRef.current || isProcessing) return;
+    setShowEndConfirm(true);
+  }, [isProcessing]);
+
+  const cancelEndSession = useCallback(() => {
+    setShowEndConfirm(false);
+  }, []);
+
+  const confirmEndSession = useCallback(() => {
+    setShowEndConfirm(false);
+    handleEndCall();
+  }, [handleEndCall]);
+
   const handleSaveAndExit = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (recognitionRef.current) {
@@ -905,7 +922,7 @@ export const useCustomInterview = () => {
         toast.error("An error occurred while saving, but exiting anyway.");
       } finally {
         resetInterview();
-        navigate("/dashboard/reports");
+        navigate("/dashboard/reports", { replace: true });
       }
     })();
   }, [
@@ -1171,7 +1188,18 @@ export const useCustomInterview = () => {
     setIsMuted(false);
     isAgentSpeakingRef.current = false;
     setIsAgentSpeaking(false);
-    const submitMsg = `I've submitted my solution in ${language}:\n\n${code}`;
+    // Analyze the code submission to detect if it's empty or just default template
+    const codeAnalysis = analyzeCodeSubmission(code, language);
+
+    let submitMsg;
+    if (codeAnalysis.isEmpty || codeAnalysis.isDefault) {
+      // For empty/default submissions, inform the AI agent about this
+      submitMsg = `I've submitted my solution in ${language}. However, the submission appears to be only the empty template without significant implementation.`;
+    } else {
+      // For valid code submissions
+      submitMsg = `I've submitted my solution in ${language}:\n\n${code}`;
+    }
+
     const newMessage = {
       id: Date.now(),
       role: "user",
@@ -1202,6 +1230,7 @@ export const useCustomInterview = () => {
       isProcessing,
       connectionStatus,
       isUserFocus,
+      showEndConfirm,
       isPreview,
       sessionId,
       userName,
@@ -1225,6 +1254,9 @@ export const useCustomInterview = () => {
       resetInterview,
       formatDuration,
       handleSaveAndExit,
+      requestEndSession,
+      cancelEndSession,
+      confirmEndSession,
     },
   };
 };

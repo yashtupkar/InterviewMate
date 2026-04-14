@@ -17,9 +17,17 @@ const startInterview = async (req, res) => {
     }
 
     // Check balance (min 5 mins = 2.5 credits)
-    const hasBalance = await CreditService.hasBalance(userId, "mock_interview", 5);
+    const hasBalance = await CreditService.hasBalance(
+      userId,
+      "mock_interview",
+      5,
+    );
     if (!hasBalance) {
-      return res.status(403).json({ message: "Insufficient credits to start an interview. Please top up." });
+      return res
+        .status(403)
+        .json({
+          message: "Insufficient credits to start an interview. Please top up.",
+        });
     }
 
     // Create a new session
@@ -73,6 +81,14 @@ const startInterview = async (req, res) => {
       - For DSA/Backend, prioritize javascript, python or cpp.
       - timeLimit is in seconds (300 = 5 minutes).
       - After a coding question, wait for the user to submit or for the timer to run out.
+      
+      HANDLING EMPTY/DEFAULT CODE SUBMISSIONS:
+      - If the candidate submits code that is empty, contains only the default template, or shows no actual solution implementation, DO NOT ask them to provide code again.
+      - Instead, acknowledge the submission gracefully with one of these responses:
+        * "I see you've submitted the template code. That's okay - let's move forward. Based on this coding question, it seems [observation about the problem/language used]."
+        * "I understand. Let me move on to the next question so we can explore other areas."
+      - CRITICAL: Immediately proceed to ask the next technical or behavioral question. Do NOT loop back to request code.
+      - This prevents frustrating the candidate and keeps the interview flowing naturally.
       `;
     } else if (interviewType === "hr") {
       typeSpecificInstructions = `
@@ -330,10 +346,10 @@ const reportVapiFailure = async (req, res) => {
 
     await VapiKeyManager.reportExhaustion(publicKey);
     const nextKey = await VapiKeyManager.getActiveKey();
-    
-    res.status(200).json({ 
-      message: "Key reported and rotated", 
-      nextKey 
+
+    res.status(200).json({
+      message: "Key reported and rotated",
+      nextKey,
     });
   } catch (error) {
     console.error("Error rotating key:", error);

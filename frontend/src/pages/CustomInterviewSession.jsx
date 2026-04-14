@@ -11,6 +11,8 @@ import InterviewerSection from "../components/interview/InterviewerSection";
 import ControlBar from "../components/interview/ControlBar";
 import SessionOverviewCards from "../components/interview/SessionOverviewCards";
 import TranscriptView from "../components/interview/TranscriptView";
+import CustomInterviewConfirmEndModal from "../components/interview/CustomInterviewConfirmEndModal";
+import CustomInterviewEndedModal from "../components/interview/CustomInterviewEndedModal";
 
 const CustomInterviewSession = () => {
   const { state, refs, actions } = useCustomInterview();
@@ -37,6 +39,7 @@ const CustomInterviewSession = () => {
     transcript,
     callStatus,
     user,
+    showEndConfirm,
   } = state;
 
   const { localVideoRef, agentVolumeCircleRef } = refs;
@@ -44,13 +47,15 @@ const CustomInterviewSession = () => {
     toggleMute,
     toggleVideo,
     toggleVideoFocus,
-    handleEndCall,
     handleGenerateReport,
     handleAttemptChallenge,
     handleSkipChallenge,
     handleCodingSubmit,
     formatDuration,
     handleSaveAndExit,
+    requestEndSession,
+    cancelEndSession,
+    confirmEndSession,
   } = actions;
 
   useEffect(() => {
@@ -88,7 +93,7 @@ const CustomInterviewSession = () => {
     hasInterviewEnded: hasCallEnded,
     isPreview,
     enableInPreview: true,
-    resultPath: `/interview/result/${sessionId}`,
+    resultPath: "/dashboard/reports",
   });
 
   return (
@@ -118,6 +123,19 @@ const CustomInterviewSession = () => {
         onCancel={reloadGuard.cancelReload}
       />
 
+      <CustomInterviewConfirmEndModal
+        isOpen={showEndConfirm}
+        onConfirm={confirmEndSession}
+        onCancel={cancelEndSession}
+      />
+
+      <CustomInterviewEndedModal
+        isOpen={hasCallEnded && !isProcessing}
+        onGenerateReport={() => handleGenerateReport()}
+        onExit={handleSaveAndExit}
+        isProcessing={isProcessing}
+      />
+
       <div className="h-full flex flex-col min-h-screen relative z-10">
         <InterviewHeader
           displayInterviewData={displayInterviewData}
@@ -136,7 +154,6 @@ const CustomInterviewSession = () => {
               <InterviewerSection
                 activeCodingTask={activeCodingTask}
                 hasCallEnded={hasCallEnded}
-                isProcessing={isProcessing}
                 isAgentSpeaking={isAgentSpeaking}
                 isAiThinking={isAiThinking}
                 isUserFocus={isUserFocus}
@@ -150,8 +167,6 @@ const CustomInterviewSession = () => {
                 localVideoRef={localVideoRef}
                 agentVolumeCircleRef={agentVolumeCircleRef}
                 toggleVideoFocus={toggleVideoFocus}
-                handleGenerateReport={handleGenerateReport}
-                handleExitSession={handleSaveAndExit}
               />
             </div>
 
@@ -165,7 +180,7 @@ const CustomInterviewSession = () => {
                 isVideoOn={isVideoOn}
                 toggleMute={toggleMute}
                 toggleVideo={toggleVideo}
-                handleEndCall={handleEndCall}
+                handleEndCall={requestEndSession}
               />
             </div>
 

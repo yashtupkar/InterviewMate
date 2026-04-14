@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FiMessageSquare, FiInfo, FiRadio, FiUsers } from "react-icons/fi";
 import CodingTaskAlert from "./CodingTaskAlert";
 
@@ -16,6 +16,90 @@ const TranscriptView = ({
   handleSkipChallenge,
   className = "",
 }) => {
+  const [typedAgentText, setTypedAgentText] = useState({});
+  const completedAgentMessageIdsRef = useRef(new Set());
+  const typingTimerRef = useRef(null);
+  const isInitializedRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) {
+        clearInterval(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isInitializedRef.current) {
+      const existingAgentText = {};
+
+      transcript.forEach((msg) => {
+        if (msg?.isAgent && msg.id != null) {
+          completedAgentMessageIdsRef.current.add(msg.id);
+          existingAgentText[msg.id] = msg.text;
+        }
+      });
+
+      if (Object.keys(existingAgentText).length > 0) {
+        setTypedAgentText(existingAgentText);
+      }
+
+      isInitializedRef.current = true;
+      return;
+    }
+
+    const latestAgentMessage = [...transcript]
+      .reverse()
+      .find((msg) => msg?.isAgent && msg.id != null);
+
+    if (!latestAgentMessage) return;
+    if (completedAgentMessageIdsRef.current.has(latestAgentMessage.id)) return;
+
+    const fullText = latestAgentMessage.text ?? "";
+    const totalChars = fullText.length;
+
+    if (totalChars === 0) {
+      completedAgentMessageIdsRef.current.add(latestAgentMessage.id);
+      setTypedAgentText((prev) => ({ ...prev, [latestAgentMessage.id]: "" }));
+      return;
+    }
+
+    if (typingTimerRef.current) {
+      clearInterval(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+
+    const totalDurationMs = Math.min(12000, Math.max(2200, totalChars * 55));
+    const charDelayMs = Math.max(28, Math.floor(totalDurationMs / totalChars));
+
+    let currentIndex = 1;
+    setTypedAgentText((prev) => ({
+      ...prev,
+      [latestAgentMessage.id]: fullText.slice(0, 1),
+    }));
+
+    typingTimerRef.current = setInterval(() => {
+      currentIndex += 1;
+
+      if (currentIndex >= totalChars) {
+        setTypedAgentText((prev) => ({
+          ...prev,
+          [latestAgentMessage.id]: fullText,
+        }));
+        completedAgentMessageIdsRef.current.add(latestAgentMessage.id);
+        clearInterval(typingTimerRef.current);
+        typingTimerRef.current = null;
+        return;
+      }
+
+      setTypedAgentText((prev) => ({
+        ...prev,
+        [latestAgentMessage.id]: fullText.slice(0, currentIndex),
+      }));
+    }, charDelayMs);
+  }, [transcript]);
+
   const userAvatar =
     user?.imageUrl || user?.profileImageUrl || user?.avatarUrl || "";
   const userInitial =
@@ -118,7 +202,15 @@ const TranscriptView = ({
                     : "bg-gradient-to-br from-primary to-[#a3e14d] text-black font-semibold rounded-tr-none shadow-primary/10"
                 }`}
               >
-                {msg.text}
+                {msg.isAgent && msg.id != null
+                  ? (typedAgentText[msg.id] ?? msg.text)
+                  : msg.text}
+                {msg.isAgent &&
+                  msg.id != null &&
+                  typedAgentText[msg.id] != null &&
+                  typedAgentText[msg.id] !== msg.text && (
+                    <span className="ml-1 inline-block h-3 w-[2px] animate-pulse rounded-full bg-primary align-middle" />
+                  )}
               </div>
             </div>
           ))

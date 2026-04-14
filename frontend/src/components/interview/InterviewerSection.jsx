@@ -1,10 +1,9 @@
 import React from "react";
-import { FiCheckCircle, FiMic, FiUser, FiVideo } from "react-icons/fi";
+import { FiUser, FiVideo } from "react-icons/fi";
 
 const InterviewerSection = ({
   activeCodingTask,
   hasCallEnded,
-  isProcessing,
   isAgentSpeaking,
   isAiThinking,
   isUserFocus,
@@ -18,8 +17,6 @@ const InterviewerSection = ({
   localVideoRef,
   agentVolumeCircleRef,
   toggleVideoFocus,
-  handleGenerateReport,
-  handleExitSession,
 }) => {
   const isConnecting =
     connectionStatus !== "Connected" ||
@@ -37,34 +34,6 @@ const InterviewerSection = ({
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
         {!activeCodingTask && !hasCallEnded && (
           <div className="absolute inset-0 bg-primary/5 blur-[100px] animate-pulse-slow pointer-events-none" />
-        )}
-
-        {hasCallEnded && !isProcessing && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-40">
-            <div className="text-center w-full max-w-sm px-6">
-              <FiCheckCircle className="w-10 h-10 text-primary mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2 tracking-tight">
-                Interview Finished!
-              </h2>
-              <p className="text-zinc-500 text-xs leading-relaxed mb-6 font-medium">
-                You've completed the interview session. Ready for analysis?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => handleGenerateReport()}
-                  className="flex-1 bg-primary hover:bg-[#a3e14d] text-black font-black text-xs py-3 rounded-2xl transition-all active:scale-[0.98] shadow-xl shadow-primary/20"
-                >
-                  Generate Detailed Report
-                </button>
-                <button
-                  onClick={handleExitSession}
-                  className="flex-1 bg-zinc-950/80 hover:bg-zinc-900 text-white font-bold text-xs py-3 rounded-2xl border border-white/10 transition-all active:scale-[0.98]"
-                >
-                  Exit
-                </button>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Interviewer View / Speaker Indicator */}

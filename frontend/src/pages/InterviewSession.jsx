@@ -30,6 +30,8 @@ import CodingSpace from "../components/CodingSpace";
 import ReloadSessionPrompt from "../components/interview/ReloadSessionPrompt";
 import useInterviewReloadProtection from "../hooks/useInterviewReloadProtection";
 
+import { analyzeCodeSubmission } from "../utils/codeSubmissionUtils";
+
 const vapiSpeechConfig = {
   responseDelaySeconds: 1.5,
   startSpeakingPlan: {
@@ -312,9 +314,21 @@ const InterviewSession = () => {
   // ── Submit handler: notify Vapi, unmute, close CodingSpace
   const handleCodingSubmit = (submission) => {
     const { code, language, isAutoSubmit } = submission;
-    const summaryMsg = isAutoSubmit
-      ? `Time's up! I've submitted my solution for the coding question. Language: ${language}. Here is my code:\n\n${code}`
-      : `I've finished my coding solution. Language: ${language}. Here is my code:\n\n${code}`;
+    // Analyze the code submission to detect if it's empty or just default template
+    const codeAnalysis = analyzeCodeSubmission(code, language);
+
+    let summaryMsg;
+    if (codeAnalysis.isEmpty || codeAnalysis.isDefault) {
+      // For empty/default submissions, inform the AI agent about this
+      summaryMsg = isAutoSubmit
+        ? `Time's up! I submitted the coding question. Language: ${language}. I submitted only the empty template without implementation.`
+        : `I've finished with the coding question. Language: ${language}. I submitted the code, but it appears to be mostly the empty template without significant implementation.`;
+    } else {
+      // For valid code submissions
+      summaryMsg = isAutoSubmit
+        ? `Time's up! I've submitted my solution for the coding question. Language: ${language}. Here is my code:\n\n${code}`
+        : `I've finished my coding solution. Language: ${language}. Here is my code:\n\n${code}`;
+    }
 
     try {
       if (vapi.current) {
@@ -337,11 +351,17 @@ const InterviewSession = () => {
     }
 
     setActiveCodingTask(null);
-    toast.success(
-      isAutoSubmit
-        ? "Time up! Code submitted. Interview continues…"
-        : "Code submitted! Interview continues…",
-    );
+    // Show different toast message based on code quality
+    const toastMsg =
+      codeAnalysis.isEmpty || codeAnalysis.isDefault
+        ? isAutoSubmit
+          ? "Time up! Submission recorded. Moving to next question…"
+          : "Submission recorded. Let's continue with the interview…"
+        : isAutoSubmit
+          ? "Time up! Code submitted. Interview continues…"
+          : "Code submitted! Interview continues…";
+
+    toast.success(toastMsg);
   };
 
   // Helper to extract task details from unstructured text

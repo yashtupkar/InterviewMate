@@ -15,6 +15,9 @@ import {
   FiChevronRight,
   FiZap,
   FiArrowRight,
+  FiEdit2,
+  FiSave,
+  FiPlay,
   FiCreditCard,
   FiVolume2,
   FiUpload,
@@ -26,6 +29,7 @@ import { useInterview } from "../context/InterviewContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import usePollyTTS from "../hooks/usePollyTTS";
 import { FEATURE_COSTS } from "../constants/pricing";
+import UniversalPopup from "../components/common/UniversalPopup";
 
 import { interviewAgents } from "../constants/agents";
 
@@ -50,7 +54,6 @@ const presetSkills = [
   "Python",
   "Java",
   "Html/CSS",
-  "Python",
   "C++",
   "DSA",
 ];
@@ -83,6 +86,12 @@ const CreateInterview = () => {
   const [showAllAgents, setShowAllAgents] = useState(false);
   const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] =
     useState(false);
+  const [presets, setPresets] = useState([]);
+  const [selectedPresetId, setSelectedPresetId] = useState("");
+  const [presetName, setPresetName] = useState("");
+  const [isPresetLoading, setIsPresetLoading] = useState(false);
+  const [isPresetSaving, setIsPresetSaving] = useState(false);
+  const [showSavePresetModal, setShowSavePresetModal] = useState(false);
   const [mobileStage, setMobileStage] = useState(1);
   const [isSmallScreen, setIsSmallScreen] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false,
@@ -110,6 +119,7 @@ const CreateInterview = () => {
   const localVideoRef = useRef(null);
   const experienceDropdownRef = useRef(null);
   const jobTitleSliderRef = useRef(null);
+  const presetSliderRef = useRef(null);
   const navigate = useNavigate();
 
   const [subscription, setSubscription] = useState(null);
@@ -131,6 +141,28 @@ const CreateInterview = () => {
 
   useEffect(() => {
     resetInterview();
+
+    const fetchPresets = async () => {
+      try {
+        setIsPresetLoading(true);
+        const token = await getToken();
+        if (!token) return;
+
+        const response = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/presets`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        setPresets(response.data?.presets || []);
+      } catch (err) {
+        console.error("Error fetching interview presets:", err);
+      } finally {
+        setIsPresetLoading(false);
+      }
+    };
+
     const fetchSubscription = async () => {
       try {
         const token = await getToken();
@@ -147,6 +179,8 @@ const CreateInterview = () => {
         console.error("Error fetching subscription:", err);
       }
     };
+
+    fetchPresets();
     fetchSubscription();
   }, [getToken]);
 
@@ -261,7 +295,238 @@ const CreateInterview = () => {
     addSkill(value);
   };
 
-  const startInterview = async () => {
+  const buildPresetPayload = () => ({
+    name: presetName.trim(),
+    interviewMode,
+    role: interviewData?.role || "",
+    level: interviewData?.level || "Junior",
+    interviewType: interviewData?.interviewType || "technical",
+    inputType,
+    skillsSourceType,
+    skills,
+    jobDescription,
+    resumeContent,
+    resumeFileName,
+    duration,
+    agentName: interviewData?.agentName || "",
+    agentVoiceProvider: interviewData?.agentVoiceProvider || "",
+    agentVoiceId: interviewData?.agentVoiceId || "",
+  });
+
+  const applyPresetToForm = (preset) => {
+    if (!preset) return;
+
+    setInterviewMode(preset.interviewMode || "roleBased");
+    setInputType(preset.inputType || "both");
+    setSkillsSourceType(preset.skillsSourceType || "both");
+    setSkills(Array.isArray(preset.skills) ? preset.skills : []);
+    setSkillInput("");
+    setJobDescription(preset.jobDescription || "");
+    setResumeContent(preset.resumeContent || "");
+    setResumeFileName(preset.resumeFileName || "");
+    setDuration(preset.duration || 10);
+
+    setInterviewData((prev) => ({
+      ...prev,
+      role: preset.role || "",
+      level: preset.level || "Junior",
+      interviewType: preset.interviewType || "technical",
+      agentName: preset.agentName || "",
+      agentVoiceProvider: preset.agentVoiceProvider || "",
+      agentVoiceId: preset.agentVoiceId || "",
+    }));
+  };
+
+  const handleSelectPreset = (presetId) => {
+    if (selectedPresetId === presetId) {
+      setSelectedPresetId("");
+      setPresetName("");
+      setInterviewMode("roleBased");
+      setInputType("both");
+      setSkillsSourceType("both");
+      setSkills([]);
+      setSkillInput("");
+      setJobDescription("");
+      setResumeContent("");
+      setResumeFileName("");
+      setDuration(10);
+      setInterviewData((prev) => ({
+        ...prev,
+        role: "",
+        level: "Junior",
+        interviewType: "technical",
+        agentName: "",
+        agentVoiceProvider: "",
+        agentVoiceId: "",
+      }));
+      toast.success("Preset removed from active selection.");
+      return;
+    }
+
+    setSelectedPresetId(presetId);
+
+    const selectedPreset = presets.find((preset) => preset._id === presetId);
+    if (!selectedPreset) {
+      setPresetName("");
+      return;
+    }
+
+    setPresetName(selectedPreset.name || "");
+    applyPresetToForm(selectedPreset);
+    toast.success("Preset applied.");
+  };
+
+  const savePreset = async ({ isUpdate = false, customName = "" } = {}) => {
+    const resolvedName = (customName || presetName || "").trim();
+
+    if (!resolvedName) {
+      toast.error("Please enter a preset name.");
+      return false;
+    }
+
+    if (isUpdate && !selectedPresetId) {
+      toast.error("Please select a preset to update.");
+      return false;
+    }
+
+    try {
+      setIsPresetSaving(true);
+      const token = await getToken();
+      if (!token) return false;
+
+      const payload = {
+        ...buildPresetPayload(),
+        name: resolvedName,
+      };
+      let response;
+      let nextSelectedId = selectedPresetId;
+
+      if (isUpdate) {
+        response = await axios.put(
+          `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/presets/${selectedPresetId}`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        const updatedPreset = response.data?.preset;
+        nextSelectedId = updatedPreset._id;
+        setPresets((prev) =>
+          prev.map((item) =>
+            item._id === updatedPreset._id ? updatedPreset : item,
+          ),
+        );
+        toast.success("Preset updated.");
+      } else {
+        response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/presets`,
+          payload,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        const createdPreset = response.data?.preset;
+        setPresets((prev) => [createdPreset, ...prev]);
+        setSelectedPresetId(createdPreset._id);
+        nextSelectedId = createdPreset._id;
+        toast.success("Preset saved.");
+      }
+
+      setPresetName(resolvedName);
+
+      return nextSelectedId;
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Unable to save interview preset.",
+      );
+      return false;
+    } finally {
+      setIsPresetSaving(false);
+    }
+  };
+
+  const deleteSelectedPreset = async () => {
+    if (!selectedPresetId) {
+      toast.error("Select a preset to delete.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Delete this preset? This action cannot be undone.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsPresetSaving(true);
+      const token = await getToken();
+      if (!token) return;
+
+      await axios.delete(
+        `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/presets/${selectedPresetId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      setPresets((prev) =>
+        prev.filter((item) => item._id !== selectedPresetId),
+      );
+      setSelectedPresetId("");
+      setPresetName("");
+      toast.success("Preset deleted.");
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Unable to delete interview preset.",
+      );
+    } finally {
+      setIsPresetSaving(false);
+    }
+  };
+
+  const openSavePresetModal = () => {
+    setPresetName(
+      interviewData?.role?.trim() ? `${interviewData.role} preset` : "",
+    );
+    setShowSavePresetModal(true);
+  };
+
+  const handleSavePresetAndContinue = async () => {
+    const saved = await savePreset({
+      isUpdate: false,
+      customName: presetName,
+    });
+    if (!saved) return;
+
+    setShowSavePresetModal(false);
+    toast.success("Preset saved. You can now start the session.");
+  };
+
+  const handlePrimaryPresetAction = async () => {
+    if (selectedPresetId) {
+      await savePreset({ isUpdate: true });
+      return;
+    }
+
+    openSavePresetModal();
+  };
+
+  const visiblePresets = presets.filter(
+    (preset) => (preset?.interviewMode || "roleBased") === interviewMode,
+  );
+  const canUpdateSelectedPreset = visiblePresets.some(
+    (preset) => preset._id === selectedPresetId,
+  );
+
+  useEffect(() => {
+    if (selectedPresetId && !canUpdateSelectedPreset) {
+      setSelectedPresetId("");
+    }
+  }, [selectedPresetId, canUpdateSelectedPreset]);
+
+  const startInterviewSession = async () => {
     if (
       subscription &&
       subscription.tier !== "Infinite Elite" &&
@@ -454,6 +719,16 @@ const CreateInterview = () => {
     if (jobTitleSliderRef.current) {
       const scrollAmount = 200;
       jobTitleSliderRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const scrollPresetSlider = (direction) => {
+    if (presetSliderRef.current) {
+      const scrollAmount = 220;
+      presetSliderRef.current.scrollBy({
         left: direction === "left" ? -scrollAmount : scrollAmount,
         behavior: "smooth",
       });
@@ -671,6 +946,123 @@ const CreateInterview = () => {
                   </button>
                 </div>
               </div>
+
+              {(isPresetLoading || visiblePresets.length > 0) && (
+                <div
+                  className={isCompactMobileForm ? "space-y-3" : "space-y-4"}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
+                      Saved presets
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400">
+                        {visiblePresets.length} presets
+                      </span>
+                      <button
+                        type="button"
+                        onClick={deleteSelectedPreset}
+                        disabled={isPresetSaving || !selectedPresetId}
+                        className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 text-[9px] font-black uppercase tracking-wider hover:bg-red-500/30 transition-all disabled:opacity-40"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  {isPresetLoading ? (
+                    <p className="text-[10px] font-semibold text-zinc-500">
+                      Loading presets...
+                    </p>
+                  ) : visiblePresets.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 p-3">
+                      <p className="text-[11px] font-semibold text-zinc-400">
+                        No saved presets yet. Configure the form, then use Save
+                        Preset.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div
+                        ref={presetSliderRef}
+                        className="overflow-x-auto pb-1 scrollbar-none no-scrollbar"
+                      >
+                        <div className="flex gap-2.5 min-w-max">
+                          {visiblePresets.map((preset) => {
+                            const isSelected = selectedPresetId === preset._id;
+                            return (
+                              <button
+                                key={preset._id}
+                                type="button"
+                                onClick={() => handleSelectPreset(preset._id)}
+                                className={`w-[206px] text-left p-2.5 rounded-xl border transition-all ${isSelected ? "border-[#bef264] bg-[#bef264] shadow-[0_0_0_1px_rgba(190,242,100,0.35)]" : "border-cyan-200/20 bg-gradient-to-br from-cyan-300/10 via-slate-800/30 to-slate-900/20 hover:border-cyan-200/40"}`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span
+                                    className={`text-[10px] font-black uppercase tracking-wide truncate ${isSelected ? "text-zinc-900" : "text-cyan-50"}`}
+                                  >
+                                    {preset.name}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span
+                                      className={`w-3.5 h-3.5 rounded-full border ${isSelected ? "border-zinc-900/70" : "border-cyan-200/50"} flex items-center justify-center`}
+                                    >
+                                      <span
+                                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-zinc-900" : "bg-transparent"}`}
+                                      />
+                                    </span>
+                                  </span>
+                                </div>
+                                <div
+                                  className={`mt-2 space-y-1 text-[9px] font-semibold ${isSelected ? "text-zinc-800" : "text-cyan-100/80"}`}
+                                >
+                                  <p className="truncate">
+                                    Role: {preset.role || "Not set"}
+                                  </p>
+                                  <p>Duration: {preset.duration || 10} min</p>
+                                  <p>
+                                    Source:{" "}
+                                    {preset.interviewMode === "skillsBased"
+                                      ? preset.skillsSourceType
+                                      : preset.inputType}
+                                  </p>
+                                  <p className="truncate">
+                                    Interviewer: {preset.agentName || "Not set"}
+                                  </p>
+                                  {preset.interviewMode === "skillsBased" && (
+                                    <p className="truncate">
+                                      Skills:{" "}
+                                      {preset.skills?.length
+                                        ? preset.skills.join(", ")
+                                        : "None"}
+                                    </p>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => scrollPresetSlider("left")}
+                          className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-[9px] font-black uppercase tracking-wider hover:border-zinc-500 hover:text-white transition-all"
+                        >
+                          Prev
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollPresetSlider("right")}
+                          className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-[9px] font-black uppercase tracking-wider hover:border-zinc-500 hover:text-white transition-all"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <hr className="dark:border-white/5 border-black/5" />
 
@@ -1244,41 +1636,97 @@ const CreateInterview = () => {
               </div>
 
               <div className={isCompactMobileForm ? "pt-1" : "pt-2"}>
-                <button
-                  onClick={startInterview}
-                  disabled={loading}
-                  className={`w-full ${isCompactMobileForm ? "px-6 py-3.5 text-sm" : "px-10 py-4"} ${subscription && subscription.tier !== "Infinite Elite" && availableCredits <= 0 ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700" : "bg-[#bef264] hover:bg-[#bef264]/90 text-black"} cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95 group`}
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                      Starting Interview...
-                    </>
-                  ) : subscription &&
+                <div className="flex items-stretch gap-2">
+                  <button
+                    onClick={handlePrimaryPresetAction}
+                    disabled={loading || isPresetSaving}
+                    className={`${isCompactMobileForm ? "w-[42%] px-3 py-3 text-[12px]" : "w-[36%] px-4 py-4 text-[13px]"} ${canUpdateSelectedPreset ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20" : "bg-white/10 border border-white/20 hover:bg-white/15 text-white shadow-white/10"} cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl active:scale-95 group`}
+                  >
+                    {loading || isPresetSaving ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Processing...
+                      </>
+                    ) : canUpdateSelectedPreset ? (
+                      <>
+                        Update Preset
+                        <FiEdit2
+                          size={16}
+                          className="group-hover:translate-x-0.5 transition-transform"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        Save Preset
+                        <FiSave
+                          size={16}
+                          className="group-hover:translate-y-[-1px] transition-transform"
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={startInterviewSession}
+                    disabled={loading || isPresetSaving}
+                    className={`flex-1 ${isCompactMobileForm ? "px-4 py-3 text-[12px]" : "px-6 py-4 text-[13px]"} bg-[#bef264] hover:bg-[#bef264]/90 text-black cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95`}
+                  >
+                    {subscription &&
                     subscription.tier !== "Infinite Elite" &&
                     availableCredits < FEATURE_COSTS.mockInterview ? (
-                    <>
-                      Get Credits
-                      <FiCreditCard
-                        size={20}
-                        className="group-hover:translate-x-1 transition-transform"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      Start Session
-                      <FiArrowRight
-                        size={20}
-                        className="group-hover:translate-x-1 transition-transform"
-                      />
-                    </>
-                  )}
-                </button>
+                      <>
+                        Start Session (Get Credits)
+                        <FiCreditCard size={18} />
+                      </>
+                    ) : (
+                      <>
+                        Start Session
+                        <FiPlay size={16} />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <UniversalPopup
+        isOpen={showSavePresetModal}
+        onClose={() => setShowSavePresetModal(false)}
+        title="Save Preset"
+        description="Name this preset. After saving, use Start Session to begin the interview."
+        maxWidth="max-w-md"
+        padding="p-5"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowSavePresetModal(false)}
+              disabled={isPresetSaving || loading}
+              className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-200 text-[11px] font-black uppercase tracking-wider hover:border-zinc-500 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSavePresetAndContinue}
+              disabled={isPresetSaving || loading}
+              className="px-4 py-2 rounded-xl bg-[#bef264] text-black text-[11px] font-black uppercase tracking-wider hover:bg-[#bef264]/90 disabled:opacity-50"
+            >
+              {isPresetSaving || loading ? "Saving..." : "Save Preset"}
+            </button>
+          </>
+        }
+      >
+        <input
+          value={presetName}
+          onChange={(e) => setPresetName(e.target.value)}
+          placeholder="e.g. Frontend React Interview"
+          className="w-full px-4 py-3 text-sm bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none font-bold placeholder-gray-600"
+        />
+      </UniversalPopup>
     </>
   );
 };

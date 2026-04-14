@@ -1,11 +1,84 @@
 const { OpenAI } = require("openai");
 const pdfParse = require("pdf-parse");
+const Joi = require("joi");
+const { analyzeCodeSubmission } = require("../utils/codeAnalysis");
 const InterviewSession = require("../models/interviewSessionModel");
+const InterviewPreset = require("../models/InterviewPreset");
 const {
   AnalyzeFullTranscript,
 } = require("../services/InterviewResponseAnalyzer");
 const CreditService = require("../services/creditService");
 const { SERVICE_CREDITS } = require("../config/pricingConfig");
+
+const ALLOWED_INTERVIEW_MODES = ["roleBased", "skillsBased"];
+const ALLOWED_SOURCE_TYPES = ["resume", "jobDescription", "both"];
+const ALLOWED_INTERVIEW_TYPES = ["behavioral", "technical", "hr", "general"];
+
+const sanitizePresetPayload = (payload = {}) => {
+  const schema = Joi.object({
+    name: Joi.string().trim().max(80).required().messages({
+      "string.max": "Preset name cannot exceed 80 characters",
+      "any.required": "Preset name is required",
+    }),
+    interviewMode: Joi.string()
+      .valid(...ALLOWED_INTERVIEW_MODES)
+      .default("roleBased"),
+    role: Joi.string().trim().max(100).allow("").default(""),
+    level: Joi.string().trim().max(50).allow("").default("Junior"),
+    interviewType: Joi.string()
+      .valid(...ALLOWED_INTERVIEW_TYPES)
+      .default("technical"),
+    inputType: Joi.string()
+      .valid(...ALLOWED_SOURCE_TYPES)
+      .default("both"),
+    skillsSourceType: Joi.string()
+      .valid(...ALLOWED_SOURCE_TYPES)
+      .default("both"),
+    skills: Joi.array()
+      .items(Joi.string().trim().max(50).replace(/\s+/g, " "))
+      .max(25)
+      .default([]),
+    jobDescription: Joi.string().trim().max(15000).allow("").default(""),
+    resumeContent: Joi.string().trim().max(25000).allow("").default(""),
+    resumeFileName: Joi.string().trim().max(255).allow("").default(""),
+    duration: Joi.number().integer().min(5).max(120).default(10),
+    agentName: Joi.string().trim().max(50).allow("").default(""),
+    agentVoiceProvider: Joi.string().trim().max(50).allow("").default(""),
+    agentVoiceId: Joi.string().trim().max(100).allow("").default(""),
+  });
+
+  const { value, error } = schema.validate(payload, {
+    stripUnknown: true,
+    abortEarly: false,
+  });
+
+  if (error) {
+    return { error: error.details.map((d) => d.message).join(", ") };
+  }
+
+  // Basic XSS sanitization for all string fields
+  const sanitize = (val) => {
+    if (typeof val !== "string") return val;
+    // Remove potential HTML tags to prevent XSS
+    return val.replace(/<[^>]*>?/gm, "").trim();
+  };
+
+  const sanitizedValue = { ...value };
+  Object.keys(sanitizedValue).forEach((key) => {
+    if (typeof sanitizedValue[key] === "string") {
+      sanitizedValue[key] = sanitize(sanitizedValue[key]);
+    } else if (Array.isArray(sanitizedValue[key])) {
+      sanitizedValue[key] = sanitizedValue[key].map(sanitize);
+    }
+  });
+
+  // Ensure skills are unique and filtered
+  if (Array.isArray(sanitizedValue.skills)) {
+    sanitizedValue.skills = [...new Set(sanitizedValue.skills.filter(Boolean))];
+  }
+
+  return { value: sanitizedValue };
+};
 
 // Initialize OpenAI client for OpenRouter (LLM)
 const getOpenAIClient = () => {
@@ -165,6 +238,8 @@ const startCustomSession = async (req, res) => {
       - EXAMPLE: "Here is your coding question. Make a function for reversing an array in JavaScript language. You have a time limit of 3 minutes. Let's start solving coding question, let me know when it's done."
       - Supported languages: javascript, html, python, java, cpp.
       - After a coding question, wait for the user to click "Attempt" or for them to let you know they are done.
+      
+      CRITICAL: Immediately proceed to ask the next technical question after a coding submission. Do NOT loop back requesting more code attempts if the submission is basic or empty.
       `;
     } else if (interviewType === "hr") {
       typeSpecificInstructions = `
@@ -217,6 +292,138 @@ const startCustomSession = async (req, res) => {
   }
 };
 
+const listPresets = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const presets = await InterviewPreset.find({ userId })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    return res.status(200).json({ presets });
+  } catch (error) {
+    console.error("List Interview Presets Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch interview presets" });
+  }
+};
+
+const createPreset = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const existingCount = await InterviewPreset.countDocuments({ userId });
+    if (existingCount >= 30) {
+      return res.status(400).json({
+        message:
+          "You can save up to 30 presets. Delete an old preset to add a new one.",
+      });
+    }
+
+    const { value: payload, error: validationError } = sanitizePresetPayload(
+      req.body,
+    );
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const preset = await InterviewPreset.create({
+      userId,
+      ...payload,
+    });
+
+    return res.status(201).json({ preset });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message:
+          "A preset with this name already exists. Please choose another name.",
+      });
+    }
+
+    console.error("Create Interview Preset Error:", error);
+    return res.status(500).json({ message: "Failed to save interview preset" });
+  }
+};
+
+const updatePreset = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { presetId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const { value: payload, error: validationError } = sanitizePresetPayload(
+      req.body,
+    );
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    const preset = await InterviewPreset.findOneAndUpdate(
+      { _id: presetId, userId },
+      payload,
+      { new: true, runValidators: true },
+    );
+
+    if (!preset) {
+      return res.status(404).json({ message: "Preset not found" });
+    }
+
+    return res.status(200).json({ preset });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message:
+          "A preset with this name already exists. Please choose another name.",
+      });
+    }
+
+    console.error("Update Interview Preset Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to update interview preset" });
+  }
+};
+
+const deletePreset = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { presetId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    const deletedPreset = await InterviewPreset.findOneAndDelete({
+      _id: presetId,
+      userId,
+    });
+
+    if (!deletedPreset) {
+      return res.status(404).json({ message: "Preset not found" });
+    }
+
+    return res.status(200).json({ message: "Preset deleted successfully" });
+  } catch (error) {
+    console.error("Delete Interview Preset Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to delete interview preset" });
+  }
+};
+
 // TTS removed to favor browser-native speech synthesis
 
 /**
@@ -234,9 +441,30 @@ const customInterviewController = {
           .json({ message: "OpenRouter API Key not configured" });
       }
 
+      // ── Structured Signal Analysis ──
+      const enhancedMessages = [...messages];
+      const lastUserMessage = [...messages]
+        .reverse()
+        .find((m) => m.role === "user");
+
+      if (lastUserMessage) {
+        const analysis = analyzeCodeSubmission(lastUserMessage.content);
+        if (analysis.isCodeSubmission && !analysis.isValid) {
+          // Send a hidden system instruction to guide the AI's response for low-quality code
+          enhancedMessages.push({
+            role: "system",
+            content:
+              "[SYSTEM_SIGNAL: The candidate submitted an empty or default code template. Acknowledge this gracefully, but DO NOT ask them to resubmit. Immediately proceed to the next technical question to maintain flow.]",
+          });
+        }
+      }
+
       const response = await openai.chat.completions.create({
         model: "google/gemini-2.0-flash-lite-001", // Highly optimized for low-latency
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...enhancedMessages,
+        ],
         temperature: 0.7,
       });
 
@@ -298,4 +526,8 @@ module.exports = {
   ...customInterviewController,
   startCustomSession,
   parseResumePdf,
+  listPresets,
+  createPreset,
+  updatePreset,
+  deletePreset,
 };

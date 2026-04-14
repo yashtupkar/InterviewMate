@@ -180,3 +180,98 @@ graph TD
     *   **Stdin Execution:** Open a coding task, write a program that requires standard input (e.g., `input()` in Python), provide text in the terminal text area, and click Run.
     *   **Reload Prevention:** Enter a live interview session and attempt to reload the page using F5 or Ctrl+R. Verify that the custom warning prompt appears and prevents the reload until confirmed.
     *   **UI Responsiveness:** Test the `ControlBar` and `SessionOverviewCards` on mobile viewports to verify padding and text truncations.
+
+  Updates on date: 14/04/2026
+  ## 1. High-Level Summary (TL;DR)
+*   **Impact:** High - Introduces a new feature for saving interview configurations and significantly improves the AI's handling of code submissions and interview flow.
+*   **Key Changes:**
+    *   **Interview Presets:** Added full CRUD functionality for users to save, manage, and apply interview configuration presets.
+    *   **Smart Code Submissions:** Implemented utilities to detect empty or default template code submissions.
+    *   **AI Prompt Updates:** Instructed the AI agent to gracefully acknowledge empty/default submissions and move to the next question instead of getting stuck in a loop.
+    *   **Session UX Improvements:** Added dedicated confirmation and summary modals for ending interview sessions, plus a typing animation for the AI's transcript.
+
+## 2. Visual Overview (Code & Logic Map)
+
+### Interview Presets Flow
+```mermaid
+graph TD
+    subgraph Frontend
+        CreateInterview["CreateInterview.jsx"]
+    end
+    subgraph Backend API
+        Routes["customInterviewRoutes.js"]
+        Controller["customInterviewController.js"]
+    end
+    subgraph Database
+        Model["InterviewPreset.js"]
+    end
+    CreateInterview -- "savePreset()" --> Routes
+    CreateInterview -- "handleSelectPreset()" --> CreateInterview
+    Routes -- "POST/PUT /presets" --> Controller
+    Controller -- "createPreset() / updatePreset()" --> Model
+
+    style CreateInterview fill:#c8e6c9,color:#1a5e20
+    style Routes fill:#bbdefb,color:#0d47a1
+    style Controller fill:#bbdefb,color:#0d47a1
+    style Model fill:#fff3e0,color:#e65100
+```
+
+### Smart Code Submission Logic
+```mermaid
+sequenceDiagram
+    participant User as Candidate
+    participant Hooks as "useCustomInterview.js / InterviewSession.jsx"
+    participant Utils as "codeSubmissionUtils.js"
+    participant AI as "AI Controller (Backend)"
+
+    User->>Hooks: "handleCodingSubmit(code)"
+    Hooks->>Utils: "analyzeCodeSubmission(code, language)"
+    Utils-->>Hooks: "Returns: { isEmpty, isDefault }"
+    alt Is Empty or Default
+        Hooks->>AI: "Inform AI: submission is empty template"
+        AI-->>User: "Gracefully acknowledge and move to next question"
+    else Is Valid Code
+        Hooks->>AI: "Inform AI: Here is my code"
+        AI-->>User: "Evaluate submitted code"
+    end
+```
+
+## 3. Detailed Change Analysis
+
+### 📁 Interview Presets Feature
+*   **What Changed:** Users can now save their configured interview settings (Role, Experience, Duration, Skills, etc.) up to a maximum of 30 presets per user. Applying a preset quickly populates the interview setup form.
+*   **API Endpoints Added:**
+    | Method | Endpoint | Description |
+    | :--- | :--- | :--- |
+    | `GET` | `/presets` | Lists all saved presets for the authenticated user. |
+    | `POST` | `/presets` | Creates a new preset. |
+    | `PUT` | `/presets/:presetId` | Updates an existing preset. |
+    | `DELETE` | `/presets/:presetId` | Deletes a specific preset. |
+
+### 📁 Smart Code Submission Handling
+*   **What Changed:** Created `codeSubmissionUtils.js` which houses logic to strip comments and whitespace to verify if a code submission is effectively empty or just the default language template.
+*   **Frontend Integration:** `handleCodingSubmit` in `useCustomInterview.js` and `InterviewSession.jsx` now uses `analyzeCodeSubmission()` to dynamically alter the message sent to the AI agent and the UI toast notification.
+*   **Backend Integration:** Updated the system prompts in `customInterviewController.js` and `vapiInterviewController.js`. The AI is now explicitly instructed: *"If the candidate submits code that is empty... DO NOT ask them to provide code again... Immediately proceed to ask the next technical question."*
+
+### 📁 Session UX & Transcript Updates
+*   **What Changed:**
+    *   Replaced the inline "Interview Finished" overlay in `InterviewerSection.jsx` with two new dedicated components: `CustomInterviewConfirmEndModal.jsx` and `CustomInterviewEndedModal.jsx`.
+    *   Added a character-by-char typing animation (`typedAgentText`) in `TranscriptView.jsx` to make the AI agent's responses feel more natural.
+
+### 📁 Database Schema
+*   **New Model:**
+    | Field | Type | Default | Description |
+    | :--- | :--- | :--- | :--- |
+    | `userId` | `ObjectId` | *Required* | Reference to the User. |
+    | `name` | `String` | *Required* | Name of the preset. |
+    | `interviewMode` | `String` | `"roleBased"` | Either `"roleBased"` or `"skillsBased"`. |
+    | `skills` | `[String]` | `[]` | Array of extracted/selected skills. |
+    | `duration` | `Number` | `10` | Interview duration (5-120 mins). |
+
+## 4. Impact & Risk Assessment
+*   **⚠️ Breaking Changes:** Requires MongoDB schema updates. Ensure the new `InterviewPreset` collection can be created successfully.
+*   **🐛 Potential Risks:** The typing animation in `TranscriptView.jsx` uses `setInterval` tied to React state. If the user receives rapidly successive AI messages, the timer cleanup logic must perfectly execute to prevent text overlapping or memory leaks.
+*   **🧪 Testing Suggestions:**
+    *   **Presets:** Test creating a preset with a duplicate name (should handle HTTP 409 correctly). Test the slider scrolling UI for presets on smaller screens.
+    *   **Code Submissions:** Test submitting a blank screen, a screen with only comments (`// this is a comment`), the exact default template, and a legitimate code answer. Verify the AI agent's vocal response correctly matches the prompt instructions for each scenario.
+    *   **Session Flow:** Click the "End Interview" button and ensure the new confirmation modal correctly halts the ending process if "Cancel" is clicked.
