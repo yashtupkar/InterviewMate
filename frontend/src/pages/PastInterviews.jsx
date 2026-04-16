@@ -134,7 +134,7 @@ const PastInterviews = () => {
                         <td className="px-4 sm:px-6 py-4">
                           <div className="flex items-center gap-2 sm:gap-3">
                             <img
-                              src={agent.image}
+                              src={agent.profileImage}
                               alt={agentName}
                               className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border dark:border-zinc-700 border-gray-300 object-cover shrink-0"
                             />

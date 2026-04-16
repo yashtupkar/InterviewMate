@@ -275,3 +275,78 @@ sequenceDiagram
     *   **Presets:** Test creating a preset with a duplicate name (should handle HTTP 409 correctly). Test the slider scrolling UI for presets on smaller screens.
     *   **Code Submissions:** Test submitting a blank screen, a screen with only comments (`// this is a comment`), the exact default template, and a legitimate code answer. Verify the AI agent's vocal response correctly matches the prompt instructions for each scenario.
     *   **Session Flow:** Click the "End Interview" button and ensure the new confirmation modal correctly halts the ending process if "Cancel" is clicked.
+
+ Date : 16/4/26
+## 1. High-Level Summary (TL;DR)
+*   **Impact:** High - Significantly enhances the interview experience with seamless video avatars and improved speech-to-text (STT) pacing.
+*   **Key Changes:**
+    *   ✨ **Looped Video Avatars:** Introduced `AgentLoopedVideoAvatar` to handle smooth crossfading between agent animation states (idle, speaking).
+    *   ⏱️ **STT Auto-Send Countdown:** Added a 5-second countdown before auto-sending user speech, allowing users to pause and think without prematurely submitting their answer.
+    *   🚀 **Intelligent Preloading:** Implemented dynamic video preloading in the session to ensure zero-delay playback when the agent's state changes.
+    *   🎨 **Agent Data Overhaul:** Updated agent configurations to support multiple random video clips per state and dedicated profile thumbnails.
+    *   ♻️ **UI Refactoring:** Cleaned up `InterviewerSection` and enhanced `TranscriptView` with live status banners for the countdown and speaker turns.
+
+## 2. Visual Overview (Code & Logic Map)
+
+```mermaid
+graph TD
+    subgraph "CustomInterviewSession.jsx"
+        A["agentVisualState"] -->|"speaking / idle"| B["InterviewerSection"]
+        P["collectAnimationSources()"] -.->|"Preloads Videos in Background"| A
+    end
+
+    subgraph "Avatar Rendering (AgentLoopedVideoAvatar.jsx)"
+        B --> C["<AgentLoopedVideoAvatar />"]
+        C --> D["useVideoStateMachine()"]
+        D -->|"Active Layer"| E["Front Video"]
+        D -->|"Prepares & Crossfades"| F["Back Video"]
+    end
+
+    subgraph "Speech & Countdown Logic (useCustomInterview.js)"
+        G["SpeechRecognition"] -->|"500ms pause"| H["startCountdown()"]
+        H -->|"User resumes speaking"| I["cancelCountdown()"]
+        H -->|"5s elapses"| J["Auto-Send (handleUserSpeech)"]
+        H -.->|"Updates UI"| K["TranscriptView Banner"]
+    end
+
+    classDef component fill:#bbdefb,color:#0d47a1,stroke:#0d47a1,stroke-width:2px;
+    classDef hook fill:#c8e6c9,color:#1a5e20,stroke:#1a5e20,stroke-width:2px;
+    classDef logic fill:#fff3e0,color:#e65100,stroke:#e65100,stroke-width:2px;
+
+    class B,C,E,F,K component;
+    class D hook;
+    class A,P,G,H,I,J logic;
+```
+
+## 3. Detailed Change Analysis
+
+### 🎥 Video Avatar System
+*   **Component Name:** `AgentLoopedVideoAvatar`, `InterviewerSection`
+*   **What Changed:** Replaced inline video crossfading in `InterviewerSection` with a dedicated `AgentLoopedVideoAvatar` component. It uses a custom hook (`useVideoStateMachine`) to manage double-buffered `<video>` elements, allowing seamless transitions and randomized clip selection for the same state. Added intelligent video caching via hidden `<video>` elements in `CustomInterviewSession` based on the agent's current state.
+
+### ⏱️ Speech-to-Text Countdown
+*   **Component Name:** `useCustomInterview`, `TranscriptView`
+*   **What Changed:** Changed the STT submission logic to prevent cutting off users. After a 500ms pause (`PAUSE_DETECT`), a 5-second countdown begins. If the user resumes speaking, the countdown cancels. If it reaches 0, the answer is auto-submitted. `TranscriptView` was updated to display dynamic banners (e.g., Amber countdown, Sky Blue agent speaking, Emerald listening).
+
+### ⚙️ Agent Configurations
+*   **Component Name:** `agents.js`, `CreateInterview`, `PastInterviews`
+*   **What Changed:** Updated agent profiles to support arrays of animation paths (enabling random clip rotation). Temporarily disabled several agents that lack animations. Updated the UI to use the new `profileImage` attribute for thumbnails instead of the main fallback image.
+
+| Property | Old Type | New Type | Description |
+|---|---|---|---|
+| `animations.idle` | `String` | `Array<String>` | Supports multiple idle clips, chosen randomly. |
+| `animations.speaking` | `String` | `Array<String>` | Supports multiple speaking clips, chosen randomly. |
+| `profileImage` | *None* | `String` | Added dedicated thumbnail paths for UI selection grids. |
+| `image` | `String` | `String` | Updated fallback image paths to new assets. |
+
+### 🏠 Homepage Features
+*   **Component Name:** `Features.jsx`
+*   **What Changed:** Updated `videoSrc` paths for the homepage feature highlights (`interview.mp4` and `feedback.mp4`).
+
+## 4. Impact & Risk Assessment
+*   **⚠️ Breaking Changes:** Several agents (Elliot, Rachel, Drew, Clyde, Mimi, Fin, Nicole) have been commented out in `agents.js` as they do not yet support the new animation structure.
+*   **🐛 Testing Suggestions:**
+    *   **Avatar Transitions:** Verify that the agent smoothly crossfades between idle and speaking states without flickering or black frames.
+    *   **STT Pacing & Countdown:** Speak into the microphone, pause for 1 second to trigger the amber countdown banner, then speak again to verify it cancels. Let the countdown finish to ensure the message auto-sends.
+    *   **Performance:** Monitor the network tab to ensure video preloading (`collectAnimationSources`) does not cause excessive bandwidth usage or memory leaks over long sessions.
+    *   **UI Fallbacks:** Disconnect the internet momentarily to ensure the agent falls back to the static `image` gracefully if a video fails to load.

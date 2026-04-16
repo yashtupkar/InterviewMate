@@ -11,6 +11,8 @@ const featuresList = [
       "Adaptive questioning based on your narrative arc.",
       "Real-time stress level assessment.",
     ],
+    videoSrc: "/assets/featuresVideo/interview.mp4",
+
     icon: PlayCircle,
     reverse: false,
   },
@@ -38,7 +40,7 @@ const featuresList = [
       "Industry-standard STAR method optimization.",
     ],
     icon: BarChart,
-    videoSrc: "/assets/featuresVideo/ai-report-feedback.mp4",
+    videoSrc: "/assets/featuresVideo/feedback.mp4",
     reverse: false,
   },
   {

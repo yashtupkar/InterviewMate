@@ -1425,28 +1425,12 @@ const CreateInterview = () => {
                   <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
                     Select Interviewer
                   </label>
-                  <button
-                    onClick={() => setShowAllAgents(!showAllAgents)}
-                    className="text-[10px] font-black uppercase tracking-widest text-[#bef264] hover:text-[#bef264]/80 transition-colors"
-                  >
-                    {showAllAgents ? "Show Less" : "View All"}
-                  </button>
+                 
                 </div>
                 <div
                   className={`grid ${isCompactMobileForm ? "grid-cols-1 gap-2.5" : "grid-cols-2 gap-3"} transition-all duration-300`}
                 >
                   {interviewAgents
-                    .filter((a) =>
-                      [
-                        "Rohan",
-                        "Sophia",
-                        "Marcus",
-                        "Emma",
-                        "Drew",
-                        "Rachel",
-                      ].includes(a.name),
-                    )
-                    .slice(0, showAllAgents ? undefined : 4)
                     .map((agent) => (
                       <div
                         key={agent.name}
@@ -1467,7 +1451,7 @@ const CreateInterview = () => {
                           backgroundColor:
                             interviewData.agentName === agent.name
                               ? `#${agent.bg}15`
-                              : "",
+                              : "black",
                         }}
                         className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${
                           interviewData.agentName === agent.name
@@ -1489,7 +1473,7 @@ const CreateInterview = () => {
                           }}
                         >
                           <img
-                            src={agent.image}
+                            src={agent.profileImage}
                             alt={agent.name}
                             className={`w-11 h-11 rounded-full object-cover border-2 ${
                               interviewData.agentName === agent.name
