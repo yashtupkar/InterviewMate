@@ -108,6 +108,7 @@ const CustomInterviewSession = () => {
       interviewAgents.reduce((acc, agent) => {
         acc[agent.name] = {
           image: agent.image,
+          profileImage: agent.profileImage,
           animations: agent.animations || null,
         };
         return acc;
@@ -116,6 +117,9 @@ const CustomInterviewSession = () => {
   );
 
   const getAgentImage = (name) =>
+    agentMedia[name]?.image || "/assets/interviewers/male1.png";
+
+  const getAgentProfileImage = (name) =>
     agentMedia[name]?.profileImage || "/assets/interviewers/male1.png";
 
   const getAgentVideo = (name, state) =>
@@ -289,7 +293,7 @@ const CustomInterviewSession = () => {
                 isAgentSpeaking={isAgentSpeaking}
                 isUserTurn={isUserTurn}
                 agentName={agentName}
-                getAgentImage={getAgentImage}
+                getAgentImage={getAgentProfileImage}
                 connectionStatus={connectionStatus}
                 codingPopupTask={codingPopupTask}
                 showCodingPopup={!activeCodingTask}
@@ -343,7 +347,7 @@ const CustomInterviewSession = () => {
               isAgentSpeaking={isAgentSpeaking}
               isUserTurn={isUserTurn}
               agentName={agentName}
-              getAgentImage={getAgentImage}
+              getAgentImage={getAgentProfileImage}
               connectionStatus={connectionStatus}
               codingPopupTask={codingPopupTask}
               showCodingPopup={!activeCodingTask}

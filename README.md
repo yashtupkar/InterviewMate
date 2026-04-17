@@ -1,11 +1,11 @@
-# <img src="./frontend/public/favicon.svg" width="40" height="40" valign="middle"> PlaceMateAI
+# <img src="./frontend/public/favicon.svg" width="40" height="40" valign="middle"> InterviewMate (PlaceMateAI)
 
 <div align="center">
   <p align="center">
-    <h3>Ace Your Next Interview with AI-Powered Precision</h3>
+      <h3>Ace Interviews, Group Discussions, and Coding Rounds with AI</h3>
     <br />
     <a href="#features">Features</a> ·
-    <a href="#custom-engine">Custom AI Engine</a> ·
+      <a href="#architecture">Architecture</a> ·
     <a href="#tech-stack">Tech Stack</a> ·
     <a href="#getting-started">Getting Started</a>
   </p>
@@ -15,71 +15,100 @@
 
 ## 🌟 Overview
 
-**PlaceMateAI** (formerly PrepiAi) is a cutting-edge platform designed to transform how users prepare for career breakthroughs by moving away from expensive third-party wrappers like Vapi. PlaceMateAI leverages a **Custom-Built AI Engine** to provide high-performance, low-latency mock interviews and group discussions at a fraction of the cost.
+**InterviewMate** (also referred to as **PlaceMateAI**) is a full-stack AI interview preparation platform built on the **MERN stack** with voice AI, coding practice, ATS analysis, LinkedIn optimization, and subscription-based usage.
+
+It uses a custom real-time orchestration flow with:
+
+- **OpenRouter (Gemini models)** for interview intelligence and evaluation
+- **AWS Polly (TTS)** for natural AI voice output
+- **Web Speech API (STT)** for fast browser-side speech recognition
+- **MongoDB** for session, report, and product data storage
 
 ## 🚀 Key Features
 
-- 🤖 **Custom AI Mock Interviews**: Low-latency, voice-based sessions using Gemini 2.0 Flash Lite.
-- 👥 **Group Discussion (GD) Multi-Agent**: Participate in dynamic GDs with 4 distinct AI personalities.
-- 💻 **Real-time Coding Space**: Solve technical questions in an integrated IDE during interviews.
-- 📊 **Intelligent Reports**: Instant, deep-dive analysis of your performance across 8+ dimensions.
-- 👔 **LinkedIn Optimization**: AI insights to polish your professional profile.
-- 🔐 **Secure Auth**: Powered by **Clerk** for seamless user management.
-- 💳 **Affordable Pricing**: Built on a cost-efficient architecture to make prep accessible to everyone.
+- 🤖 **AI Mock Interviews**: Role-based and custom interviews with voice interaction and adaptive follow-up questions.
+- 👥 **Multi-Agent Group Discussions**: Practice GD rounds with multiple AI personas and detailed speaking analytics.
+- 💻 **Integrated Coding Interview Space**: Attempt coding questions in a live coding environment as part of interview flow.
+- 📄 **ATS Resume Analyzer**: Upload resume and get ATS-style scoring and improvement suggestions.
+- 👔 **LinkedIn Review & Suggestions**: Improve profile sections with AI-driven recommendations.
+- 📊 **Detailed Performance Reports**: Session feedback across communication, confidence, structure, and technical depth.
+- 🔐 **Authentication & User Profiles**: Secure sign-in and account management with Clerk.
+- 💳 **Credits, Subscriptions & Payments**: Tiered plans, usage tracking, and payment integration.
+- 🔊 **High-Quality Voice Responses**: AWS Polly-based TTS pipeline for clear, natural AI interviewer voice.
 
 ---
 
-## 🧠 Custom AI Engine & Cost Efficiency
+## 🧠 Architecture
 
-PlaceMateAI has transitioned from **Vapi AI** to a proprietary orchestration engine to maximize affordability and control.
+InterviewMate is designed as a **modular MERN platform** with an AI orchestration layer for real-time interview experiences.
 
-### **The Architecture**
-*   **Speech-to-Text (STT)**: Browser-native `Web Speech API` (Zero Cost).
-*   **Large Language Model (LLM)**: `Google Gemini 2.0 Flash Lite` via OpenRouter (Ultra-low latency, ~₹0.0186/min).
-*   **Text-to-Speech (TTS)**: Browser-native `window.speechSynthesis` (Zero Cost).
-*   **Orchestration**: Custom React-Node logic for real-time multi-agent GD synchronization.
+### AI/Voice Pipeline
 
-### **Cost Summary**
-PlaceMateAI is **99% cheaper** to run than Vapi-based solutions.
-*   **20-Min Interview**: ₹280 (Vapi) vs **₹0.46** (PlaceMateAI).
-*   **30-Min GD Session**: ₹420 (Vapi) vs **₹1.68** (PlaceMateAI).
+- **STT**: Browser-native `Web Speech API`
+- **LLM**: `Gemini` models through **OpenRouter**
+- **TTS**: **AWS Polly** (Neural voices)
+- **Session Control**: Custom React + Node orchestration for turn management, transcript flow, and agent responses
 
-For a detailed cost analysis, see [pricing.md](./pricing.md).
+### Backend Services
+
+- Interview generation and follow-up handling
+- ATS scoring and feedback processing
+- Coding question and response analysis
+- Credit deduction and subscription checks
+- Payment/webhook integrations
+
+For pricing and cost design details, see [pricing.md](./pricing.md) and [usage_based_plan.md](./usage_based_plan.md).
 
 ---
 
 ## 🛠 Tech Stack
 
+### Core Stack (MERN)
+
+- **MongoDB**: Primary data store
+- **Express.js**: API and orchestration server
+- **React**: Frontend UI and interview flows
+- **Node.js**: Runtime for backend services
+
 ### Frontend
-- **React + Vite**: High-performance UI.
-- **TailwindCSS**: Sleek "Midnight Cyan" design system.
-- **Web Speech API**: Powering STT and TTS without server latency.
-- **Lucide Icons & Framer Motion**: Premium animations and iconography.
+
+- **React + Vite**: Fast SPA architecture
+- **TailwindCSS**: Design system and responsive UI
+- **Web Speech API**: Real-time speech-to-text capture
+- **Framer Motion + Lucide**: Motion and icon system
 
 ### Backend
-- **Node.js + Express**: Scalable API orchestration.
-- **MongoDB + Mongoose**: Real-time transcript and session storage.
-- **OpenRouter (Gemini)**: State-of-the-art LLM intelligence.
-- **Clerk**: Secure authentication and user sessions.
+
+- **Node.js + Express**: REST APIs and interview orchestration
+- **MongoDB + Mongoose**: Persistence layer for users, sessions, reports, and billing entities
+- **OpenRouter**: LLM gateway for Gemini-based prompts and analysis
+- **AWS Polly**: Production-grade TTS generation
+- **Clerk**: Authentication and identity management
+- **Razorpay**: Subscription/payment processing
 
 ---
 
 ## 🏁 Getting Started
 
 ### Prerequisites
+
 - **Node.js**: v18.0.0+
 - **MongoDB**: Atlas or Local instance
-- **OpenRouter API Key**: For LLM logic
+- **OpenRouter API Key**: For LLM orchestration
+- **AWS Credentials**: For Polly TTS
+- **Clerk Keys**: For authentication
 
 ### Installation
 
 1. **Clone the project**
+
    ```bash
-   git clone https://github.com/yourusername/PlaceMateAI.git
-   cd PlaceMateAI
+   git clone https://github.com/yashtupkar/InterviewMate.git
+   cd InterviewMate
    ```
 
 2. **Setup Backend**
+
    ```bash
    cd backend
    npm install
@@ -87,6 +116,9 @@ For a detailed cost analysis, see [pricing.md](./pricing.md).
    MONGODB_URI=your_uri
    CLERK_SECRET_KEY=your_key
    OPENROUTER_API_KEY=your_key
+   AWS_ACCESS_KEY_ID=your_key
+   AWS_SECRET_ACCESS_KEY=your_key
+   AWS_REGION=ap-south-1
    ```
 
 3. **Setup Frontend**
@@ -104,6 +136,16 @@ For a detailed cost analysis, see [pricing.md](./pricing.md).
 **Frontend:** `npm run dev` in `/frontend`
 
 Visit [http://localhost:5173](http://localhost:5173).
+
+---
+
+## 📁 Project Structure
+
+- `frontend/`: React app, interview UI, coding UI, dashboards
+- `backend/controllers/`: Feature-level API controllers
+- `backend/services/`: AI, TTS, billing, and analysis services
+- `backend/models/`: MongoDB schemas
+- `backend/routes/`: API route modules
 
 ---
 

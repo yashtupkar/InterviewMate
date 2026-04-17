@@ -433,19 +433,6 @@ const InterviewerSection = ({
           {/* Agent view */}
           {!isUserFocus && (
             <>
-              {/* Background image */}
-              <div
-                className="absolute inset-0 opacity-75"
-                style={{
-                  backgroundImage: "url('/assets/background/Agent-bg.png')",
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              />
-
-              {/* Dark vignette */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/55" />
-
               {/* ── Video / Image Avatar ── */}
               <AgentLoopedVideoAvatar
                 animations={animations}
@@ -461,9 +448,6 @@ const InterviewerSection = ({
                 ref={agentVolumeCircleRef}
                 className="absolute inset-0 pointer-events-none"
               />
-
-              {/* Bottom vignette */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/35 to-black/45" />
             </>
           )}
 
