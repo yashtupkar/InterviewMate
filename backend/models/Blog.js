@@ -107,7 +107,8 @@ const blogSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-blogSchema.index({ status: 1, publishedAt: -1 });
+blogSchema.index({ status: 1, publishedAt: -1, isActive: 1 });
+blogSchema.index({ slug: 1, isActive: 1 });
 blogSchema.index({ createdAt: -1 });
 blogSchema.index({ category: 1 });
 blogSchema.index({ tags: 1 });

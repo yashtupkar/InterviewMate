@@ -45,6 +45,10 @@ const ensureUniqueSlug = async (candidate, excludeId = null) => {
   let attempt = 1;
 
   while (true) {
+    if (attempt > 10) {
+      throw new ApiError(500, "Failed to generate unique slug");
+    }
+
     const query = { slug };
     if (excludeId) {
       query._id = { $ne: excludeId };
