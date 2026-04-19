@@ -19,6 +19,8 @@ const questionRoutes = require("./routes/questionRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const ttsRoutes = require("./routes/ttsRoutes");
+const blogRoutes = require("./routes/blogRoutes");
+const { getSitemapXml } = require("./controllers/blogController");
 
 // Connect to Database
 connectDB();
@@ -51,6 +53,10 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/tts", ttsRoutes);
+app.use("/api/blogs", blogRoutes);
+
+// SEO
+app.get("/sitemap.xml", getSitemapXml);
 
 // Health Check
 app.get("/api/health", (req, res) => {

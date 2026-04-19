@@ -421,3 +421,113 @@ graph TD
     *   Verify navigation flow from the Dashboard -> List -> Detail -> Code Page to ensure parameters (`skills`, `domain`, `questionId`) propagate correctly.
     *   Test edge cases in `CreateInterview` and `GroupDiscussionSetup` by denying microphone/camera permissions to ensure the new error handlers trigger properly.
     *   Load a question with missing `starterCode` or `testCases` in `QuestionCodePage` to ensure the `buildTaskFromQuestion` fallbacks work without crashing.
+
+
+    ## 1. High-Level Summary (TL;DR)
+*   **Impact:** High - Introduces a major new feature to the platform.
+*   **Key Changes:**
+    *   ✨ **Full-Stack Blog Module:** Adds a MongoDB schema, robust backend CRUD APIs, and frontend views (`BlogList`, `BlogDetail`) for a complete blogging experience.
+    *   🛠 **Admin Content Management:** Introduces a dedicated `BlogManagement` interface for administrators to create, edit, draft, and publish articles.
+    *   🖼 **Cloudinary Integration:** Supports uploading and hosting blog featured images via `multer` and the Cloudinary API.
+    *   🔍 **SEO Enhancements:** Adds a dynamically generated `/sitemap.xml`, a static `robots.txt`, and dynamic OpenGraph tags using `react-helmet-async`.
+    *   📝 **Markdown Rendering:** Renders blog content securely on the frontend using `react-markdown` and `remark-gfm`.
+
+## 2. Visual Overview (Code & Logic Map)
+
+```mermaid
+graph TD
+    %% Node definitions
+    Nav["Navigation / App Routes"]
+    BlogList["BlogList Component"]
+    BlogDetail["BlogDetail Component"]
+    BlogAdmin["BlogManagement Component"]
+    
+    GetBlogs["GET /api/blogs"]
+    GetBlogBySlug["GET /api/blogs/:slug"]
+    AdminAPI["Admin CRUD (/api/blogs/admin)"]
+    UploadAPI["uploadBlogImage()"]
+    Sitemap["getSitemapXml()"]
+    
+    Cloudinary["Cloudinary Storage"]
+    MongoBlog["MongoDB: Blog Model"]
+    
+    %% Relationships
+    Nav --> BlogList
+    Nav --> BlogDetail
+    Nav --> BlogAdmin
+    
+    BlogList -.-> GetBlogs
+    BlogDetail -.-> GetBlogBySlug
+    BlogAdmin -.-> AdminAPI
+    BlogAdmin -.-> UploadAPI
+    
+    GetBlogs --> MongoBlog
+    GetBlogBySlug --> MongoBlog
+    AdminAPI --> MongoBlog
+    UploadAPI --> Cloudinary
+    Sitemap --> MongoBlog
+    
+    %% Styling
+    style Nav fill:#bbdefb,color:#0d47a1
+    style BlogList fill:#bbdefb,color:#0d47a1
+    style BlogDetail fill:#bbdefb,color:#0d47a1
+    style BlogAdmin fill:#bbdefb,color:#0d47a1
+    
+    style GetBlogs fill:#c8e6c9,color:#1a5e20
+    style GetBlogBySlug fill:#c8e6c9,color:#1a5e20
+    style AdminAPI fill:#c8e6c9,color:#1a5e20
+    style UploadAPI fill:#c8e6c9,color:#1a5e20
+    style Sitemap fill:#c8e6c9,color:#1a5e20
+    
+    style Cloudinary fill:#fff3e0,color:#e65100
+    style MongoBlog fill:#f3e5f5,color:#7b1fa2
+```
+
+## 3. Detailed Change Analysis
+
+### 🗄 Backend API & Database
+*   **What Changed:** Added a complete API layer for the blog feature. Created the `Blog` Mongoose model containing fields for SEO, Markdown content, status (draft/published), and tags. Implemented `blogController.js` handling operations like unique slug generation (`ensureUniqueSlug`), HTML sanitization (`sanitizeMarkdown`), read-time calculation (`calculateReadTime`), and XML sitemap generation (`getSitemapXml`).
+*   **API Endpoints:**
+
+| API Endpoint | Method | Auth Required | Description |
+|---|---|---|---|
+| `/api/blogs` | GET | No | Fetch paginated list of published blogs. |
+| `/api/blogs/:slug` | GET | No | Fetch a single published blog by slug. |
+| `/api/blogs/admin/all` | GET | Yes (Admin) | Fetch all blogs (drafts & published). |
+| `/api/blogs/admin` | POST | Yes (Admin) | Create a new blog post. |
+| `/api/blogs/admin/:id` | PUT/DEL | Yes (Admin) | Update or soft-delete a blog. |
+| `/api/blogs/admin/upload-image` | POST | Yes (Admin) | Upload an image to Cloudinary via `multer`. |
+| `/sitemap.xml` | GET | No | Generates an XML sitemap of all published blogs. |
+
+### 🌐 External Integrations & Configuration
+*   **What Changed:** Added Cloudinary integration for handling featured images. The `cloudinaryService.js` exposes `uploadImageBuffer` which converts a `multer` memory buffer to a base64 Data URI and uploads it to the `interviewmate/blogs` folder. Added necessary `.env` variables.
+*   **Environment Configuration:**
+
+| Key | Old Value | New Value | Description |
+|---|---|---|---|
+| `CLOUDINARY_CLOUD_NAME` | *N/A* | *(New)* | Cloudinary account name for image hosting. |
+| `CLOUDINARY_API_KEY` | *N/A* | *(New)* | Cloudinary API Key. |
+| `CLOUDINARY_API_SECRET` | *N/A* | *(New)* | Cloudinary API Secret. |
+
+*   **Dependencies:**
+
+| Package | Old Ver | New Ver | Purpose |
+|---|---|---|---|
+| `cloudinary` | *N/A* | `^2.9.0` | Backend image upload handler. |
+| `remark-gfm` | *N/A* | `^4.0.1` | Frontend markdown rendering (GitHub Flavored). |
+
+### 🖥 Frontend Application
+*   **What Changed:** 
+    *   Created `BlogList.jsx` for displaying a paginated grid of articles.
+    *   Created `BlogDetail.jsx` for rendering the full article using `react-markdown`. 
+    *   Created `BlogManagement.jsx` to provide an interface for admins to manage content. 
+    *   Updated `App.jsx` to register the new routes (`/blog`, `/blog/:slug`, `/admin/blogs`) and `layout.jsx` to add the navigation links.
+    *   **SEO Updates:** Added `robots.txt` and dynamically updated `meta` and `canonicalUrl` tags using `react-helmet-async` on the blog pages to improve search engine visibility.
+
+## 4. Impact & Risk Assessment
+*   **Breaking Changes:** None. This is a purely additive feature.
+*   **Testing Suggestions:**
+    *   **Image Uploads:** Verify Cloudinary image uploads from the Admin panel to ensure the correct environment variables are loaded and the image buffer is processed correctly.
+    *   **Slug Generation:** Test the `ensureUniqueSlug` logic by creating multiple blogs with the exact same title to ensure suffixes (`-1`, `-2`) are appended.
+    *   **SEO Validation:** Validate the generated `/sitemap.xml` endpoint to ensure it correctly maps to valid URLs and excludes drafts.
+    *   **Markdown Rendering:** Test rendering complex markdown (tables, code blocks) in `BlogDetail` to ensure `remark-gfm` parses it correctly without breaking the UI layout.

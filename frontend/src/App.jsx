@@ -44,6 +44,9 @@ import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
 import QuestionCodePage from "./pages/QuestionBank/QuestionCodePage";
 import AdminRoute from "./components/AdminRoute";
 import SeedQuestions from "./pages/adminScreens/SeedQuestions";
+import BlogList from "./pages/Blog/BlogList";
+import BlogDetail from "./pages/Blog/BlogDetail";
+import BlogManagement from "./pages/adminScreens/BlogManagement";
 import CheckoutPage from "./pages/CheckoutPage";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -281,6 +284,24 @@ function App() {
         />
 
         <Route
+          path="/blog"
+          element={
+            <Layout>
+              <BlogList />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/blog/:slug"
+          element={
+            <Layout>
+              <BlogDetail />
+            </Layout>
+          }
+        />
+
+        <Route
           path="/mic"
           element={
             <Layout>
@@ -296,6 +317,14 @@ function App() {
             element={
               <Layout>
                 <SeedQuestions />
+              </Layout>
+            }
+          />
+          <Route
+            path="/admin/blogs"
+            element={
+              <Layout>
+                <BlogManagement />
               </Layout>
             }
           />

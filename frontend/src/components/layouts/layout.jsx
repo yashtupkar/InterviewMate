@@ -15,6 +15,7 @@ import {
   FiLinkedin,
   FiBook,
   FiTool,
+  FiEdit3,
 } from "react-icons/fi";
 import Logo from "../common/Logo";
 
@@ -112,6 +113,7 @@ const Layout = ({ children }) => {
     location.pathname.startsWith("/interview-questions") ||
     location.pathname.startsWith("/interview-question") ||
     location.pathname.startsWith("/questions");
+  const isBlogActive = location.pathname.startsWith("/blog");
 
   return (
     <div className="flex flex-col min-h-screen relative z-10 w-full">
@@ -144,6 +146,14 @@ const Layout = ({ children }) => {
             >
               <FiBook size={15} />
               Question Bank
+            </Link>
+
+            <Link
+              to="/blog"
+              className={`flex items-center gap-1.5 font-medium transition-colors ${isBlogActive ? "text-[#bef264]" : "text-white hover:text-[#bef264]"}`}
+            >
+              <FiEdit3 size={15} />
+              Blog
             </Link>
 
             {/* Tools Dropdown */}
@@ -347,6 +357,13 @@ const Layout = ({ children }) => {
             >
               <FiBook size={16} className="text-[#bef264]/60" />
               Question Bank
+            </Link>
+            <Link
+              to="/blog"
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+            >
+              <FiEdit3 size={16} className="text-[#bef264]/60" />
+              Blog
             </Link>
             {user ? (
               <Link
