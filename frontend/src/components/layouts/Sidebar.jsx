@@ -126,8 +126,11 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
     {
       name: "Question Bank",
       icon: <FaBook />,
-      path: "/questions",
-      active: location.pathname.startsWith("/questions"),
+      path: "/interview-questions",
+      active:
+        location.pathname.startsWith("/interview-questions") ||
+        location.pathname.startsWith("/interview-question") ||
+        location.pathname.startsWith("/questions"),
       badge: "Free",
     },
   ];

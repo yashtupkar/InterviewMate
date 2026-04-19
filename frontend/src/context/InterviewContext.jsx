@@ -2,6 +2,21 @@ import React, { createContext, useContext, useState, useRef } from "react";
 
 const InterviewContext = createContext();
 
+const getStoredBoolean = (key, defaultValue) => {
+  const stored = localStorage.getItem(key);
+
+  if (stored === null) {
+    return defaultValue;
+  }
+
+  try {
+    const parsed = JSON.parse(stored);
+    return typeof parsed === "boolean" ? parsed : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
+
 export const InterviewProvider = ({ children }) => {
   const [interviewData, setInterviewData] = useState({
     interviewType: "technical",
@@ -19,14 +34,12 @@ export const InterviewProvider = ({ children }) => {
   const [interviewDuration, setInterviewDuration] = useState(0);
 
   // Camera and Mic states with localStorage persistence
-  const [isCameraEnabled, setIsCameraEnabled] = useState(() => {
-    const stored = localStorage.getItem("interview_camera_enabled");
-    return stored !== null ? JSON.parse(stored) : true;
-  });
-  const [isMicEnabled, setIsMicEnabled] = useState(() => {
-    const stored = localStorage.getItem("interview_mic_enabled");
-    return stored !== null ? JSON.parse(stored) : true;
-  });
+  const [isCameraEnabled, setIsCameraEnabled] = useState(() =>
+    getStoredBoolean("interview_camera_enabled", true),
+  );
+  const [isMicEnabled, setIsMicEnabled] = useState(() =>
+    getStoredBoolean("interview_mic_enabled", true),
+  );
 
   const setAndStoreCameraStatus = (status) => {
     setIsCameraEnabled(status);

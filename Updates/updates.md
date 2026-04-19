@@ -350,3 +350,74 @@ graph TD
     *   **STT Pacing & Countdown:** Speak into the microphone, pause for 1 second to trigger the amber countdown banner, then speak again to verify it cancels. Let the countdown finish to ensure the message auto-sends.
     *   **Performance:** Monitor the network tab to ensure video preloading (`collectAnimationSources`) does not cause excessive bandwidth usage or memory leaks over long sessions.
     *   **UI Fallbacks:** Disconnect the internet momentarily to ensure the agent falls back to the static `image` gracefully if a video fails to load.
+
+    Date : 19/4/2025
+    ## 1. High-Level Summary (TL;DR)
+*   **Impact:** Medium
+*   **Key Changes:**
+    *   **SEO-Friendly Routing:** Refactored Question Bank URLs (e.g., from `/questions/:id` to `/interview-question/:skills/:questionId`) for better SEO and context.
+    *   **New Coding Interface:** Introduced `QuestionCodePage` to render interactive coding challenges based on fetched question data.
+    *   **Enhanced Error Handling:** Centralized API error parsing and toast notification logic in `CreateInterview` and `GroupDiscussionSetup`.
+    *   **Related Questions:** Added functionality to fetch and display related questions dynamically on the `QuestionDetail` page.
+    *   **Robust Local Storage:** Replaced inline `localStorage` checks with a safer `getStoredBoolean` utility in `InterviewContext`.
+
+## 2. Visual Overview (Code & Logic Map)
+
+```mermaid
+graph TD
+    %% Define Nodes with strict double quotes for labels
+    App["App.jsx (Router)"]
+    Dashboard["QuestionBankDashboard"]
+    List["QuestionBankList"]
+    Detail["QuestionDetail"]
+    CodePage["QuestionCodePage"]
+    
+    %% Relationships
+    App -->|"/interview-questions"| Dashboard
+    App -->|"/interview-questions/:domain"| List
+    App -->|"/interview-question/:skills/:questionId"| Detail
+    App -->|"/interview-question/:skills/:questionId/code"| CodePage
+    
+    subgraph "QuestionDetail Logic"
+        Detail -->|"fetchRelatedQuestions()"| API_Questions["API: /api/questions?skill=..."]
+    end
+    
+    subgraph "QuestionCodePage Logic"
+        CodePage -->|"fetchQuestion()"| API_GetQ["API: /api/questions/:questionId"]
+        API_GetQ -->|"buildTaskFromQuestion()"| CodingSpace["CodingSpace"]
+    end
+```
+
+## 3. Detailed Change Analysis
+
+### 🗺️ Routing & Navigation
+*   **What Changed:** Redesigned the Question Bank URL structure to be more descriptive and parameter-driven. Updated `Sidebar.jsx` and `layout.jsx` to keep the active state synchronized with the new URL structures.
+
+| Old Route | New Route | Component | Reason |
+| :--- | :--- | :--- | :--- |
+| `/questions` | `/interview-questions` | `QuestionBankDashboard` | Improved SEO & clarity |
+| `/questions/list` | `/interview-questions/:domain` | `QuestionBankList` | Domain-based filtering |
+| `/questions/:id` | `/interview-question/:skills/:questionId` | `QuestionDetail` | Inject skills context |
+| `/code` | `/code-space`, `/interview-question/.../code` | `QuestionCodePage` | Dedicated coding space |
+
+### 📚 Question Bank Enhancements
+*   **What Changed:** 
+    *   **`QuestionDetail.jsx`:** Replaced the `id` param with `skills` and `questionId`. Implemented a new `useEffect` hook to fetch related questions dynamically based on the current question's primary skill, domain, or company. Added `slugifySkill` utility for URL construction.
+    *   **`QuestionBankList.jsx`:** Replaced query parameter domain filtering with a route parameter (`useParams().domain`). Includes automatic redirection logic to clean up legacy `domain` query parameters.
+
+### 🐛 Error Handling & State Management
+*   **What Changed:** 
+    *   **`CreateInterview.jsx` & `GroupDiscussionSetup.jsx`:** Introduced `getDetailedErrorMessage`, `showErrorToast`, and `clearFieldError` helpers. This provides detailed, backend-provided error feedback to the user instead of generic messages.
+    *   **`GroupDiscussionSetup.jsx`:** Added explicit validation to prevent starting a session if the microphone (`micReady`) is unavailable.
+    *   **`InterviewContext.jsx`:** Created `getStoredBoolean` helper to safely parse boolean flags from `localStorage`, preventing application crashes on invalid JSON payloads.
+
+### 💻 New Component: QuestionCodePage
+*   **What Changed:** Added `QuestionCodePage.jsx` which bridges the question data from the backend to the `CodingSpace` component. It includes a `buildTaskFromQuestion` adapter function that normalizes the API payload (extracting `starterCode`, `testCases`, and `constraints`) into a `task` object readable by the IDE component.
+
+## 4. Impact & Risk Assessment
+*   **⚠️ Breaking Changes:** 
+    *   **Bookmarks:** Users with bookmarked `/questions/:id` URLs will encounter 404s unless a server-side or router-level redirect is implemented.
+*   **🔍 Testing Suggestions:**
+    *   Verify navigation flow from the Dashboard -> List -> Detail -> Code Page to ensure parameters (`skills`, `domain`, `questionId`) propagate correctly.
+    *   Test edge cases in `CreateInterview` and `GroupDiscussionSetup` by denying microphone/camera permissions to ensure the new error handlers trigger properly.
+    *   Load a question with missing `starterCode` or `testCases` in `QuestionCodePage` to ensure the `buildTaskFromQuestion` fallbacks work without crashing.

@@ -41,6 +41,7 @@ import Contact from "./pages/Contact";
 import QuestionBankDashboard from "./pages/QuestionBank/QuestionBankDashboard";
 import QuestionBankList from "./pages/QuestionBank/QuestionBankList";
 import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
+import QuestionCodePage from "./pages/QuestionBank/QuestionCodePage";
 import AdminRoute from "./components/AdminRoute";
 import SeedQuestions from "./pages/adminScreens/SeedQuestions";
 import CheckoutPage from "./pages/CheckoutPage";
@@ -230,10 +231,28 @@ function App() {
         />
 
         <Route
+          path="/interview-questions"
+          element={
+            <Layout>
+              <QuestionBankDashboard />
+            </Layout>
+          }
+        />
+
+        <Route
           path="/questions"
           element={
             <Layout>
               <QuestionBankDashboard />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/interview-questions/:domain"
+          element={
+            <Layout>
+              <QuestionBankList />
             </Layout>
           }
         />
@@ -248,12 +267,17 @@ function App() {
         />
 
         <Route
-          path="/questions/:id"
+          path="/interview-question/:skills/:questionId"
           element={
             <Layout>
               <QuestionDetail />
             </Layout>
           }
+        />
+
+        <Route
+          path="/interview-question/:skills/:questionId/code"
+          element={<QuestionCodePage />}
         />
 
         <Route
@@ -363,7 +387,12 @@ function App() {
 
           {/* Testing routes */}
           <Route path="/voices" element={<VoiceTest />} />
-          <Route path="/code" element={<CodingSpace />} />
+          <Route path="/code-space" element={<QuestionCodePage />} />
+          <Route
+            path="/interview-question/:skills/:questionId/code-space"
+            element={<QuestionCodePage />}
+          />
+          <Route path="/code" element={<QuestionCodePage />} />
         </Route>
 
         {/* Auth Routes */}

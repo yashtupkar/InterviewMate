@@ -16,12 +16,26 @@ import QuestionBankAuthPopup from "../../components/common/QuestionBankAuthPopup
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
+const slugifySkill = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/\+/g, " plus ")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
+const buildQuestionLink = (question) => {
+  const skillSlug = slugifySkill(question?.skills?.[0] || "general");
+  return `/interview-question/${skillSlug}/${question?._id}`;
+};
+
 const QuestionDetail = () => {
-  const { id } = useParams();
+  const { skills, questionId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { isSignedIn, getToken } = useAuth();
-  const backPath = location.state?.from || "/questions";
+  const backPath = location.state?.from || "/interview-questions";
   const [question, setQuestion] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -32,6 +46,8 @@ const QuestionDetail = () => {
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [showUpgradeGate, setShowUpgradeGate] = useState(false);
   const [showLimitGate, setShowLimitGate] = useState(false);
+  const [relatedQuestions, setRelatedQuestions] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   const cleanMD = (text) => {
     if (!text) return "";
@@ -83,8 +99,14 @@ const QuestionDetail = () => {
 
   useEffect(() => {
     const fetchQuestion = async () => {
+      if (!questionId) {
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await axios.get(`${backendURL}/api/questions/${id}`);
+        const res = await axios.get(
+          `${backendURL}/api/questions/${questionId}`,
+        );
         if (res.data.success) {
           setQuestion(res.data.data);
           if (res.data.data.starterCode) {
@@ -99,7 +121,7 @@ const QuestionDetail = () => {
       }
     };
     fetchQuestion();
-  }, [id]);
+  }, [questionId]);
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -126,6 +148,66 @@ const QuestionDetail = () => {
     fetchSubscription();
   }, [isSignedIn, getToken]);
 
+  useEffect(() => {
+    const fetchRelatedQuestions = async () => {
+      if (!question?._id) return;
+
+      const currentId = String(question._id);
+      const queries = [];
+      const primarySkill = question.skills?.[0];
+      const primaryDomain = question.domains?.[0];
+      const primaryCompany = question.companies?.[0];
+
+      if (primarySkill) {
+        queries.push(
+          `${backendURL}/api/questions?skill=${encodeURIComponent(primarySkill)}&limit=8`,
+        );
+      }
+
+      if (primaryDomain) {
+        queries.push(
+          `${backendURL}/api/questions?domain=${encodeURIComponent(primaryDomain)}&limit=8`,
+        );
+      }
+
+      if (primaryCompany) {
+        queries.push(
+          `${backendURL}/api/questions?company=${encodeURIComponent(primaryCompany)}&limit=8`,
+        );
+      }
+
+      if (queries.length === 0) {
+        setRelatedQuestions([]);
+        return;
+      }
+
+      setRelatedLoading(true);
+      try {
+        const responses = await Promise.all(queries.map((url) => axios.get(url)));
+        const merged = [];
+        const seen = new Set([currentId]);
+
+        responses.forEach((response) => {
+          (response.data?.data || []).forEach((item) => {
+            const itemId = String(item?._id || item?.id || "");
+            if (!itemId || seen.has(itemId)) return;
+            seen.add(itemId);
+            merged.push(item);
+          });
+        });
+
+        setRelatedQuestions(merged.slice(0, 6));
+      } catch (error) {
+        console.error("Failed to load related questions:", error);
+        setRelatedQuestions([]);
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+
+    fetchRelatedQuestions();
+  }, [question]);
+
   const capitalize = (value = "") =>
     value.charAt(0).toUpperCase() + value.slice(1);
 
@@ -135,7 +217,7 @@ const QuestionDetail = () => {
     const defaultLanguage = starterLangs[0] || "javascript";
 
     return {
-      id: data?._id || data?.id || id,
+      id: data?._id || data?.id || questionId,
       title: data?.title || "Coding challenge",
       difficulty: capitalize(data?.difficulty || "easy"),
       language: defaultLanguage,
@@ -174,12 +256,19 @@ const QuestionDetail = () => {
       return;
     }
 
-    navigate("/code", {
-      state: {
-        task: buildTaskFromQuestion(question),
-        fromQuestionId: question?._id || id,
+    const skillSlug = slugifySkill(
+      question?.skills?.[0] || skills || "javascript",
+    );
+
+    navigate(
+      `/interview-question/${skillSlug}/${question?._id || questionId}/code-space`,
+      {
+        state: {
+          task: buildTaskFromQuestion(question),
+          fromQuestionId: question?._id || questionId,
+        },
       },
-    });
+    );
   };
 
   if (loading) {
@@ -328,7 +417,7 @@ const QuestionDetail = () => {
                   </span>
                 ))} */}
 
-                {question.companies.slice(0, 3).map((c) => (
+                {question.companies?.slice(0, 3).map((c) => (
                   <span
                     key={c}
                     className="text-xs capitalize bg-[#bef264]/10 text-[#bef264] px-2 py-1 rounded"
@@ -520,6 +609,93 @@ const QuestionDetail = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* RELATED QUESTIONS */}
+        <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6">
+          <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-white">
+                Related Questions
+              </h2>
+              <p className="text-sm text-zinc-400 mt-1">
+                Explore similar questions to compare patterns, difficulty, and interview depth.
+              </p>
+            </div>
+            <Link
+              to="/interview-questions/all"
+              className="text-xs font-black uppercase tracking-widest text-[#bef264] hover:text-white transition-colors"
+            >
+              Browse All
+            </Link>
+          </div>
+
+          {relatedLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, index) => (
+                <div
+                  key={index}
+                  className="h-32 rounded-xl border border-zinc-800 bg-zinc-950 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : relatedQuestions.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {relatedQuestions.map((relatedQuestion) => (
+                <Link
+                  key={relatedQuestion._id}
+                  to={buildQuestionLink(relatedQuestion)}
+                  state={{ from: location.pathname + location.search }}
+                  className="group rounded-xl border border-zinc-800 bg-black/40 p-4 hover:border-[#bef264]/40 hover:bg-zinc-950 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-white group-hover:text-[#bef264] transition-colors line-clamp-2">
+                        {relatedQuestion.title}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-2 uppercase tracking-widest">
+                        {relatedQuestion.type} • {relatedQuestion.difficulty}
+                      </p>
+                    </div>
+                    <span className="text-[#bef264] text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                      Open →
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {relatedQuestion.skills?.slice(0, 1).map((skill) => (
+                      <span
+                        key={skill}
+                        className="text-[10px] px-2 py-1 rounded-full bg-[#bef264]/10 text-[#bef264] uppercase tracking-widest"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {relatedQuestion.companies?.slice(0, 1).map((company) => (
+                      <span
+                        key={company}
+                        className="text-[10px] px-2 py-1 rounded-full bg-zinc-800 text-zinc-300 capitalize"
+                      >
+                        {company}
+                      </span>
+                    ))}
+                    {relatedQuestion.domains?.slice(0, 1).map((domain) => (
+                      <span
+                        key={domain}
+                        className="text-[10px] px-2 py-1 rounded-full bg-zinc-800 text-zinc-300 capitalize"
+                      >
+                        {domain}
+                      </span>
+                    ))}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-zinc-800 bg-zinc-950 px-4 py-6 text-sm text-zinc-400">
+              No closely related questions found yet. Use the question bank to browse by skill, company, or domain.
+            </div>
+          )}
         </div>
       </div>
     </div>

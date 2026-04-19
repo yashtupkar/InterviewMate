@@ -30,6 +30,7 @@ import { useUser, useAuth } from "@clerk/clerk-react";
 import usePollyTTS from "../hooks/usePollyTTS";
 import { FEATURE_COSTS } from "../constants/pricing";
 import UniversalPopup from "../components/common/UniversalPopup";
+import Skeleton from "../components/common/Skeleton";
 
 import { interviewAgents } from "../constants/agents";
 
@@ -93,10 +94,39 @@ const CreateInterview = () => {
   const [isPresetSaving, setIsPresetSaving] = useState(false);
   const [showSavePresetModal, setShowSavePresetModal] = useState(false);
   const [mobileStage, setMobileStage] = useState(1);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [activeTtsAgent, setActiveTtsAgent] = useState("");
+  const [isTtsLoading, setIsTtsLoading] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false,
   );
   const { speakText, stopSpeaking } = usePollyTTS();
+
+  const getDetailedErrorMessage = (error, fallbackMessage) => {
+    const statusCode = error?.response?.status;
+    const backendMessage = error?.response?.data?.message;
+    const genericMessage = error?.message;
+    const message = backendMessage || genericMessage || fallbackMessage;
+
+    if (statusCode) {
+      return `${statusCode}: ${message}`;
+    }
+
+    return message;
+  };
+
+  const showErrorToast = (error, fallbackMessage) => {
+    toast.error(getDetailedErrorMessage(error, fallbackMessage));
+  };
+
+  const clearFieldError = (field) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (interviewMode === "skillsBased") {
@@ -107,12 +137,20 @@ const CreateInterview = () => {
   const playVoiceSample = async (agent, e = null) => {
     if (e) e.stopPropagation();
 
+    if (isTtsLoading && activeTtsAgent === agent.name) {
+      return;
+    }
+
     try {
+      setIsTtsLoading(true);
+      setActiveTtsAgent(agent.name);
       const text = `Hi, I am ${agent.name}. I'll be your interviewer today.`;
       await speakText(text, agent.name);
     } catch (err) {
       console.error("Voice preview error:", err);
-      toast.error("Voice preview unavailable. Please try again.");
+      showErrorToast(err, "Voice preview unavailable. Please try again.");
+    } finally {
+      setIsTtsLoading(false);
     }
   };
 
@@ -158,6 +196,7 @@ const CreateInterview = () => {
         setPresets(response.data?.presets || []);
       } catch (err) {
         console.error("Error fetching interview presets:", err);
+        showErrorToast(err, "Unable to fetch interview presets.");
       } finally {
         setIsPresetLoading(false);
       }
@@ -177,6 +216,7 @@ const CreateInterview = () => {
         }
       } catch (err) {
         console.error("Error fetching subscription:", err);
+        showErrorToast(err, "Unable to fetch subscription details.");
       }
     };
 
@@ -209,10 +249,14 @@ const CreateInterview = () => {
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
           }
+          clearFieldError("cameraMic");
         } catch (err) {
           console.error("Camera access denied:", err);
           setIsCameraEnabled(false);
-          toast.error("Could not access camera. Please check permissions.");
+          showErrorToast(
+            err,
+            "Could not access camera. Please check permissions.",
+          );
         }
       }
     };
@@ -227,6 +271,18 @@ const CreateInterview = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setInterviewData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "role" && value.trim()) {
+      clearFieldError("role");
+    }
+
+    if (name === "level" && value) {
+      clearFieldError("level");
+    }
+
+    if (name === "interviewType" && value) {
+      clearFieldError("interviewType");
+    }
   };
 
   const availableCredits =
@@ -278,6 +334,7 @@ const CreateInterview = () => {
     const rawValues = skillInput.split(",");
     rawValues.forEach((value) => addSkill(value));
     setSkillInput("");
+    clearFieldError("skills");
   };
 
   const togglePresetSkill = (value) => {
@@ -293,6 +350,7 @@ const CreateInterview = () => {
     }
 
     addSkill(value);
+    clearFieldError("skills");
   };
 
   const buildPresetPayload = () => ({
@@ -438,9 +496,7 @@ const CreateInterview = () => {
 
       return nextSelectedId;
     } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "Unable to save interview preset.",
-      );
+      showErrorToast(error, "Unable to save interview preset.");
       return false;
     } finally {
       setIsPresetSaving(false);
@@ -478,9 +534,7 @@ const CreateInterview = () => {
       setPresetName("");
       toast.success("Preset deleted.");
     } catch (error) {
-      toast.error(
-        error?.response?.data?.message || "Unable to delete interview preset.",
-      );
+      showErrorToast(error, "Unable to delete interview preset.");
     } finally {
       setIsPresetSaving(false);
     }
@@ -526,6 +580,69 @@ const CreateInterview = () => {
     }
   }, [selectedPresetId, canUpdateSelectedPreset]);
 
+  const isResumeRequired =
+    interviewMode === "roleBased"
+      ? inputType === "resume" || inputType === "both"
+      : skillsSourceType === "resume" || skillsSourceType === "both";
+
+  const isJobDescriptionRequired =
+    interviewMode === "roleBased"
+      ? inputType === "jobDescription" || inputType === "both"
+      : skillsSourceType === "jobDescription" || skillsSourceType === "both";
+
+  const isSkillsRequired = interviewMode === "skillsBased";
+
+  const validateFormBeforeStart = () => {
+    const nextErrors = {};
+    const hasResumeContent = Boolean(resumeContent.trim());
+    const hasJobDescription = Boolean(jobDescription.trim());
+    const hasSkills = skills.length > 0;
+
+    if (!interviewData?.role?.trim()) {
+      nextErrors.role = "Job title is required.";
+    }
+
+    if (!interviewData?.level) {
+      nextErrors.level = "Experience level is required.";
+    }
+
+    if (!interviewData?.agentName) {
+      nextErrors.agentName = "Please select an interviewer.";
+    }
+
+    if (!isCameraEnabled || !isMicEnabled) {
+      nextErrors.cameraMic = "Enable both camera and microphone to start.";
+    }
+
+    if (isSkillsRequired && !hasSkills) {
+      nextErrors.skills = "Add at least one skill for skills-based interviews.";
+    }
+
+    if (isJobDescriptionRequired && !hasJobDescription) {
+      nextErrors.jobDescription =
+        "Job description is required for the selected source.";
+    }
+
+    if (isResumeRequired && !hasResumeContent) {
+      nextErrors.resumeContent =
+        "Resume content is required. Upload and parse your resume PDF.";
+    }
+
+    if (!duration) {
+      nextErrors.duration = "Please choose interview duration.";
+    }
+
+    setFieldErrors(nextErrors);
+
+    const firstError = Object.values(nextErrors)[0];
+    if (firstError) {
+      toast.error(firstError);
+      return false;
+    }
+
+    return true;
+  };
+
   const startInterviewSession = async () => {
     if (
       subscription &&
@@ -539,13 +656,7 @@ const CreateInterview = () => {
       return;
     }
 
-    if (!interviewData.agentName) {
-      toast.error("Please select an interviewer to continue.");
-      return;
-    }
-
-    if (!isCameraEnabled || !isMicEnabled) {
-      toast.error("Please enable both camera and microphone to start.");
+    if (!validateFormBeforeStart()) {
       return;
     }
 
@@ -647,6 +758,9 @@ const CreateInterview = () => {
         duration: serverDuration,
       } = response.data;
       setSessionId(newSessionId);
+      toast.success(
+        "Interview initialized successfully. Launching your session...",
+      );
 
       navigate(`/session-custom/${newSessionId}`, {
         state: {
@@ -657,7 +771,7 @@ const CreateInterview = () => {
       });
     } catch (error) {
       console.error(error);
-      toast.error("Failed to initialize custom interview.");
+      showErrorToast(error, "Failed to initialize custom interview.");
     } finally {
       setLoading(false);
     }
@@ -672,11 +786,19 @@ const CreateInterview = () => {
     }
 
     if (selectedFile.type !== "application/pdf") {
+      setFieldErrors((prev) => ({
+        ...prev,
+        resumeContent: "Only PDF files are supported.",
+      }));
       toast.error("Please upload a PDF file only.");
       return;
     }
 
     if (selectedFile.size > 5 * 1024 * 1024) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        resumeContent: "Resume PDF must be 5MB or smaller.",
+      }));
       toast.error("Resume PDF must be 5MB or smaller.");
       return;
     }
@@ -701,15 +823,33 @@ const CreateInterview = () => {
         },
       );
 
-      setResumeContent(response.data.resumeText || "");
+      const parsedText = response.data?.resumeText?.trim() || "";
+      if (!parsedText) {
+        setResumeContent("");
+        setFieldErrors((prev) => ({
+          ...prev,
+          resumeContent:
+            "Resume was parsed but no readable text was found. Please upload a clearer PDF.",
+        }));
+        toast.error(
+          "422: Resume parsed but no readable text was found. Please upload a clearer PDF.",
+        );
+        return;
+      }
+
+      setResumeContent(parsedText);
       setResumeFileName(response.data.fileName || selectedFile.name);
-      toast.success("Resume parsed successfully.");
+      clearFieldError("resumeContent");
+      toast.success("Resume parsed successfully and ready to use.");
     } catch (error) {
       setResumeContent("");
       setResumeFileName("");
-      toast.error(
-        error?.response?.data?.message || "Failed to parse resume PDF.",
-      );
+      setFieldErrors((prev) => ({
+        ...prev,
+        resumeContent:
+          "Resume parsing failed. Please try another PDF or retry upload.",
+      }));
+      showErrorToast(error, "Failed to parse resume PDF.");
     } finally {
       setIsParsingResume(false);
     }
@@ -735,9 +875,32 @@ const CreateInterview = () => {
     }
   };
 
-  const toggleVideo = () => setIsCameraEnabled(!isCameraEnabled);
+  const toggleMic = () => {
+    setIsMicEnabled((prev) => {
+      const next = !prev;
+      if (next && isCameraEnabled) {
+        clearFieldError("cameraMic");
+      }
+      return next;
+    });
+  };
+
+  const toggleVideo = () => {
+    setIsCameraEnabled((prev) => {
+      const next = !prev;
+      if (next && isMicEnabled) {
+        clearFieldError("cameraMic");
+      }
+      return next;
+    });
+  };
 
   const canProceedToForm = isCameraEnabled && isMicEnabled;
+  const canStartInterview = isCameraEnabled && isMicEnabled;
+  const isCreditBlocked =
+    subscription &&
+    subscription.tier !== "Infinite Elite" &&
+    availableCredits < FEATURE_COSTS.mockInterview;
   const isCompactMobileForm = isSmallScreen && mobileStage === 2;
   const hasParsedResume = Boolean(resumeContent.trim()) && !isParsingResume;
 
@@ -780,7 +943,7 @@ const CreateInterview = () => {
               </p>
             </div>
 
-            <div className="relative aspect-video bg-zinc-950 rounded-xl sm:rounded-[2rem] border-y border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
+            <div className="relative aspect-video bg-zinc-950 rounded-xl sm:rounded-2xl border-y border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
               {isCameraEnabled ? (
                 <video
                   ref={localVideoRef}
@@ -811,25 +974,25 @@ const CreateInterview = () => {
               )}
 
               {/* Controls Overlay Desktop*/}
-              <div className="absolute hidden  bottom-2 sm:bottom-6 left-1/2 -translate-x-1/2 sm:flex items-center gap-4 bg-zinc-900/80 backdrop-blur-2xl p-2.5  rounded-xl sm:rounded-3xl border border-white/10 transition-all duration-300 shadow-2xl hover:bg-zinc-900">
+              <div className="absolute hidden  bottom-2 sm:bottom-2 left-1/2 -translate-x-1/2 sm:flex items-center gap-2 bg-zinc-900/80 backdrop-blur-2xl p-2   border border-white/10 transition-all duration-300 shadow-2xl hover:bg-zinc-900">
                 <button
-                  onClick={() => setIsMicEnabled(!isMicEnabled)}
-                  className={`p-3 sm:p-4 rounded-lg sm:rounded-2xl transition-all cursor-pointer ${!isMicEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
+                  onClick={toggleMic}
+                  className={`p-3 sm:px-6 sm:py-3 rounded-lg sm:rounded-sm transition-all cursor-pointer ${!isMicEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
                 >
                   {!isMicEnabled ? (
-                    <FiMicOff className="text-sm sm:text-xl" />
+                    <FiMicOff className="text-sm sm:text-lg" />
                   ) : (
-                    <FiMic className="text-sm sm:text-xl" />
+                    <FiMic className="text-sm sm:text-lg" />
                   )}
                 </button>
                 <button
                   onClick={toggleVideo}
-                  className={`p-3 sm:p-4 rounded-lg sm:rounded-2xl transition-all cursor-pointer ${!isCameraEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
+                  className={`p-3 sm:px-6 sm:py-3 rounded-lg sm:rounded-sm transition-all cursor-pointer ${!isCameraEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
                 >
                   {!isCameraEnabled ? (
-                    <FiVideoOff className="text-sm sm:text-xl" />
+                    <FiVideoOff className="text-sm sm:text-lg" />
                   ) : (
-                    <FiVideo className="text-sm sm:text-xl" />
+                    <FiVideo className="text-sm sm:text-lg" />
                   )}
                 </button>
               </div>
@@ -848,7 +1011,7 @@ const CreateInterview = () => {
             {/* Controls Overlay Mobile */}
             <div className="w-fit mx-auto sm:hidden  flex items-center gap-4 bg-zinc-900/80 backdrop-blur-2xl p-2.5  rounded-xl sm:rounded-3xl border border-white/10 transition-all duration-300 shadow-2xl hover:bg-zinc-900">
               <button
-                onClick={() => setIsMicEnabled(!isMicEnabled)}
+                onClick={toggleMic}
                 className={`px-4 py-2 sm:p-4 rounded-lg sm:rounded-2xl transition-all cursor-pointer ${!isMicEnabled ? "bg-red-500 text-white shadow-lg shadow-red-500/20" : "bg-white/5 hover:bg-white/10 text-white"}`}
               >
                 {!isMicEnabled ? (
@@ -881,7 +1044,7 @@ const CreateInterview = () => {
               </button>
             )}
 
-            <div className="sm:dark:bg-[#1a1a1a] sm:bg-white p-3 sm:p-7 shadow-xl rounded-[2rem] sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
+            <div className="sm:dark:bg-black sm:bg-white p-3 sm:p-7 shadow-xl rounded-2xl sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
               <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
                 <FiShield className="mr-3 text-[#bef264] text-xl" />
                 Professional Environment
@@ -896,7 +1059,7 @@ const CreateInterview = () => {
 
           {/* Setup Form */}
           <div
-            className={`w-full lg:w-[450px] flex flex-col animate-fade-in-right ${isSmallScreen && mobileStage === 1 ? "hidden" : ""} ${isCompactMobileForm ? "gap-5 px-1" : "gap-8 px-4"}`}
+            className={`w-full lg:w-[500px] flex flex-col animate-fade-in-right ${isSmallScreen && mobileStage === 1 ? "hidden" : ""} ${isCompactMobileForm ? "gap-3 px-1" : "gap-4 px-2"}`}
           >
             {isCompactMobileForm && (
               <div className="flex items-center justify-between mb-1">
@@ -913,34 +1076,43 @@ const CreateInterview = () => {
               </div>
             )}
 
-            <div className={isCompactMobileForm ? "pb-1" : "pb-2"}>
-              <h2
-                className={`${isCompactMobileForm ? "text-base" : "text-lg"} font-black dark:text-white text-black mb-1 uppercase tracking-tight`}
-              >
-                Interview details
-              </h2>
+            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl px-4 py-3 shadow-lg shadow-black/20">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#bef264]">
+                    Session Setup
+                  </p>
+                  <h2
+                    className={`${isCompactMobileForm ? "text-base" : "text-lg"} font-extrabold text-zinc-100 mt-1 tracking-tight`}
+                  >
+                    Interview details
+                  </h2>
+                </div>
+              </div>
               <p
-                className={`dark:text-zinc-400 text-gray-500 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium`}
+                className={`text-zinc-400 ${isCompactMobileForm ? "text-xs" : "text-sm"} font-medium mt-1`}
               >
-                Give the job details you want to apply for
+                Give the job details you want to prepare for
               </p>
             </div>
 
-            <div className={isCompactMobileForm ? "space-y-4" : "space-y-6"}>
+            <div
+              className={`${isCompactMobileForm ? "space-y-4" : "space-y-5"} rounded-2xl border border-zinc-800/80 bg-zinc-950/75 backdrop-blur-xl p-3 sm:p-4 shadow-2xl shadow-black/25`}
+            >
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
+                <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
                   Interview mode
                 </label>
-                <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
+                <div className="inline-flex rounded-full p-1 border border-zinc-700 bg-zinc-900/90 shadow-inner">
                   <button
                     onClick={() => setInterviewMode("roleBased")}
-                    className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${interviewMode === "roleBased" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                    className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-bold uppercase tracking-wide rounded-full transition-all ${interviewMode === "roleBased" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                   >
                     Role-based
                   </button>
                   <button
                     onClick={() => setInterviewMode("skillsBased")}
-                    className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${interviewMode === "skillsBased" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                    className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-bold uppercase tracking-wide rounded-full transition-all ${interviewMode === "skillsBased" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                   >
                     Skills-based
                   </button>
@@ -952,7 +1124,7 @@ const CreateInterview = () => {
                   className={isCompactMobileForm ? "space-y-3" : "space-y-4"}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
+                    <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
                       Saved presets
                     </label>
                     <div className="flex items-center gap-2">
@@ -963,7 +1135,7 @@ const CreateInterview = () => {
                         type="button"
                         onClick={deleteSelectedPreset}
                         disabled={isPresetSaving || !selectedPresetId}
-                        className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 text-[9px] font-black uppercase tracking-wider hover:bg-red-500/30 transition-all disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-200 text-[9px] font-semibold uppercase tracking-wide hover:bg-red-500/25 transition-all disabled:opacity-40"
                       >
                         Delete
                       </button>
@@ -971,9 +1143,20 @@ const CreateInterview = () => {
                   </div>
 
                   {isPresetLoading ? (
-                    <p className="text-[10px] font-semibold text-zinc-500">
-                      Loading presets...
-                    </p>
+                    <div className="space-y-3">
+                      <div className="overflow-x-auto pb-1 scrollbar-none no-scrollbar">
+                        <div className="flex gap-2.5 min-w-max">
+                          {[1, 2, 3].map((item) => (
+                            <div key={item} className="w-[206px]">
+                              <Skeleton className="h-[116px] w-full rounded-xl" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-semibold text-zinc-500">
+                        Loading presets...
+                      </p>
+                    </div>
                   ) : visiblePresets.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 p-3">
                       <p className="text-[11px] font-semibold text-zinc-400">
@@ -995,26 +1178,26 @@ const CreateInterview = () => {
                                 key={preset._id}
                                 type="button"
                                 onClick={() => handleSelectPreset(preset._id)}
-                                className={`w-[206px] text-left p-2.5 rounded-xl border transition-all ${isSelected ? "border-[#bef264] bg-[#bef264] shadow-[0_0_0_1px_rgba(190,242,100,0.35)]" : "border-cyan-200/20 bg-gradient-to-br from-cyan-300/10 via-slate-800/30 to-slate-900/20 hover:border-cyan-200/40"}`}
+                                className={`w-[206px] text-left p-2.5 rounded-xl border transition-all ${isSelected ? "border-[#bef264] bg-[#bef264]/15 shadow-[0_0_0_1px_rgba(190,242,100,0.25)]" : "border-zinc-700 bg-zinc-900/80 hover:border-zinc-500"}`}
                               >
                                 <div className="flex items-center justify-between gap-2">
                                   <span
-                                    className={`text-[10px] font-black uppercase tracking-wide truncate ${isSelected ? "text-zinc-900" : "text-cyan-50"}`}
+                                    className={`text-[10px] font-bold uppercase tracking-wide truncate ${isSelected ? "text-[#d9f99d]" : "text-zinc-100"}`}
                                   >
                                     {preset.name}
                                   </span>
                                   <span className="inline-flex items-center gap-1.5">
                                     <span
-                                      className={`w-3.5 h-3.5 rounded-full border ${isSelected ? "border-zinc-900/70" : "border-cyan-200/50"} flex items-center justify-center`}
+                                      className={`w-3.5 h-3.5 rounded-full border ${isSelected ? "border-[#d9f99d]/70" : "border-zinc-500"} flex items-center justify-center`}
                                     >
                                       <span
-                                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-zinc-900" : "bg-transparent"}`}
+                                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-[#d9f99d]" : "bg-transparent"}`}
                                       />
                                     </span>
                                   </span>
                                 </div>
                                 <div
-                                  className={`mt-2 space-y-1 text-[9px] font-semibold ${isSelected ? "text-zinc-800" : "text-cyan-100/80"}`}
+                                  className={`mt-2 space-y-1 text-[9px] font-semibold ${isSelected ? "text-zinc-200" : "text-zinc-400"}`}
                                 >
                                   <p className="truncate">
                                     Role: {preset.role || "Not set"}
@@ -1043,41 +1226,48 @@ const CreateInterview = () => {
                           })}
                         </div>
                       </div>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => scrollPresetSlider("left")}
-                          className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-[9px] font-black uppercase tracking-wider hover:border-zinc-500 hover:text-white transition-all"
-                        >
-                          Prev
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => scrollPresetSlider("right")}
-                          className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-[9px] font-black uppercase tracking-wider hover:border-zinc-500 hover:text-white transition-all"
-                        >
-                          Next
-                        </button>
-                      </div>
+                      {visiblePresets.length > 2 && (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => scrollPresetSlider("left")}
+                            className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-[9px] font-black uppercase tracking-wider hover:border-zinc-500 hover:text-white transition-all"
+                          >
+                            Prev
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => scrollPresetSlider("right")}
+                            className="px-2.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 text-[9px] font-black uppercase tracking-wider hover:border-zinc-500 hover:text-white transition-all"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
 
-              <hr className="dark:border-white/5 border-black/5" />
+              <hr className="border-zinc-800/80" />
 
               {/* Job Title */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
-                  Job title
+                <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
+                  Job title <span className="text-red-400">*</span>
                 </label>
                 <input
                   name="role"
                   value={interviewData?.role || ""}
                   onChange={handleInputChange}
                   placeholder="e.g. Frontend Developer"
-                  className={`w-full ${isCompactMobileForm ? "px-4 py-3 text-xs" : "px-5 py-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none font-bold placeholder-gray-600 shadow-sm`}
+                  className={`w-full ${isCompactMobileForm ? "px-3.5 py-2.5 text-xs" : "px-4 py-3 text-[13px]"} bg-zinc-900 border ${fieldErrors.role ? "border-red-500/70 focus:border-red-500 focus:ring-red-500/40" : "border-zinc-700 focus:ring-[#bef264]/40 focus:border-[#bef264]/70"} rounded-xl text-zinc-100 focus:ring-1 transition-all outline-none font-semibold placeholder-zinc-500 shadow-sm`}
                 />
+                {fieldErrors.role && (
+                  <p className="text-[10px] font-semibold text-red-400">
+                    {fieldErrors.role}
+                  </p>
+                )}
 
                 {/* Job Title Suggestions Slider */}
                 <div className="relative group/slider">
@@ -1093,10 +1283,10 @@ const CreateInterview = () => {
                             target: { name: "role", value: title },
                           })
                         }
-                        className={`whitespace-nowrap px-4 py-2 rounded-full border text-[11px] font-bold transition-all cursor-pointer snap-start ${
+                        className={`whitespace-nowrap px-3.5 py-1.5 rounded-full border text-[10px] font-semibold transition-all cursor-pointer snap-start ${
                           interviewData.role === title
-                            ? "bg-[#bef264]/10 border-[#bef264] text-[#bef264] shadow-[0_0_15px_-3px_rgba(190,242,100,0.2)]"
-                            : "bg-zinc-800 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-zinc-300"
+                            ? "bg-[#bef264]/15 border-[#bef264]/70 text-[#d9f99d]"
+                            : "bg-zinc-900 border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
                         }`}
                       >
                         {title}
@@ -1122,46 +1312,49 @@ const CreateInterview = () => {
                 </div>
               </div>
 
-              <hr className="dark:border-white/5 border-black/5" />
+              <hr className="border-zinc-800/80" />
 
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <div
                   className={`flex items-center justify-between ${isCompactMobileForm ? "mb-1" : "mb-2"}`}
                 >
-                  <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
+                  <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
                     {interviewMode === "roleBased"
                       ? "Context source"
-                      : "Skills & context source"}
+                      : "Skills & context source"}{" "}
+                    <span className="text-red-400">*</span>
                   </label>
                 </div>
 
                 {interviewMode === "roleBased" ? (
-                  <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
+                  <div className="inline-flex rounded-full p-1 border border-zinc-700 bg-zinc-900/90 shadow-inner">
                     <button
                       onClick={() => setInputType("jobDescription")}
-                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-semibold uppercase tracking-wide rounded-full transition-all ${inputType === "jobDescription" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                     >
                       JD
                     </button>
                     <button
                       onClick={() => setInputType("resume")}
-                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-semibold uppercase tracking-wide rounded-full transition-all ${inputType === "resume" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                     >
                       Resume
                     </button>
                     <button
                       onClick={() => setInputType("both")}
-                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${inputType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                      className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-semibold uppercase tracking-wide rounded-full transition-all ${inputType === "both" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                     >
                       Both
                     </button>
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-3 rounded-2xl border border-zinc-800 bg-black/40 p-3 sm:p-4">
+                    <div
+                      className={`space-y-3 rounded-2xl border bg-zinc-900/70 p-3 ${fieldErrors.skills ? "border-red-500/70" : "border-zinc-700"}`}
+                    >
                       <div className="flex items-center justify-between">
-                        <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                          Skills Focus
+                        <label className="block text-[10px] font-semibold text-zinc-300 uppercase tracking-wide">
+                          Skills Focus <span className="text-red-400">*</span>
                         </label>
                         <span className="text-[10px] font-semibold text-zinc-500">
                           Select preset or add custom
@@ -1178,7 +1371,7 @@ const CreateInterview = () => {
                               key={skill}
                               type="button"
                               onClick={() => togglePresetSkill(skill)}
-                              className={`px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all ${isSelected ? "bg-[#bef264]/10 border-[#bef264] text-[#bef264]" : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500"}`}
+                              className={`px-3 py-1.5 rounded-full border text-[10px] font-semibold uppercase tracking-wide transition-all ${isSelected ? "bg-[#bef264]/15 border-[#bef264]/70 text-[#d9f99d]" : "bg-zinc-900 border-zinc-700 text-zinc-300 hover:border-zinc-500"}`}
                             >
                               {skill}
                             </button>
@@ -1192,12 +1385,12 @@ const CreateInterview = () => {
                           onChange={(e) => setSkillInput(e.target.value)}
                           onKeyDown={handleSkillInputKeyDown}
                           placeholder="Add skills (e.g. SQL, joins, indexing)"
-                          className={`w-full ${isCompactMobileForm ? "px-4 py-3 text-xs" : "px-5 py-3 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/50 focus:border-[#bef264] transition-all outline-none font-bold placeholder-gray-600 shadow-sm`}
+                          className={`w-full ${isCompactMobileForm ? "px-3.5 py-2.5 text-xs" : "px-4 py-2.5 text-[13px]"} bg-zinc-900 border ${fieldErrors.skills ? "border-red-500/70 focus:border-red-500 focus:ring-red-500/40" : "border-zinc-700 focus:ring-[#bef264]/40 focus:border-[#bef264]/70"} rounded-xl text-zinc-100 focus:ring-1 transition-all outline-none font-semibold placeholder-zinc-500 shadow-sm`}
                         />
                         <button
                           type="button"
                           onClick={addSkillFromInput}
-                          className="px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 text-[11px] font-black uppercase tracking-wider hover:border-zinc-500 transition-all"
+                          className="px-3.5 py-2.5 rounded-xl bg-zinc-800 border border-zinc-600 text-zinc-100 text-[10px] font-semibold uppercase tracking-wide hover:border-zinc-400 transition-all"
                         >
                           Add
                         </button>
@@ -1221,24 +1414,29 @@ const CreateInterview = () => {
                           No skills selected yet.
                         </p>
                       )}
+                      {fieldErrors.skills && (
+                        <p className="text-[10px] font-semibold text-red-400">
+                          {fieldErrors.skills}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="flex dark:bg-black rounded-full p-1 border border-zinc-800 w-fit shadow-sm">
+                    <div className="inline-flex rounded-full p-1 border border-zinc-700 bg-zinc-900/90 shadow-inner">
                       <button
                         onClick={() => setSkillsSourceType("jobDescription")}
-                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${skillsSourceType === "jobDescription" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-semibold uppercase tracking-wide rounded-full transition-all ${skillsSourceType === "jobDescription" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                       >
                         JD
                       </button>
                       <button
                         onClick={() => setSkillsSourceType("resume")}
-                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${skillsSourceType === "resume" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-semibold uppercase tracking-wide rounded-full transition-all ${skillsSourceType === "resume" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                       >
                         Resume
                       </button>
                       <button
                         onClick={() => setSkillsSourceType("both")}
-                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-black uppercase tracking-wider rounded-full transition-all ${skillsSourceType === "both" ? "bg-[#bef264] text-black shadow-lg" : "dark:text-zinc-400 text-gray-500 hover:text-zinc-300"}`}
+                        className={`${isCompactMobileForm ? "px-3 py-1 text-[9px]" : "px-4 py-1.5 text-[10px]"} font-semibold uppercase tracking-wide rounded-full transition-all ${skillsSourceType === "both" ? "bg-[#bef264] text-zinc-900 shadow" : "text-zinc-400 hover:text-zinc-200"}`}
                       >
                         Both
                       </button>
@@ -1255,16 +1453,26 @@ const CreateInterview = () => {
                       (skillsSourceType === "jobDescription" ||
                         skillsSourceType === "both"))) && (
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                        Job Description
+                      <label className="block text-[10px] font-semibold text-zinc-300 uppercase tracking-wide">
+                        Job Description <span className="text-red-400">*</span>
                       </label>
                       <textarea
                         value={jobDescription}
-                        onChange={(e) => setJobDescription(e.target.value)}
+                        onChange={(e) => {
+                          setJobDescription(e.target.value);
+                          if (e.target.value.trim()) {
+                            clearFieldError("jobDescription");
+                          }
+                        }}
                         rows={isCompactMobileForm ? 3 : 4}
                         placeholder="Paste the job description here..."
-                        className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] transition-all outline-none resize-none font-medium dark:placeholder-zinc-700 placeholder-gray-500 shadow-sm`}
+                        className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-3.5 text-[13px]"} bg-zinc-900 border ${fieldErrors.jobDescription ? "border-red-500/70 focus:ring-red-500/40" : "border-zinc-700 focus:ring-[#bef264]/40"} rounded-xl text-zinc-100 focus:ring-1 transition-all outline-none resize-none font-medium placeholder-zinc-500 shadow-sm`}
                       ></textarea>
+                      {fieldErrors.jobDescription && (
+                        <p className="text-[10px] font-semibold text-red-400">
+                          {fieldErrors.jobDescription}
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -1274,11 +1482,11 @@ const CreateInterview = () => {
                       (skillsSourceType === "resume" ||
                         skillsSourceType === "both"))) && (
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                        Resume PDF
+                      <label className="block text-[10px] font-semibold text-zinc-300 uppercase tracking-wide">
+                        Resume PDF <span className="text-red-400">*</span>
                       </label>
                       <label
-                        className={`w-full flex items-start justify-between gap-3 ${isCompactMobileForm ? "p-3" : "p-4"} bg-black border rounded-xl transition-all cursor-pointer ${hasParsedResume ? "border-[#bef264]/50" : "border-zinc-800 hover:border-zinc-700"}`}
+                        className={`w-full flex items-start justify-between gap-3 ${isCompactMobileForm ? "p-3" : "p-3.5"} bg-zinc-900 border rounded-xl transition-all cursor-pointer ${fieldErrors.resumeContent ? "border-red-500/70" : hasParsedResume ? "border-[#bef264]/50" : "border-zinc-700 hover:border-zinc-500"}`}
                       >
                         <div className="flex items-start gap-3">
                           <div
@@ -1328,6 +1536,12 @@ const CreateInterview = () => {
                         </div>
                       )}
 
+                      {fieldErrors.resumeContent && (
+                        <p className="text-[10px] font-semibold text-red-400">
+                          {fieldErrors.resumeContent}
+                        </p>
+                      )}
+
                       {hasParsedResume && (
                         <div className="space-y-2 animate-fade-in">
                           <div className="flex items-center justify-between">
@@ -1343,7 +1557,7 @@ const CreateInterview = () => {
                             readOnly
                             rows={isCompactMobileForm ? 3 : 4}
                             placeholder="Parsed resume content"
-                            className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-4 text-[13px]"} bg-black border custom-scrollbar border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264]/40 transition-all outline-none resize-none font-medium shadow-sm`}
+                            className={`w-full ${isCompactMobileForm ? "p-3 text-xs" : "p-3.5 text-[13px]"} bg-zinc-900 border custom-scrollbar border-zinc-700 rounded-xl text-zinc-100 focus:ring-1 focus:ring-[#bef264]/30 transition-all outline-none resize-none font-medium shadow-sm`}
                           ></textarea>
                         </div>
                       )}
@@ -1352,22 +1566,22 @@ const CreateInterview = () => {
                 </div>
               </div>
 
-              <hr className="dark:border-white/5 border-black/5" />
+              <hr className="border-zinc-800/80" />
 
               {/* Experience Level */}
               <div
                 className={`relative ${isCompactMobileForm ? "space-y-3" : "space-y-4"}`}
                 ref={experienceDropdownRef}
               >
-                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
-                  Experience level
+                <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
+                  Experience level <span className="text-red-400">*</span>
                 </label>
                 <button
                   type="button"
                   onClick={() =>
                     setIsExperienceDropdownOpen(!isExperienceDropdownOpen)
                   }
-                  className={`w-full flex items-center justify-between ${isCompactMobileForm ? "px-4 py-3 text-xs" : "px-5 py-4 text-[13px]"} bg-black border border-zinc-800 rounded-xl text-white focus:ring-1 focus:ring-[#bef264] outline-none font-bold shadow-sm transition-all cursor-pointer hover:border-zinc-700`}
+                  className={`w-full flex items-center justify-between ${isCompactMobileForm ? "px-3.5 py-2.5 text-xs" : "px-4 py-3 text-[13px]"} bg-zinc-900 border border-zinc-700 rounded-xl text-zinc-100 focus:ring-1 focus:ring-[#bef264]/40 outline-none font-semibold shadow-sm transition-all cursor-pointer hover:border-zinc-500`}
                 >
                   <span>
                     {
@@ -1388,7 +1602,7 @@ const CreateInterview = () => {
                 </button>
 
                 {isExperienceDropdownOpen && (
-                  <div className="absolute z-10 w-full mt-2 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden animate-fade-in">
+                  <div className="absolute z-10 w-full mt-2 bg-zinc-950 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden animate-fade-in">
                     {[
                       { value: "Junior", label: "Entry Level" },
                       { value: "Mid-Level", label: "Mid-Level Associate" },
@@ -1417,110 +1631,121 @@ const CreateInterview = () => {
                 )}
               </div>
 
-              <hr className="dark:border-white/5 border-black/5" />
+              <hr className="border-zinc-800/80" />
 
               {/* Interviewer Selection */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
-                    Select Interviewer
+                  <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
+                    Select Interviewer <span className="text-red-400">*</span>
                   </label>
-                 
                 </div>
                 <div
                   className={`grid ${isCompactMobileForm ? "grid-cols-1 gap-2.5" : "grid-cols-2 gap-3"} transition-all duration-300`}
                 >
-                  {interviewAgents
-                    .map((agent) => (
-                      <div
-                        key={agent.name}
-                        onClick={() => {
-                          setInterviewData((p) => ({
-                            ...p,
-                            agentName: agent.name,
-                            agentVoiceProvider: agent.provider,
-                            agentVoiceId: agent.voiceId,
-                          }));
-                          playVoiceSample(agent);
-                        }}
-                        style={{
-                          borderColor:
-                            interviewData.agentName === agent.name
-                              ? `#${agent.bg}`
-                              : "",
-                          backgroundColor:
-                            interviewData.agentName === agent.name
-                              ? `#${agent.bg}15`
-                              : "black",
-                        }}
-                        className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${
+                  {interviewAgents.map((agent) => (
+                    <div
+                      key={agent.name}
+                      onClick={() => {
+                        setInterviewData((p) => ({
+                          ...p,
+                          agentName: agent.name,
+                          agentVoiceProvider: agent.provider,
+                          agentVoiceId: agent.voiceId,
+                        }));
+                        clearFieldError("agentName");
+                        playVoiceSample(agent);
+                      }}
+                      style={{
+                        borderColor:
                           interviewData.agentName === agent.name
-                            ? "shadow-xl shadow-black/40 scale-[1.02]"
-                            : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900"
+                            ? `#${agent.bg}`
+                            : "",
+                        backgroundColor:
+                          interviewData.agentName === agent.name
+                            ? `#${agent.bg}15`
+                            : "black",
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-300 ${
+                        interviewData.agentName === agent.name
+                          ? "shadow-lg shadow-black/30 scale-[1.01]"
+                          : "border-zinc-700 bg-zinc-900/70 hover:border-zinc-500 hover:bg-zinc-900"
+                      }`}
+                    >
+                      <div
+                        className={`relative rounded-full p-0.5 transition-all duration-300 ${
+                          interviewData.agentName === agent.name
+                            ? "scale-110"
+                            : ""
                         }`}
-                      >
-                        <div
-                          className={`relative rounded-full p-0.5 transition-all duration-300 ${
+                        style={{
+                          background:
                             interviewData.agentName === agent.name
-                              ? "scale-110"
-                              : ""
+                              ? `linear-gradient(135deg, #${agent.bg}, #${agent.bg}88)`
+                              : "transparent",
+                        }}
+                      >
+                        <img
+                          src={agent.profileImage}
+                          alt={agent.name}
+                          className={`w-10 h-10 rounded-full object-cover border ${
+                            interviewData.agentName === agent.name
+                              ? "border-zinc-950"
+                              : "border-zinc-700"
                           }`}
-                          style={{
-                            background:
-                              interviewData.agentName === agent.name
-                                ? `linear-gradient(135deg, #${agent.bg}, #${agent.bg}88)`
-                                : "transparent",
-                          }}
-                        >
-                          <img
-                            src={agent.profileImage}
-                            alt={agent.name}
-                            className={`w-11 h-11 rounded-full object-cover border-2 ${
-                              interviewData.agentName === agent.name
-                                ? "border-zinc-950"
-                                : "border-zinc-800"
-                            }`}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p
-                              className="text-[13px] font-black truncate transition-colors"
-                              style={{
-                                color:
-                                  interviewData.agentName === agent.name
-                                    ? `#${agent.bg}`
-                                    : "#d4d4d8", // zinc-300
-                              }}
-                            >
-                              {agent.name}
-                            </p>
-                            <button
-                              onClick={(e) => playVoiceSample(agent, e)}
-                              className={`p-2 rounded-xl transition-all ${
-                                interviewData.agentName === agent.name
-                                  ? "bg-white/10 text-white hover:bg-white/20"
-                                  : "bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-800"
-                              }`}
-                              title="Play sample"
-                            >
-                              <FiVolume2 size={14} />
-                            </button>
-                          </div>
-                          <p className="text-[10px] dark:text-zinc-400 text-gray-500 font-black uppercase tracking-widest mt-0.5">
-                            {agent.label} Voice
-                          </p>
-                        </div>
+                        />
                       </div>
-                    ))}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p
+                            className="text-[13px] font-black truncate transition-colors"
+                            style={{
+                              color:
+                                interviewData.agentName === agent.name
+                                  ? `#${agent.bg}`
+                                  : "#d4d4d8", // zinc-300
+                            }}
+                          >
+                            {agent.name}
+                          </p>
+                          <button
+                            onClick={(e) => playVoiceSample(agent, e)}
+                            disabled={
+                              isTtsLoading && activeTtsAgent === agent.name
+                            }
+                            className={`p-2 rounded-xl transition-all ${
+                              interviewData.agentName === agent.name
+                                ? "bg-white/10 text-white hover:bg-white/20"
+                                : "bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                            } disabled:opacity-60 disabled:cursor-not-allowed`}
+                            title="Play sample"
+                          >
+                            {isTtsLoading && activeTtsAgent === agent.name ? (
+                              <FiLoader size={14} className="animate-spin" />
+                            ) : (
+                              <FiVolume2 size={14} />
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-[10px] dark:text-zinc-400 text-gray-500 font-black uppercase tracking-widest mt-0.5">
+                          {agent.label} Voice
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+                {fieldErrors.agentName && (
+                  <p className="text-[10px] font-semibold text-red-400">
+                    {fieldErrors.agentName}
+                  </p>
+                )}
               </div>
 
-              <hr className="dark:border-white/5 border-black/5" />
+              <hr className="border-zinc-800/80" />
 
               {/* Interview Types */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
+                <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
                   Interview Type
                 </label>
                 <div
@@ -1534,7 +1759,7 @@ const CreateInterview = () => {
                         interviewType: "technical",
                       }))
                     }
-                    className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-4 py-3" : "px-5 py-4"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "technical" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
+                    className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-3.5 py-2.5" : "px-4 py-3"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "technical" ? "border-[#bef264]/70 bg-[#bef264]/10 text-white" : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 text-zinc-400"}`}
                   >
                     <div
                       className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "technical" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
@@ -1564,10 +1789,10 @@ const CreateInterview = () => {
                           interviewType: "behavioral",
                         }))
                       }
-                      className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-4 py-3" : "px-5 py-4"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-[#bef264] bg-[#bef264]/10 text-white shadow-xl shadow-[#bef264]/5" : "border-zinc-800 bg-black hover:border-zinc-700 text-zinc-400"}`}
+                      className={`w-full flex items-center gap-4 ${isCompactMobileForm ? "px-3.5 py-2.5" : "px-4 py-3"} rounded-xl border transition-all duration-300 group ${interviewData.interviewType === "behavioral" ? "border-violet-400/80 bg-violet-500/10 text-white" : "border-zinc-700 bg-zinc-900 hover:border-zinc-500 text-zinc-400"}`}
                     >
                       <div
-                        className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-[#bef264] border-[#bef264] scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
+                        className={`w-3.5 h-3.5 rounded-sm border-2 transition-all ${interviewData.interviewType === "behavioral" ? "bg-violet-400 border-violet-400 scale-110" : "bg-transparent border-zinc-700 group-hover:border-zinc-500"}`}
                       />
                       <div className="flex-1 text-left">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -1576,7 +1801,7 @@ const CreateInterview = () => {
                           >
                             Behavioral
                           </span>
-                          <span className="text-[9px] px-2 py-0.5 rounded bg-[#bef264]/20 text-[#bef264] font-black uppercase tracking-widest">
+                          <span className="text-[9px] px-2 py-0.5 rounded bg-violet-400/20 text-violet-200 font-black uppercase tracking-widest">
                             Soft skills
                           </span>
                         </div>
@@ -1595,28 +1820,38 @@ const CreateInterview = () => {
                 </div>
               </div>
 
-              <hr className="dark:border-white/5 border-black/5" />
+              <hr className="border-zinc-800/80" />
 
               {/* Interview Duration */}
               <div className={isCompactMobileForm ? "space-y-3" : "space-y-4"}>
-                <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest">
-                  Interview Duration
+                <label className="block text-[11px] font-semibold text-zinc-300 uppercase tracking-wide">
+                  Interview Duration <span className="text-red-400">*</span>
                 </label>
-                <div className="flex bg-black rounded-xl p-1 border border-zinc-800 shadow-sm">
+                <div className="flex bg-zinc-900 rounded-xl p-1 border border-zinc-700 shadow-sm">
                   {[5, 10, 15, 20].map((mins) => (
                     <button
                       key={mins}
                       onClick={() => setDuration(mins)}
-                      className={`flex-1 ${isCompactMobileForm ? "py-2 text-[10px]" : "py-2.5 text-[11px]"} font-black uppercase tracking-wider rounded-lg transition-all ${
+                      className={`flex-1 ${isCompactMobileForm ? "py-2 text-[10px]" : "py-2 text-[11px]"} font-semibold uppercase tracking-wide rounded-lg transition-all ${
                         duration === mins
-                          ? "bg-[#bef264] text-black shadow-lg"
-                          : "text-zinc-400 hover:text-zinc-300"
+                          ? "bg-[#bef264] text-zinc-900 shadow"
+                          : "text-zinc-400 hover:text-zinc-100"
                       }`}
                     >
                       {mins} Min
                     </button>
                   ))}
                 </div>
+                {fieldErrors.duration && (
+                  <p className="text-[10px] font-semibold text-red-400">
+                    {fieldErrors.duration}
+                  </p>
+                )}
+                {fieldErrors.cameraMic && (
+                  <p className="text-[10px] font-semibold text-red-400">
+                    {fieldErrors.cameraMic}
+                  </p>
+                )}
               </div>
 
               <div className={isCompactMobileForm ? "pt-1" : "pt-2"}>
@@ -1624,7 +1859,7 @@ const CreateInterview = () => {
                   <button
                     onClick={handlePrimaryPresetAction}
                     disabled={loading || isPresetSaving}
-                    className={`${isCompactMobileForm ? "w-[42%] px-3 py-3 text-[12px]" : "w-[36%] px-4 py-4 text-[13px]"} ${canUpdateSelectedPreset ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20" : "bg-white/10 border border-white/20 hover:bg-white/15 text-white shadow-white/10"} cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl active:scale-95 group`}
+                    className={`${isCompactMobileForm ? "w-[42%] px-3 py-2.5 text-[11px]" : "w-[36%] px-4 py-3 text-[12px]"} ${canUpdateSelectedPreset ? "bg-emerald-500 hover:bg-emerald-400 text-zinc-900 shadow-emerald-500/20" : "bg-zinc-800 border border-zinc-600 hover:bg-zinc-700 text-zinc-100"} cursor-pointer font-semibold rounded-xl transition-all inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] group`}
                   >
                     {loading || isPresetSaving ? (
                       <>
@@ -1652,12 +1887,15 @@ const CreateInterview = () => {
 
                   <button
                     onClick={startInterviewSession}
-                    disabled={loading || isPresetSaving}
-                    className={`flex-1 ${isCompactMobileForm ? "px-4 py-3 text-[12px]" : "px-6 py-4 text-[13px]"} bg-[#bef264] hover:bg-[#bef264]/90 text-black cursor-pointer font-black rounded-2xl transition-all inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-xl shadow-[#bef264]/20 active:scale-95`}
+                    disabled={loading || isPresetSaving || !canStartInterview}
+                    className={`flex-1 ${isCompactMobileForm ? "px-4 py-2.5 text-[11px]" : "px-6 py-3 text-[12px]"} bg-[#bef264] hover:bg-[#a3e635] text-zinc-900 cursor-pointer font-semibold rounded-xl transition-all inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-[#bef264]/20 active:scale-[0.99]`}
                   >
-                    {subscription &&
-                    subscription.tier !== "Infinite Elite" &&
-                    availableCredits < FEATURE_COSTS.mockInterview ? (
+                    {!canStartInterview ? (
+                      <>
+                        Enable Camera & Mic to Start
+                        <FiMicOff size={16} />
+                      </>
+                    ) : isCreditBlocked ? (
                       <>
                         Start Session (Get Credits)
                         <FiCreditCard size={18} />

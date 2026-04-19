@@ -1,7 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
 import { SignedIn, SignedOut, useUser, useClerk } from "@clerk/clerk-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { FiUser, FiLogOut, FiLayout, FiCreditCard, FiGift, FiMenu, FiX, FiChevronDown, FiFileText, FiCheckSquare, FiLinkedin, FiBook, FiTool } from "react-icons/fi";
+import {
+  FiUser,
+  FiLogOut,
+  FiLayout,
+  FiCreditCard,
+  FiGift,
+  FiMenu,
+  FiX,
+  FiChevronDown,
+  FiFileText,
+  FiCheckSquare,
+  FiLinkedin,
+  FiBook,
+  FiTool,
+} from "react-icons/fi";
 import Logo from "../common/Logo";
 
 import Footer from "./Footer";
@@ -58,38 +72,66 @@ const Layout = ({ children }) => {
   }, [location.pathname]);
 
   const toolsMenuItems = [
-    { label: "Resume Builder", to: "/resume-builder", icon: <FiFileText size={15} />, desc: "Build ATS-friendly resumes", isProtected: true },
-    { label: "ATS Scorer", to: "/ats-scorer", icon: <FiCheckSquare size={15} />, desc: "Check resume compatibility", isProtected: true },
-    { label: "LinkedIn Optimizer", to: "/dashboard/linkedin", icon: <FiLinkedin size={15} />, desc: "Optimize your LinkedIn profile", isProtected: true },
+    {
+      label: "Resume Builder",
+      to: "/resume-builder",
+      icon: <FiFileText size={15} />,
+      desc: "Build ATS-friendly resumes",
+      isProtected: true,
+    },
+    {
+      label: "ATS Scorer",
+      to: "/ats-scorer",
+      icon: <FiCheckSquare size={15} />,
+      desc: "Check resume compatibility",
+      isProtected: true,
+    },
+    {
+      label: "LinkedIn Optimizer",
+      to: "/dashboard/linkedin",
+      icon: <FiLinkedin size={15} />,
+      desc: "Optimize your LinkedIn profile",
+      isProtected: true,
+    },
   ];
 
   const scrollToWaitlist = () => {
     setIsToolsOpen(false);
     setIsMobileMenuOpen(false);
-    const el = document.getElementById('waitlist');
+    const el = document.getElementById("waitlist");
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      el.scrollIntoView({ behavior: "smooth" });
     } else {
-      navigate('/#waitlist');
+      navigate("/#waitlist");
     }
   };
 
-  const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + "/");
+  const isActive = (path) =>
+    location.pathname === path || location.pathname.startsWith(path + "/");
+  const isQuestionBankActive =
+    location.pathname.startsWith("/interview-questions") ||
+    location.pathname.startsWith("/interview-question") ||
+    location.pathname.startsWith("/questions");
 
   return (
     <div className="flex flex-col min-h-screen relative z-10 w-full">
-      <nav className={`fixed  top-0 left-1/2 -translate-x-1/2 w-full  z-[100] transition-all duration-500 ease-in-out ${isMobileMenuOpen
-        ? "h-screen bg-zinc-900 md:h-auto lg:bg-black/20 lg:backdrop-blur-lg overflow-hidden"
-        : isScrolled
-          ? "h-[72px] md:h-auto bg-black/50 lg:bg-zinc-900/50  backdrop-blur-lg shadow-2xl lg:rounded-full"
-          : "h-[72px] md:h-auto bg-transparent  border-transparent "
-        }`}>
-
+      <nav
+        className={`fixed  top-0 left-1/2 -translate-x-1/2 w-full  z-[100] transition-all duration-500 ease-in-out ${
+          isMobileMenuOpen
+            ? "h-screen bg-zinc-900 md:h-auto lg:bg-black/20 lg:backdrop-blur-lg overflow-hidden"
+            : isScrolled
+              ? "h-[72px] md:h-auto bg-black/50 lg:bg-zinc-900/50  backdrop-blur-lg shadow-2xl lg:rounded-full"
+              : "h-[72px] md:h-auto bg-transparent  border-transparent "
+        }`}
+      >
         {/* Navbar Header (Logo & Actions) */}
         <div className="flex justify-between items-center px-4 md:px-8 lg:px-16 h-[72px] w-full">
           <div className="flex items-center gap-2">
             <Logo size={32} />
-            <Link to="/" className="text-2xl font-semibold tracking-tight text-white">
+            <Link
+              to="/"
+              className="text-2xl font-semibold tracking-tight text-white"
+            >
               PlaceMate<span className="text-primary">AI</span>
             </Link>
           </div>
@@ -97,8 +139,8 @@ const Layout = ({ children }) => {
           {/* Desktop Nav Links */}
           <div className="hidden md:flex gap-7 text-sm items-center">
             <Link
-              to="/questions"
-              className={`flex items-center gap-1.5 font-medium transition-colors ${isActive("/questions") ? "text-[#bef264]" : "text-white hover:text-[#bef264]"}`}
+              to="/interview-questions"
+              className={`flex items-center gap-1.5 font-medium transition-colors ${isQuestionBankActive ? "text-[#bef264]" : "text-white hover:text-[#bef264]"}`}
             >
               <FiBook size={15} />
               Question Bank
@@ -112,7 +154,10 @@ const Layout = ({ children }) => {
               >
                 <FiTool size={14} />
                 Tools
-                <FiChevronDown size={14} className={`transition-transform duration-200 ${isToolsOpen ? "rotate-180" : ""}`} />
+                <FiChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${isToolsOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               {isToolsOpen && (
@@ -127,20 +172,24 @@ const Layout = ({ children }) => {
                       }
                     };
                     return (
-                    <Link
-                      key={item.label}
-                      to={item.isProtected && !user ? '#' : item.to}
-                      onClick={handleToolClick}
-                      className="flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors group"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-[#bef264]/10 text-[#bef264] flex items-center justify-center shrink-0 group-hover:bg-[#bef264]/20 transition-colors">
-                        {item.icon}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white group-hover:text-[#bef264] transition-colors">{item.label}</p>
-                        <p className="text-[11px] text-zinc-500">{item.desc}</p>
-                      </div>
-                    </Link>
+                      <Link
+                        key={item.label}
+                        to={item.isProtected && !user ? "#" : item.to}
+                        onClick={handleToolClick}
+                        className="flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#bef264]/10 text-[#bef264] flex items-center justify-center shrink-0 group-hover:bg-[#bef264]/20 transition-colors">
+                          {item.icon}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white group-hover:text-[#bef264] transition-colors">
+                            {item.label}
+                          </p>
+                          <p className="text-[11px] text-zinc-500">
+                            {item.desc}
+                          </p>
+                        </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -161,18 +210,23 @@ const Layout = ({ children }) => {
             >
               About
             </Link>
-            <Link to="/contact" className="text-white  hover:text-primary transition-colors">Contact</Link>
+            <Link
+              to="/contact"
+              className="text-white  hover:text-primary transition-colors"
+            >
+              Contact
+            </Link>
           </div>
 
           <div className="flex gap-4 items-center">
             <SignedOut>
               <button
                 onClick={() => {
-                  const el = document.getElementById('waitlist');
+                  const el = document.getElementById("waitlist");
                   if (el) {
-                    el.scrollIntoView({ behavior: 'smooth' });
+                    el.scrollIntoView({ behavior: "smooth" });
                   } else {
-                    navigate('/#waitlist');
+                    navigate("/#waitlist");
                   }
                 }}
                 className="hidden md:block bg-[#bef264] text-black px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm"
@@ -188,7 +242,10 @@ const Layout = ({ children }) => {
               </Link>
 
               {/* Custom Profile Dropdown (Desktop) */}
-              <div className="relative hidden md:flex items-center gap-4" ref={menuRef}>
+              <div
+                className="relative hidden md:flex items-center gap-4"
+                ref={menuRef}
+              >
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center gap-2 p-1 rounded-full border border-white/10 hover:border-[#bef264]/50 transition-all active:scale-95 bg-white/5"
@@ -209,8 +266,12 @@ const Layout = ({ children }) => {
                         className="w-8 h-8 rounded-full object-cover shadow-lg"
                       />
                       <div>
-                        <p className="text-white text-sm capitalize font-bold truncate">{user?.fullName}</p>
-                        <p className="text-zinc-300 text-[10px] truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                        <p className="text-white text-sm capitalize font-bold truncate">
+                          {user?.fullName}
+                        </p>
+                        <p className="text-zinc-300 text-[10px] truncate">
+                          {user?.primaryEmailAddress?.emailAddress}
+                        </p>
                       </div>
                     </div>
 
@@ -223,7 +284,10 @@ const Layout = ({ children }) => {
                       Dashboard
                     </Link>
                     <button
-                      onClick={() => { openUserProfile(); setIsProfileOpen(false); }}
+                      onClick={() => {
+                        openUserProfile();
+                        setIsProfileOpen(false);
+                      }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
                     >
                       <FiUser className="text-zinc-500" />
@@ -269,47 +333,68 @@ const Layout = ({ children }) => {
         </div>
 
         {/* Mobile Expanded Menu Content */}
-        <div className={`md:hidden flex flex-col px-8 py-4 gap-6 transition-all duration-500 ${isMobileMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"}`}>
-
+        <div
+          className={`md:hidden flex flex-col px-8 py-4 gap-6 transition-all duration-500 ${isMobileMenuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-10 pointer-events-none"}`}
+        >
           {/* Product Links */}
-          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold">Explore</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold">
+            Explore
+          </p>
           <nav className="flex flex-col gap-5">
             <Link
-              to="/questions"
+              to="/interview-questions"
               className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
             >
               <FiBook size={16} className="text-[#bef264]/60" />
               Question Bank
             </Link>
             {user ? (
-              <Link to="/resume-builder" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5">
+              <Link
+                to="/resume-builder"
+                className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+              >
                 <FiFileText size={16} className="text-[#bef264]/60" />
                 Resume Builder
               </Link>
             ) : (
-              <button onClick={scrollToWaitlist} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left">
+              <button
+                onClick={scrollToWaitlist}
+                className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left"
+              >
                 <FiFileText size={16} className="text-[#bef264]/60" />
                 Resume Builder
               </button>
             )}
             {user ? (
-              <Link to="/ats-scorer" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5">
+              <Link
+                to="/ats-scorer"
+                className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+              >
                 <FiCheckSquare size={16} className="text-[#bef264]/60" />
                 ATS Scorer
               </Link>
             ) : (
-              <button onClick={scrollToWaitlist} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left">
+              <button
+                onClick={scrollToWaitlist}
+                className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left"
+              >
                 <FiCheckSquare size={16} className="text-[#bef264]/60" />
                 ATS Scorer
               </button>
             )}
             {user ? (
-              <Link to="/dashboard/linkedin" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5">
+              <Link
+                to="/dashboard/linkedin"
+                className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
+              >
                 <FiLinkedin size={16} className="text-[#bef264]/60" />
                 LinkedIn Optimizer
               </Link>
             ) : (
-              <button onClick={scrollToWaitlist} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left">
+              <button
+                onClick={scrollToWaitlist}
+                className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5 text-left"
+              >
                 <FiLinkedin size={16} className="text-[#bef264]/60" />
                 LinkedIn Optimizer
               </button>
@@ -319,15 +404,27 @@ const Layout = ({ children }) => {
           <div className="h-px bg-white/5" />
 
           {/* General Links */}
-          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold">Company</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold">
+            Company
+          </p>
           <nav className="flex flex-col gap-5">
-            <Link to="/#pricing" onClick={handlePricingClick} className="text-white text-sm hover:text-[#bef264] transition-all font-semibold">
+            <Link
+              to="/#pricing"
+              onClick={handlePricingClick}
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold"
+            >
               Pricing
             </Link>
-            <Link to="/about" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold">
+            <Link
+              to="/about"
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold"
+            >
               About
             </Link>
-            <Link to="/contact" className="text-white text-sm hover:text-[#bef264] transition-all font-semibold">
+            <Link
+              to="/contact"
+              className="text-white text-sm hover:text-[#bef264] transition-all font-semibold"
+            >
               Contact
             </Link>
           </nav>
@@ -360,11 +457,11 @@ const Layout = ({ children }) => {
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
-                  const el = document.getElementById('waitlist');
+                  const el = document.getElementById("waitlist");
                   if (el) {
-                    el.scrollIntoView({ behavior: 'smooth' });
+                    el.scrollIntoView({ behavior: "smooth" });
                   } else {
-                    navigate('/#waitlist');
+                    navigate("/#waitlist");
                   }
                 }}
                 className="text-black bg-[#bef264] px-4 py-2.5 rounded-xl text-sm text-center transition-all font-bold"
@@ -377,7 +474,7 @@ const Layout = ({ children }) => {
       </nav>
 
       <main className="flex-1 w-full relative z-0">
-        <Background/>
+        <Background />
         {children}
       </main>
 
@@ -385,6 +482,5 @@ const Layout = ({ children }) => {
     </div>
   );
 };
-
 
 export default Layout;
