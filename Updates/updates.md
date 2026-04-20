@@ -531,3 +531,110 @@ graph TD
     *   **Slug Generation:** Test the `ensureUniqueSlug` logic by creating multiple blogs with the exact same title to ensure suffixes (`-1`, `-2`) are appended.
     *   **SEO Validation:** Validate the generated `/sitemap.xml` endpoint to ensure it correctly maps to valid URLs and excludes drafts.
     *   **Markdown Rendering:** Test rendering complex markdown (tables, code blocks) in `BlogDetail` to ensure `remark-gfm` parses it correctly without breaking the UI layout.
+
+    Date: 20/4/2026
+
+    ## 1. High-Level Summary (TL;DR)
+*   **Impact:** High - Introduces a complete Peer-to-Peer Video Interview feature with real-time matchmaking and video conferencing.
+*   **Key Changes:**
+    *   ✨ **Matchmaking System:** Built an instant queue and direct invite system for peer interviews.
+    *   📹 **Video Conferencing:** Integrated **LiveKit** SDKs on both frontend and backend for real-time video/audio rooms.
+    *   🛡️ **Trust & Safety:** Added user moderation tools including blocking and reporting mechanisms.
+    *   🗄️ **Data Models:** Created 6 new MongoDB collections to track preferences, sessions, requests, and queues.
+    *   🔧 **Query Refactoring:** Migrated existing `findOneAndUpdate` queries to use `{ returnDocument: "after" }` instead of `{ new: true }`.
+
+## 2. Visual Overview (Code & Logic Map)
+
+```mermaid
+graph TD
+    classDef frontend fill:#bbdefb,color:#0d47a1,stroke:#0d47a1
+    classDef backend fill:#c8e6c9,color:#1a5e20,stroke:#1a5e20
+    classDef db fill:#fff3e0,color:#e65100,stroke:#e65100
+
+    subgraph "Frontend: Peer Interview UI"
+        Hub["PeerInterviewHub.jsx"]:::frontend
+        Room["PeerInterviewRoom.jsx"]:::frontend
+    end
+
+    subgraph "Backend: Matchmaking & API"
+        Controller["peerInterviewController.js"]:::backend
+        LiveKit["LiveKit Server SDK"]:::backend
+    end
+
+    subgraph "Database Models"
+        Queue["PeerMatchQueueEntry"]:::db
+        Session["PeerInterviewSession"]:::db
+        Prefs["PeerMatchPreference"]:::db
+    end
+
+    Hub -->|"joinInstantQueue()"| Controller
+    Controller -->|"getOrCreatePreference()"| Prefs
+    Controller -->|"isQueuePairCompatible()"| Queue
+    Queue -->|"Match Found"| Controller
+    Controller -->|"startSession()"| Session
+    Controller -->|"getLiveKitToken()"| LiveKit
+    LiveKit -.->|"Room URL & Access Token"| Room
+    Room -->|"Video Conferencing"| LiveKit
+```
+
+## 3. Detailed Change Analysis
+
+### 🎯 Peer Interview Matchmaking (Backend)
+*   **What Changed:** Added a robust matchmaking engine in `peerInterviewController.js`. It allows users to either send direct requests or join an instant queue. The `isQueuePairCompatible()` function evaluates potential matches based on gender preferences, skill overlap (`hasSkillOverlap()`), and preferred language.
+*   **Source:** `backend/controllers/peerInterviewController.js`, `backend/models/PeerMatchQueueEntry.js`
+
+### 📹 Video Conferencing Integration (Full-Stack)
+*   **What Changed:** Integrated LiveKit for handling WebRTC video calls. The backend generates secure access tokens using `livekit-server-sdk`, while the frontend uses `@livekit/components-react` inside `PeerInterviewRoom.jsx` to render the actual video layout and manage local/remote streams.
+*   **Source:** `frontend/src/pages/PeerInterview/PeerInterviewRoom.jsx`, `backend/routes/peerInterviewRoutes.js`
+
+### 🛡️ User Moderation & Safety
+*   **What Changed:** Implemented mechanisms to prevent abuse during peer interactions. Users can report others (`PeerUserReport.js`) or block them (`PeerUserBlock.js`). The matching logic explicitly checks `areUsersBlocked()` before connecting two users.
+
+### 🗄️ New API Endpoints
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/peer-interview/preferences` | GET / POST | Fetch or update user matching preferences |
+| `/api/peer-interview/request` | POST | Send a direct peer interview request |
+| `/api/peer-interview/queue/join` | POST | Join the instant matchmaking queue |
+| `/api/peer-interview/session/:sessionId/token` | POST | Generate a LiveKit access token |
+| `/api/peer-interview/report` | POST | Report a user for misconduct |
+
+### 📦 Dependency Updates
+| Package | Type | Version |
+|---|---|---|
+| `livekit-server-sdk` | Backend | `^2.15.1` |
+| `@livekit/components-react` | Frontend | `^2.9.20` |
+| `@livekit/components-styles` | Frontend | `^1.2.0` |
+| `livekit-client` | Frontend | `^2.18.3` |
+
+### ⚙️ Environment Configuration
+| Key | Old Value | New Value | Description |
+|---|---|---|---|
+| `LIVEKIT_URL` | *None* | `wss://your-livekit-host` | WebSocket URL for the LiveKit server |
+| `LIVEKIT_API_KEY` | *None* | `devkey` | Authentication key for LiveKit |
+| `LIVEKIT_API_SECRET` | *None* | `secret` | Secret key for generating tokens |
+| `LIVEKIT_TOKEN_TTL` | *None* | `10m` | Token expiration time |
+
+### 🔍 Code Snippet: Matchmaking Logic
+```javascript
+const isQueuePairCompatible = ({ mePreference, peerPreference, meQueue, peerQueue }) => {
+  if (!mePreference.allowInstantMatch || !peerPreference.allowInstantMatch) return false;
+  
+  // Strict gender preference evaluation
+  if (!isGenderAllowed(mePreference, peerGender)) return false;
+  if (!isGenderAllowed(peerPreference, meGender)) return false;
+
+  // Language and Skill overlap validation
+  if (meQueue.preferredLanguage !== peerQueue.preferredLanguage) return false;
+  if (!hasSkillOverlap(meQueue.targetSkills || [], peerQueue.targetSkills || [])) return false;
+
+  return true;
+};
+```
+
+## 4. Impact & Risk Assessment
+*   ⚠️ **Breaking Changes:** No explicit API breakages, but refactoring MongoDB updates from `{ new: true }` to `{ returnDocument: "after" }` in `vapiKeyManager.js` and `customInterviewController.js` alters native MongoDB driver behavior vs Mongoose legacy behavior. Ensure this doesn't conflict with existing Mongoose middleware.
+*   🧪 **Testing Suggestions:**
+    *   **Matchmaking Edge Cases:** Verify that the instant queue correctly isolates users when strict `female_only` or `male_only` gender preferences are applied.
+    *   **Room Teardown:** Test `leaveQueueSafely()` and browser close events in `PeerInterviewRoom.jsx` to ensure ghost sessions are properly cleaned up on LiveKit and the database.
+    *   **Blocklist Integrity:** Attempt to match two users who have an active `PeerUserBlock` record to guarantee the system blocks the interaction.
