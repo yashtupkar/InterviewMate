@@ -4,7 +4,14 @@ import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Helmet } from "react-helmet-async";
-import { FiArrowLeft, FiCalendar, FiClock, FiUser } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiArrowRight,
+  FiCalendar,
+  FiClock,
+  FiTag,
+  FiUser,
+} from "react-icons/fi";
 import GoogleAdsBlock from "../../components/common/GoogleAdsBlock";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
@@ -22,6 +29,8 @@ const BlogDetail = () => {
   const { slug } = useParams();
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [moreBlogs, setMoreBlogs] = useState([]);
+  const [loadingMoreBlogs, setLoadingMoreBlogs] = useState(false);
 
   useEffect(() => {
     const fetchBlog = async () => {
@@ -42,6 +51,52 @@ const BlogDetail = () => {
 
     fetchBlog();
   }, [slug]);
+
+  useEffect(() => {
+    const fetchMoreBlogs = async () => {
+      if (!blog?.slug) return;
+
+      setLoadingMoreBlogs(true);
+      try {
+        const primaryParams = { page: 1, limit: 6 };
+        if (blog?.category) {
+          primaryParams.category = blog.category;
+        }
+
+        const primaryRes = await axios.get(`${backendURL}/api/blogs`, {
+          params: primaryParams,
+        });
+
+        const primaryList = (primaryRes.data?.data || [])
+          .filter((item) => item.slug !== blog.slug)
+          .slice(0, 3);
+
+        if (primaryList.length === 3) {
+          setMoreBlogs(primaryList);
+          return;
+        }
+
+        const fallbackRes = await axios.get(`${backendURL}/api/blogs`, {
+          params: { page: 1, limit: 9 },
+        });
+
+        const fallbackList = (fallbackRes.data?.data || []).filter(
+          (item) =>
+            item.slug !== blog.slug &&
+            !primaryList.some((existing) => existing.slug === item.slug),
+        );
+
+        setMoreBlogs([...primaryList, ...fallbackList].slice(0, 3));
+      } catch (error) {
+        console.error("Failed to load more blogs:", error);
+        setMoreBlogs([]);
+      } finally {
+        setLoadingMoreBlogs(false);
+      }
+    };
+
+    fetchMoreBlogs();
+  }, [blog?.slug, blog?.category]);
 
   const canonicalUrl = useMemo(() => {
     if (!blog?.slug) return `${window.location.origin}/blog`;
@@ -287,6 +342,87 @@ const BlogDetail = () => {
         </div>
 
         <GoogleAdsBlock className="mt-10" />
+
+        <section className="pt-3">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h2 className="text-2xl font-black tracking-tight">More blogs</h2>
+            <Link
+              to="/blog"
+              className="text-sm text-[#bef264] hover:text-white transition-colors inline-flex items-center gap-1.5"
+            >
+              View all <FiArrowRight size={14} />
+            </Link>
+          </div>
+
+          {loadingMoreBlogs ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="rounded-2xl border border-white/10 bg-zinc-950/70 overflow-hidden animate-pulse"
+                >
+                  <div className="h-36 w-full bg-zinc-800/70" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-4 w-10/12 rounded bg-zinc-800/70" />
+                    <div className="h-4 w-7/12 rounded bg-zinc-800/60" />
+                    <div className="h-3 w-1/2 rounded bg-zinc-800/60" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : moreBlogs.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {moreBlogs.map((item) => (
+                <article
+                  key={item._id}
+                  className="rounded-2xl border border-white/10 bg-zinc-950/70 overflow-hidden hover:border-[#bef264]/50 transition-colors"
+                >
+                  {item?.featuredImage?.url ? (
+                    <img
+                      src={item.featuredImage.url}
+                      alt={item?.featuredImage?.alt || item.title}
+                      className="h-36 w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-36 w-full bg-gradient-to-br from-zinc-900 to-zinc-800" />
+                  )}
+
+                  <div className="p-4 space-y-3">
+                    <h3 className="text-base font-bold leading-tight line-clamp-2">
+                      {item.title}
+                    </h3>
+
+                    <div className="flex flex-wrap gap-3 text-xs text-zinc-500">
+                      <span className="inline-flex items-center gap-1.5">
+                        <FiCalendar size={12} /> {formatDate(item.publishedAt)}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <FiClock size={12} /> {item.readTimeMinutes || 1} min
+                      </span>
+                      {item?.category ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <FiTag size={12} /> {item.category}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <Link
+                      to={`/blog/${item.slug}`}
+                      className="inline-flex items-center gap-1.5 text-[#bef264] text-sm font-semibold hover:text-white transition-colors"
+                    >
+                      Read article <FiArrowRight size={13} />
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-black/30 text-zinc-400 px-4 py-6 text-sm">
+              More blogs will appear here as you publish them.
+            </div>
+          )}
+        </section>
       </article>
     </div>
   );

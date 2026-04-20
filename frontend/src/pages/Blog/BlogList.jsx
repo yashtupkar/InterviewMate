@@ -16,6 +16,27 @@ const formatDate = (value) => {
   });
 };
 
+const BlogCardSkeleton = () => (
+  <article className="rounded-2xl border border-white/10 bg-zinc-950/70 overflow-hidden animate-pulse">
+    <div className="h-48 w-full bg-zinc-800/70" />
+    <div className="p-5 space-y-4">
+      <div className="space-y-2">
+        <div className="h-5 w-11/12 rounded bg-zinc-800/70" />
+        <div className="h-5 w-7/12 rounded bg-zinc-800/70" />
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 w-full rounded bg-zinc-800/60" />
+        <div className="h-4 w-10/12 rounded bg-zinc-800/60" />
+      </div>
+      <div className="flex gap-2">
+        <div className="h-3 w-24 rounded bg-zinc-800/60" />
+        <div className="h-3 w-20 rounded bg-zinc-800/60" />
+      </div>
+      <div className="h-4 w-28 rounded bg-zinc-800/70" />
+    </div>
+  </article>
+);
+
 const BlogList = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const pageFromUrl = Number(searchParams.get("page") || "1");
@@ -100,8 +121,13 @@ const BlogList = () => {
         </section>
 
         {loading ? (
-          <div className="min-h-[220px] flex items-center justify-center">
-            <div className="h-10 w-10 rounded-full border-2 border-white/15 border-t-[#bef264] animate-spin" />
+          <div className="space-y-4">
+            <div className="h-4 w-36 rounded bg-zinc-800/60 animate-pulse" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <BlogCardSkeleton key={index} />
+              ))}
+            </div>
           </div>
         ) : blogs.length === 0 ? (
           <div className="min-h-[220px] border border-white/10 rounded-2xl bg-black/30 flex items-center justify-center text-zinc-400">
