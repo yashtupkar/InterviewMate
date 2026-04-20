@@ -128,7 +128,7 @@ const PastGDs = () => {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-xl border dark:border-white/5 border-black/5 bg-black/90">
+      <div className="overflow-hidden rounded-xl border border-white/10  bg-white/5">
         <div className="hidden md:block overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>

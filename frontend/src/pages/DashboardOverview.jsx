@@ -1779,7 +1779,7 @@ const DashboardOverview = () => {
         dangerouslySetInnerHTML={{
           __html: `
         .dashboard-container {
-          background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+          
           min-height: 100vh;
         }
         .feature-card {
@@ -1827,7 +1827,7 @@ const DashboardOverview = () => {
         }}
       />
 
-      <div className="dashboard-container text-white">
+      <div className="dashboard-container bg-transparent text-white">
         <div className="px-4 md:px-6 lg:px-8 py-6 md:py-8 max-w-6xl mx-auto">
           {/* Header with Welcome Message */}
           <div className="mb-8">
