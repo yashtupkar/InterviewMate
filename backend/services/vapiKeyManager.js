@@ -12,15 +12,17 @@ class VapiKeyManager {
     }
 
     // Otherwise, fetch the next available key from DB
-    const keyDoc = await VapiKey.findOne({ isExhausted: false }).sort({ lastUsedAt: 1 });
-    
+    const keyDoc = await VapiKey.findOne({ isExhausted: false }).sort({
+      lastUsedAt: 1,
+    });
+
     if (!keyDoc) {
       // Fallback to env if no keys in DB
       return process.env.VAPI_PUBLIC_KEY;
     }
 
     this.currentKey = keyDoc;
-    
+
     // Update last used timestamp
     keyDoc.lastUsedAt = new Date();
     await keyDoc.save();
@@ -33,7 +35,7 @@ class VapiKeyManager {
 
     await VapiKey.updateOne(
       { publicKey: publicKey },
-      { $set: { isExhausted: true } }
+      { $set: { isExhausted: true } },
     );
 
     // If the exhausted key was our cached key, clear the cache
@@ -46,7 +48,7 @@ class VapiKeyManager {
     return await VapiKey.findOneAndUpdate(
       { publicKey },
       { publicKey, isExhausted: false },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" },
     );
   }
 }

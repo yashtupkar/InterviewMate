@@ -4,10 +4,7 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
 
 // List all your Vapi accounts here
-const accounts = [
-  { publicKey: "", privateKey: "" },
-
-];
+const accounts = [{ publicKey: "", privateKey: "" }];
 
 const seedKeys = async () => {
   try {
@@ -21,12 +18,12 @@ const seedKeys = async () => {
     for (const account of accounts) {
       await VapiKey.findOneAndUpdate(
         { publicKey: account.publicKey },
-        { 
-          publicKey: account.publicKey, 
+        {
+          publicKey: account.publicKey,
           privateKey: account.privateKey,
-          isExhausted: false 
+          isExhausted: false,
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" },
       );
       console.log(`Added/Updated account: ${account.publicKey}`);
     }

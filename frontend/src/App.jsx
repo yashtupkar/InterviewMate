@@ -48,6 +48,8 @@ import BlogList from "./pages/Blog/BlogList";
 import BlogDetail from "./pages/Blog/BlogDetail";
 import BlogManagement from "./pages/adminScreens/BlogManagement";
 import CheckoutPage from "./pages/CheckoutPage";
+import PeerInterviewHub from "./pages/PeerInterview/PeerInterviewHub";
+import PeerInterviewRoom from "./pages/PeerInterview/PeerInterviewRoom";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -394,6 +396,15 @@ function App() {
           <Route path="/referrals" element={<InterviewLayout />}>
             <Route index element={<Referrals />} />
           </Route>
+
+          <Route path="/peer-interview" element={<InterviewLayout />}>
+            <Route index element={<PeerInterviewHub />} />
+          </Route>
+
+          <Route
+            path="/peer-interview/session/:sessionId"
+            element={<PeerInterviewRoom />}
+          />
 
           <Route path="/help" element={<InterviewLayout />}>
             <Route index element={<HelpPage />} />

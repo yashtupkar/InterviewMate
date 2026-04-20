@@ -21,6 +21,7 @@ import {
   FiChevronDown,
   FiGift,
   FiBookOpen,
+  FiVideo,
 } from "react-icons/fi";
 
 import Logo from "../common/Logo";
@@ -95,6 +96,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
       icon: <FaUsers />,
       path: "/gd/setup",
       active: location.pathname === "/gd/setup",
+    },
+    {
+      name: "Peer Interview",
+      icon: <FiVideo />,
+      path: "/peer-interview",
+      active: location.pathname.startsWith("/peer-interview"),
+      badge: "Beta",
     },
     {
       name: "Reports",

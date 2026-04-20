@@ -20,6 +20,7 @@ const feedbackRoutes = require("./routes/feedbackRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const ttsRoutes = require("./routes/ttsRoutes");
 const blogRoutes = require("./routes/blogRoutes");
+const peerInterviewRoutes = require("./routes/peerInterviewRoutes");
 const { getSitemapXml } = require("./controllers/blogController");
 
 // Connect to Database
@@ -54,6 +55,7 @@ app.use("/api/feedback", feedbackRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/tts", ttsRoutes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/peer-interview", peerInterviewRoutes);
 
 // SEO
 app.get("/sitemap.xml", getSitemapXml);

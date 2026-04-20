@@ -374,7 +374,7 @@ const updatePreset = async (req, res) => {
     const preset = await InterviewPreset.findOneAndUpdate(
       { _id: presetId, userId },
       payload,
-      { new: true, runValidators: true },
+      { returnDocument: "after", runValidators: true },
     );
 
     if (!preset) {
