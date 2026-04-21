@@ -175,7 +175,7 @@ const PeerInterviewRoom = () => {
           <p className="text-xs uppercase tracking-wider text-zinc-400">
             Peer Interview Room
           </p>
-          <h1 className="text-xl font-bold">{roomName || "Loading room..."}</h1>
+          {/* <h1 className="text-xl font-bold">{roomName || "Loading room..."}</h1> */}
           {sessionData?.status ? (
             <p className="text-sm text-zinc-400 mt-0.5">
               Status: {sessionData.status}

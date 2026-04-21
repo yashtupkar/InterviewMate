@@ -399,6 +399,9 @@ function App() {
 
           <Route path="/peer-interview" element={<InterviewLayout />}>
             <Route index element={<PeerInterviewHub />} />
+            <Route path="send-request" element={<PeerInterviewHub />} />
+            <Route path="notifications" element={<PeerInterviewHub />} />
+            <Route path="search" element={<PeerInterviewHub />} />
           </Route>
 
           <Route
