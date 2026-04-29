@@ -276,7 +276,7 @@ const GroupDiscussionSetup = () => {
             </div>
 
             {/* Discussion Panel Preview */}
-            <div className="p-5 sm:p-6 bg-gradient-to-b  from-zinc-900/40 via-zinc-950/60 to-zinc-950/80 rounded-2xl border-y border-[#bef264] shadow-2xl shadow-black/40 relative overflow-hidden">
+            <div className="p-5 sm:p-6 bg-gradient-to-b  from-zinc-900/40 via-zinc-950/60 to-zinc-950/80 rounded-2xl border-y border-[#bef264] shadow-2xl shadow-bg-white/10 relative overflow-hidden">
               {/* Animated Background Gradient */}
               <div className="absolute inset-0 bg-gradient-to-br from-[#bef264]/3 via-transparent to-zinc-900/20 rounded-2xl" />
               <div className="absolute top-0 left-1/4 w-64 h-64 bg-[#bef264]/5 rounded-full blur-3xl -mt-32 -ml-32" />
@@ -389,8 +389,6 @@ const GroupDiscussionSetup = () => {
                     </div>
                   </div>
                 </div>
-
-          
               </div>
 
               <style>{`
@@ -434,7 +432,7 @@ const GroupDiscussionSetup = () => {
               </button>
             )}
 
-            <div className="sm:bg-black p-3 sm:p-7 shadow-xl rounded-2xl sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
+            <div className="sm:bg-white/10 p-3 sm:p-7 shadow-xl rounded-2xl sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
               <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
                 <FiMessageSquare className="mr-3 text-[#bef264] text-lg" /> GD
                 Dynamics
@@ -466,7 +464,7 @@ const GroupDiscussionSetup = () => {
               </div>
             )}
 
-            <div className="rounded-2xl border mb-2 border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl px-4 py-3 shadow-lg shadow-black/20">
+            <div className="rounded-2xl border mb-2 border-zinc-800/80 bg-white/10 backdrop-blur-xl px-4 py-3 shadow-lg shadow-black/20">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#bef264]">

@@ -132,7 +132,7 @@ const Billing = () => {
                     {/* Main Cards Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
                         {/* LEFT CARD: Plan Details */}
-                        <div className="bg-zinc-800 border border-white/5 rounded-3xl p-6 flex flex-col justify-between group hover:border-white/10 transition-all duration-300">
+                        <div className="bg-white/10 border border-white/5 rounded-3xl p-6 flex flex-col justify-between group hover:border-white/10 transition-all duration-300">
                            <div>
                                 <div className="flex justify-between items-start mb-2">
                                     <h3 className="text-xl font-bold">{subscription?.tier} Plan</h3>
@@ -178,7 +178,7 @@ const Billing = () => {
 
                         {/* TOP-UP CARD (Conditional) */}
                         {subscription?.topupCredits > 0 && (
-                            <div className="bg-zinc-800 border-2 border-[#bef264]/20 rounded-3xl p-6 flex flex-col justify-between group hover:border-[#bef264]/40 transition-all duration-300 relative overflow-hidden">
+                            <div className="bg-white/10 border-2 border-[#bef264]/20 rounded-3xl p-6 flex flex-col justify-between group hover:border-[#bef264]/40 transition-all duration-300 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 px-4 py-1 bg-[#bef264] text-black text-[8px] font-black uppercase tracking-widest rounded-bl-xl"> Active Top-up </div>
                                 <div>
                                     <div className="flex justify-between items-start mb-2">

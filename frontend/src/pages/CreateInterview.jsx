@@ -943,14 +943,14 @@ const CreateInterview = () => {
               </p>
             </div>
 
-            <div className="relative aspect-video bg-zinc-950 rounded-xl sm:rounded-2xl border-y border-[#bef264] overflow-hidden group shadow-2xl shadow-[#bef264]/5">
+            <div className="relative aspect-video bg-zinc-950 rounded-xl sm:rounded-2xl border-y  border-[#bef264] overflow-hidden group shadow-2xl shadow-white/20">
               {isCameraEnabled ? (
                 <video
                   ref={localVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="absolute inset-0 w-full h-full object-cover mirror rounded-xl sm:rounded-[2rem]"
+                  className="absolute inset-0 w-full h-full object-cover mirror rounded-xl sm:rounded-2xl"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/50 backdrop-blur-sm">
@@ -1044,7 +1044,7 @@ const CreateInterview = () => {
               </button>
             )}
 
-            <div className="sm:dark:bg-black sm:bg-white p-3 sm:p-7 shadow-xl rounded-2xl sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
+            <div className="sm:dark:bg-white/10 sm:bg-white p-3 sm:p-7 shadow-xl rounded-2xl sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5">
               <h3 className="text-sm font-bold dark:text-white text-black mb-3 flex items-center uppercase tracking-widest">
                 <FiShield className="mr-3 text-[#bef264] text-xl" />
                 Professional Environment
@@ -1076,7 +1076,7 @@ const CreateInterview = () => {
               </div>
             )}
 
-            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl px-4 py-3 shadow-lg shadow-black/20">
+            <div className="rounded-2xl border border-zinc-800/80 bg-white/10 backdrop-blur-xl px-4 py-3 shadow-lg shadow-black/20">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-[#bef264]">

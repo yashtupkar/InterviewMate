@@ -1497,9 +1497,13 @@ const DashboardOverview = () => {
     {
       id: "ai-mock-interview",
       title: "AI Mock Interview",
-      description: "Practice with AI interviewer, get real-time feedback",
+      description: "Practice realistic interviews with instant AI feedback.",
       icon: FiMic,
       credits: 10,
+      badge: "Live",
+      meta: ["Behavioral", "Technical"],
+      partners: ["AI Coach", "Instant Feedback", "Detailed Reports"],
+      
       image:
         "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Start Interview",
@@ -1509,9 +1513,12 @@ const DashboardOverview = () => {
     {
       id: "ai-gd-simulator",
       title: "AI GD Simulator",
-      description: "Group discussion with 5 AI personas",
+      description: "Run panel-style discussions with five AI personas.",
       icon: FiUsers,
       credits: 8,
+      badge: "Group",
+      meta: ["Panel", "Debate", "Abstract Topics"],
+      partners: ["GD Coach", "Realtime Scoring"],
       image:
         "https://images.pexels.com/photos/3184298/pexels-photo-3184298.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Join GD",
@@ -1519,23 +1526,29 @@ const DashboardOverview = () => {
       color: "#f59e0b",
     },
     {
-      id: "ats-scorer",
-      title: "ATS Resume Scorer",
-      description: "Check your resume's ATS compatibility score",
+      id: "ats-scanner",
+      title: "ATS Scanner",
+      description: "Scan resume keywords and get ATS match fixes.",
       icon: FiAward,
       credits: 5,
+      badge: "Scanner",
+      meta: ["Keyword Match", "Instant Score" ],
+      partners: ["Job JD Match", "Parser Safe", "ATS Ready"],
       image:
         "https://images.pexels.com/photos/5989927/pexels-photo-5989927.jpeg?auto=compress&cs=tinysrgb&w=400",
-      cta: "Analyze Resume",
+      cta: "Scan Resume",
       path: "/ats-scorer",
       color: "#3b82f6",
     },
     {
       id: "resume-builder",
       title: "AI Resume Builder",
-      description: "Create professional resumes with AI assistance",
+      description: "Build polished resumes fast with AI writing help.",
       icon: FiFileText,
       credits: 15,
+      badge: "Builder",
+      meta: ["Templates", "AI Rewrite", "Export PDF"],
+      partners: ["Role-specific", "Modern Layouts", "One Click"],
       image:
         "https://images.pexels.com/photos/5989925/pexels-photo-5989925.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Build Resume",
@@ -1545,14 +1558,32 @@ const DashboardOverview = () => {
     {
       id: "question-bank",
       title: "Interview Question Bank",
-      description: "5000+ company-specific interview questions",
+      description: "Practice with 1200+ curated interview questions.",
       icon: FiDatabase,
       credits: 0,
+      badge: "1200+",
+      meta: ["Company-wise", "Role-wise"],
+      partners: ["Theory", "Coding", "HR"],
       image:
         "https://images.pexels.com/photos/3184338/pexels-photo-3184338.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Explore Questions",
-      path: "/question-bank",
+      path: "/interview-questions",
       color: "#ec4899",
+    },
+    {
+      id: "peer-interview-practice",
+      title: "Peer Interview Practice",
+      description: "Practice interviews with peers in a live room format.",
+      icon: FiVideo,
+      credits: 6,
+      badge: "Peers",
+      meta: ["Live Rooms", "Peer Feedback", "Turn-based Q&A"],
+      partners: ["Practice Buddy", "Video + Voice", "Community"],
+      image:
+        "https://images.pexels.com/photos/5428836/pexels-photo-5428836.jpeg?auto=compress&cs=tinysrgb&w=400",
+      cta: "Practice with Peers",
+      path: "/dashboard/setup?mode=peer",
+      color: "#22c55e",
     },
   ];
 
@@ -1801,6 +1832,38 @@ const DashboardOverview = () => {
         .feature-image {
           transition: transform 0.5s ease;
         }
+        .tool-card {
+          background: linear-gradient(
+            155deg,
+            rgba(255, 255, 255, 0.08),
+            rgba(255, 255, 255, 0.03)
+          );
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          backdrop-filter: blur(12px);
+          transition: transform 0.28s ease, border-color 0.28s ease,
+            box-shadow 0.28s ease;
+        }
+        .tool-card:hover {
+          transform: translateY(-4px);
+          border-color: rgba(190, 242, 100, 0.35);
+          box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.75);
+        }
+        .tool-card:hover .tool-card-media img {
+          transform: scale(1.06);
+        }
+        .tool-card-media img {
+          transition: transform 0.45s ease;
+        }
+        .tool-chip {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.08);
+          color: #e5e7eb;
+        }
+        .tool-chip-accent {
+          border: 1px solid rgba(190, 242, 100, 0.32);
+          background: rgba(190, 242, 100, 0.14);
+          color: #d9f99d;
+        }
 
         .progress-ring {
           transform: rotate(-90deg);
@@ -1864,134 +1927,135 @@ const DashboardOverview = () => {
           {/* Statistics Card - Moved Above Continue Watching */}
           <div className="mb-8 flex items-start gap-2 w-full ">
             <div className="flex flex-col items-center justify-center gap-4 w-full">
-            <div className="bg-white/10 w-full rounded-2xl p-6 md:p-8">
-              <div className="flex items-center justify-between gap-6">
-                {/* Left - User Profile */}
-                <div className="flex items-center gap-4">
-                  {loading ? (
-                    <Skeleton className="w-16 h-16 rounded-full" />
-                  ) : (
-                    <>
-                      {user?.imageUrl ? (
-                        <img
-                          src={user.imageUrl}
-                          alt={user.fullName}
-                          className="w-16 h-16 rounded-full border-2 border-[#bef264] object-cover"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 rounded-full bg-[#bef264]/20 border-2 border-[#bef264] flex items-center justify-center">
-                          <FaUserCircle className="text-[#bef264] text-4xl" />
+              <div className="bg-white/10 w-full rounded-2xl p-6 md:p-8">
+                <div className="flex items-center justify-between gap-6">
+                  {/* Left - User Profile */}
+                  <div className="flex items-center gap-4">
+                    {loading ? (
+                      <Skeleton className="w-16 h-16 rounded-full" />
+                    ) : (
+                      <>
+                        {user?.imageUrl ? (
+                          <img
+                            src={user.imageUrl}
+                            alt={user.fullName}
+                            className="w-20 h-20 rounded-xl border-2 border-zinc-700  object-cover"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-[#bef264]/20 border-2 border-[#bef264] flex items-center justify-center">
+                            <FaUserCircle className="text-[#bef264] text-4xl" />
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-xl font-bold">
+                            Welcome, {user?.firstName || "User"} <span className="animate-wave text-2xl">👋</span>
+                          </h3>
+                          <p className="text-sm text-gray-400">
+                            {user?.primaryEmailAddress?.emailAddress ||
+                              "user@example.com"}
+                          </p>
+                          <p className="text-xs text-[#bef264] mt-1">
+                            Member since{" "}
+                            {user?.createdAt
+                              ? format(new Date(user.createdAt), "MMM yyyy")
+                              : "2024"}
+                          </p>
                         </div>
-                      )}
-                      <div>
-                        <h3 className="text-xl font-bold">
-                          Welcome, {user?.firstName || "User"} 👋
-                        </h3>
-                        <p className="text-sm text-gray-400">
-                          {user?.primaryEmailAddress?.emailAddress ||
-                            "user@example.com"}
-                        </p>
-                        <p className="text-xs text-[#bef264] mt-1">
-                          Member since{" "}
-                          {user?.createdAt
-                            ? format(new Date(user.createdAt), "MMM yyyy")
-                            : "2024"}
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
+                      </>
+                    )}
+                  </div>
 
-                {/* Center - Progress Ring */}
-                <div className="flex items-center justify-center">
-                  <div className="flex items-center gap-6">
-                    <div className="relative w-20 h-20">
-                      <svg
-                        className="w-full h-full progress-ring"
-                        viewBox="0 0 100 100"
-                      >
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          fill="none"
-                          stroke="rgba(255,255,255,0.1)"
-                          strokeWidth="6"
-                        />
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          fill="none"
-                          stroke="#bef264"
-                          strokeWidth="6"
-                          strokeDasharray={`${completionRate * 2.827} 282.7`}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xl font-bold">
-                          {completionRate}%
-                        </span>
+                  {/* Center - Progress Ring */}
+                  <div className="flex items-center justify-center">
+                    <div className="flex items-center gap-6">
+                      <div className="relative w-20 h-20">
+                        <svg
+                          className="w-full h-full progress-ring"
+                          viewBox="0 0 100 100"
+                        >
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            fill="none"
+                            stroke="rgba(255,255,255,0.1)"
+                            strokeWidth="6"
+                          />
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            fill="none"
+                            stroke="#bef264"
+                            strokeWidth="6"
+                            strokeDasharray={`${completionRate * 2.827} 282.7`}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xl font-bold">
+                            {completionRate}%
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-400">Completion Rate</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {completedInterviews.length + completedGDs.length} of{" "}
-                        {totalSessions} sessions
-                      </p>
+                      <div>
+                        <p className="text-sm text-gray-400">Completion Rate</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {completedInterviews.length + completedGDs.length} of{" "}
+                          {totalSessions} sessions
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+              {/* Bottom Stats Bar */}
+              <div className="grid grid-cols-2 w-full md:grid-cols-4 gap-4">
+                {[
+                  {
+                    label: "Total Sessions",
+                    value: totalSessions,
+                    icon: FiVideo,
+                    color: "#bef264",
+                  },
+                  {
+                    label: "Average Score",
+                    value: `${avgScore}%`,
+                    icon: FiTarget,
+                    color: "#f59e0b",
+                  },
+                  {
+                    label: "Practice Time",
+                    value: formatPrepTime(totalPrepTime),
+                    icon: FiClock,
+                    color: "#3b82f6",
+                  },
+                  {
+                    label: "Skills Improved",
+                    value: skillMatrix.filter((s) => s.Interview > 60).length,
+                    icon: FiTrendingUp,
+                    color: "#8b5cf6",
+                  },
+                ].map((stat, index) => (
+                  <div key={index} className="bg-white/10 rounded-xl p-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-[10px] text-gray-300 uppercase tracking-wider">
+                          {stat.label}
+                        </p>
+                        <p className="text-xl font-bold mt-1">{stat.value}</p>
+                      </div>
+                      <div
+                        className={` rounded-full  flex items-center justify-center`}
+                      >
+                        <stat.icon className={`text-[#bef264]`} size={14} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-                 {/* Bottom Stats Bar */}
-          <div className="grid grid-cols-2 w-full md:grid-cols-4 gap-4">
-            {[
-              {
-                label: "Total Sessions",
-                value: totalSessions,
-                icon: FiVideo,
-                color: "#bef264",
-              },
-              {
-                label: "Average Score",
-                value: `${avgScore}%`,
-                icon: FiTarget,
-                color: "#f59e0b",
-              },
-              {
-                label: "Practice Time",
-                value: formatPrepTime(totalPrepTime),
-                icon: FiClock,
-                color: "#3b82f6",
-              },
-              {
-                label: "Skills Improved",
-                value: skillMatrix.filter((s) => s.Interview > 60).length,
-                icon: FiTrendingUp,
-                color: "#8b5cf6",
-              },
-            ].map((stat, index) => (
-              <div key={index} className="bg-white/10 rounded-xl p-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-[10px] text-gray-300 uppercase tracking-wider">
-                      {stat.label}
-                    </p>
-                    <p className="text-xl font-bold mt-1">{stat.value}</p>
-                  </div>
-                  <div className={` rounded-full  flex items-center justify-center`}>
-                    <stat.icon className={`text-[#bef264]`} size={14} />
-                    </div>
-                
-                </div>
-              </div>
-            ))}
-          </div>
-          </div>
-           
+
             {/* Right - Contribution Calendar */}
             <div className="rounded-xl bg-white/5 border border-white/10 p-4 flex flex-col">
               <div className="flex items-center justify-between mb-3">
@@ -2045,7 +2109,93 @@ const DashboardOverview = () => {
               </div>
             </div>
           </div>
-       
+          {/* Feature Cards Grid */}
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold mb-6 text-white">
+              AI-Powered Tools
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              {featureCards.map((feature) => (
+                <div
+                  key={feature.id}
+                  onClick={() => navigate(feature.path)}
+                  className="group cursor-pointer rounded-2xl bg-white/10 backdrop-blur-xl p-3 transition-all duration-300 hover:bg-zinc-800/70 hover:shadow-[0_0_25px_rgba(190,242,100,0.08)]"
+                >
+                  {/* IMAGE */}
+                  <div className="relative h-36 rounded-xl overflow-hidden">
+                    <img
+                      src={feature.image}
+                      alt={feature.title}
+                      className="w-full h-full object-cover scale-105 group-hover:scale-110 transition duration-500"
+                    />
+
+                    {/* subtle overlay */}
+
+                    {/* badge */}
+                    <div className="absolute top-2 left-2 px-2 py-1 text-[10px] rounded-full bg-zinc-800/80 text-zinc-300">
+                      {feature.badge}
+                    </div>
+                  </div>
+
+                  {/* CONTENT */}
+                  <div className="pt-4 px-1">
+                    {/* CTA */}
+                    <button className="w-full mb-4 py-2.5 rounded-lg text-sm font-semibold bg-[#bef264] text-black flex items-center justify-center gap-2 transition-all duration-300 hover:gap-3 hover:shadow-[0_0_20px_rgba(190,242,100,0.4)]">
+                      {feature.cta}
+                      <FiArrowRight size={14} />
+                    </button>
+
+                    <h3 className="text-xl mb-2  font-light text-white leading-tight">
+                      {feature.title}
+                    </h3>
+
+                    <p className="text-sm text-zinc-400 leading-snug min-h-[42px]">
+                      {feature.description}
+                    </p>
+
+                    {/* meta */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {feature.meta.map((item) => (
+                        <span
+                          key={item}
+                          className="text-[10px] px-2 py-1 rounded-full bg-zinc-800 text-zinc-400"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* partners */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {feature.partners.slice(0, 2).map((item) => (
+                        <span
+                          key={item}
+                          className="text-[10px] px-2 py-1 rounded-full bg-[#bef264]/10 text-[#bef264]"
+                        >
+                          {item}
+                        </span>
+                      ))}
+
+                      {feature.partners.length > 2 && (
+                        <span className="text-[10px] text-zinc-500">
+                          + more
+                        </span>
+                      )}
+                    </div>
+
+                    {/* live */}
+                    {feature.liveText && (
+                      <div className="mt-3 flex items-center gap-2 text-[11px] text-[#bef264]">
+                        <span className="w-1.5 h-1.5 bg-[#bef264] rounded-full animate-pulse" />
+                        {feature.liveText}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Continue Watching / Recent Activity Section */}
           <div className="mb-8 mt-8">
@@ -2229,69 +2379,6 @@ const DashboardOverview = () => {
                   </>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Feature Cards Grid */}
-          <div className="mb-8">
-            <h2 className="text-xl md:text-2xl font-bold mb-4">
-              AI-Powered Tools
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {featureCards.map((feature) => (
-                <div
-                  key={feature.id}
-                  className="feature-card rounded-xl cursor-pointer group"
-                  onClick={() => navigate(feature.path)}
-                >
-                  {/* Image Section */}
-                  <div className="relative h-32 overflow-hidden">
-                    <img
-                      src={feature.image}
-                      alt={feature.title}
-                      className="feature-image w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                    <div className="absolute top-3 right-3">
-                      <div className="credit-badge px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                        <FiZap size={12} />
-                        {feature.credits} Credits
-                      </div>
-                    </div>
-                    <div className="absolute bottom-3 left-3">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: `${feature.color}20` }}
-                        >
-                          <feature.icon
-                            style={{ color: feature.color }}
-                            size={16}
-                          />
-                        </div>
-                        <h3 className="font-bold text-base">{feature.title}</h3>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content Section */}
-                  <div className="p-4">
-                    <p className="text-sm text-gray-400 mb-4">
-                      {feature.description}
-                    </p>
-                    <button
-                      className="w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 group-hover:gap-3"
-                      style={{
-                        backgroundColor: `${feature.color}10`,
-                        color: feature.color,
-                        border: `1px solid ${feature.color}30`,
-                      }}
-                    >
-                      {feature.cta} <FiArrowRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
