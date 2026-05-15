@@ -135,75 +135,6 @@ const updateUserStatus = asyncHandler(async (req, res) => {
   res.json({ success: true, data: user });
 });
 
-const deleteUser = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-
-  const user = await User.findByIdAndUpdate(
-    userId,
-    { status: 'deleted', deletedAt: new Date(), isDeleted: true },
-    { new: true }
-  );
-
-  if (!user) {
-    throw new ApiError(404, 'User not found');
-  }
-
-  res.json({ success: true, message: 'User soft-deleted successfully', data: user });
-});
-
-const suspendUser = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  const user = await User.findByIdAndUpdate(userId, { status: 'suspended' }, { new: true });
-  if (!user) throw new ApiError(404, 'User not found');
-  res.json({ success: true, data: user });
-});
-
-const activateUser = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  const user = await User.findByIdAndUpdate(userId, { status: 'active' }, { new: true });
-  if (!user) throw new ApiError(404, 'User not found');
-  res.json({ success: true, data: user });
-});
-
-const changeUserRole = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  const { role } = req.body;
-  if (!['user', 'admin'].includes(role)) {
-    throw new ApiError(400, 'Invalid role');
-  }
-  const user = await User.findByIdAndUpdate(userId, { role }, { new: true });
-  if (!user) throw new ApiError(404, 'User not found');
-  res.json({ success: true, data: user });
-});
-
-const updateUserCredits = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  const { credits } = req.body;
-  
-  if (typeof credits !== 'number') {
-    throw new ApiError(400, 'Credits must be a number');
-  }
-
-  let subscription = await Subscription.findOne({ user: userId });
-  if (!subscription) {
-    throw new ApiError(404, 'Subscription not found');
-  }
-
-  subscription.credits = credits;
-  if (!subscription.manualAdjustments) subscription.manualAdjustments = [];
-  subscription.manualAdjustments.push({
-    date: new Date(),
-    type: 'credit_add',
-    amount: credits,
-    reason: 'Admin explicit credit set',
-    adminId: req.user._id,
-  });
-
-  await subscription.save();
-  res.json({ success: true, data: subscription });
-});
-
-
 const updateUserSubscription = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const { tier, creditsToAdd, extendDays } = req.body;
@@ -286,42 +217,6 @@ const getSubscriptionDetail = asyncHandler(async (req, res) => {
   }
 
   res.json({ success: true, data: subscription });
-});
-
-const updateSubscription = asyncHandler(async (req, res) => {
-  const { subscriptionId } = req.params;
-  const { tier, credits, planExpiry, status } = req.body;
-
-  const subscription = await Subscription.findById(subscriptionId);
-
-  if (!subscription) {
-    throw new ApiError(404, 'Subscription not found');
-  }
-
-  if (tier) subscription.tier = tier;
-  if (credits !== undefined) subscription.credits = credits;
-  if (planExpiry) subscription.planExpiry = new Date(planExpiry);
-  if (status) subscription.status = status;
-
-  await subscription.save();
-
-  res.json({ success: true, data: subscription });
-});
-
-const deleteSubscription = asyncHandler(async (req, res) => {
-  const { subscriptionId } = req.params;
-
-  const subscription = await Subscription.findByIdAndUpdate(
-    subscriptionId,
-    { status: 'cancelled' },
-    { new: true }
-  );
-
-  if (!subscription) {
-    throw new ApiError(404, 'Subscription not found');
-  }
-
-  res.json({ success: true, message: 'Subscription cancelled successfully', data: subscription });
 });
 
 // Feedback Management
@@ -420,18 +315,6 @@ const getWaitlist = asyncHandler(async (req, res) => {
     data: waitlist,
     pagination: { page: parseInt(page), limit: parseInt(limit), total },
   });
-});
-
-const deleteWaitlistEntry = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const entry = await Waitlist.findByIdAndDelete(id);
-
-  if (!entry) {
-    throw new ApiError(404, 'Waitlist entry not found');
-  }
-
-  res.json({ success: true, message: 'Waitlist entry deleted successfully' });
 });
 
 const grantWaitlistAccess = asyncHandler(async (req, res) => {
@@ -591,21 +474,12 @@ module.exports = {
   getUserDetail,
   updateUserStatus,
   updateUserSubscription,
-  deleteUser,
-  suspendUser,
-  activateUser,
-  changeUserRole,
-  updateUserCredits,
   getSubscriptions,
-
   getSubscriptionDetail,
-  updateSubscription,
-  deleteSubscription,
   getFeedback,
   getContacts,
   updateContactStatus,
   getWaitlist,
-  deleteWaitlistEntry,
   grantWaitlistAccess,
   sendWaitlistNotification,
   getQuestions,

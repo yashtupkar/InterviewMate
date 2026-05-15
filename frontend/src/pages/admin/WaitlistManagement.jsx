@@ -154,22 +154,6 @@ const WaitlistManagement = () => {
     }
   };
 
-  const handleDeleteEntry = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this entry from the waitlist?')) return;
-
-    try {
-      const token = await getToken();
-      await axios.delete(`${backendURL}/api/admin/waitlist/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success('Waitlist entry removed');
-      fetchWaitlist();
-    } catch (err) {
-      console.error('Delete failed:', err);
-      toast.error('Failed to remove entry');
-    }
-  };
-
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -203,36 +187,38 @@ const WaitlistManagement = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { label: 'Total Waitlist', value: waitlist.length, color: 'text-white' },
-          { label: 'Pending', value: statusCounts.pending, color: 'text-yellow-400' },
-          { label: 'Accepted', value: statusCounts.accepted, color: 'text-green-400' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-surface-alt border border-white/10 rounded-xl p-4 shadow-lg shadow-black/20">
-            <p className="text-zinc-500 text-sm font-medium">{stat.label}</p>
-            <p className={`text-2xl font-bold mt-2 ${stat.color}`}>{stat.value}</p>
-          </div>
-        ))}
+        <div className="bg-surface-alt border border-white/10 rounded-xl p-4">
+          <p className="text-zinc-400 text-sm">Total Waitlist</p>
+          <p className="text-2xl font-bold text-white mt-2">{waitlist.length}</p>
+        </div>
+        <div className="bg-surface-alt border border-white/10 rounded-xl p-4">
+          <p className="text-zinc-400 text-sm">Pending</p>
+          <p className="text-2xl font-bold text-yellow-400 mt-2">{statusCounts.pending}</p>
+        </div>
+        <div className="bg-surface-alt border border-white/10 rounded-xl p-4">
+          <p className="text-zinc-400 text-sm">Accepted</p>
+          <p className="text-2xl font-bold text-green-400 mt-2">{statusCounts.accepted}</p>
+        </div>
       </div>
 
       {/* Bulk Actions */}
       {selectedEmails.length > 0 && (
-        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
-          <p className="text-primary font-medium">{selectedEmails.length} recipients selected</p>
+        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 flex items-center justify-between">
+          <p className="text-primary font-medium">{selectedEmails.length} selected</p>
           <div className="flex gap-2">
             <button
               onClick={handleGrantAccess}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-bold text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors"
             >
               <FiCheckCircle size={16} />
               Grant Access
             </button>
             <button
               onClick={() => setShowEmailModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors font-bold text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
             >
               <FiMail size={16} />
-              Email
+              Send Email
             </button>
           </div>
         </div>
@@ -285,24 +271,26 @@ const WaitlistManagement = () => {
                     className="w-4 h-4 rounded border-white/20 bg-surface text-primary focus:ring-0"
                   />
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Joined</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400">EMAIL</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400">STATUS</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400">JOINED</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <tr key={i} className="border-b border-white/5 animate-pulse bg-surface">
-                    <td colSpan="5" className="px-6 py-4">
-                      <div className="h-4 bg-zinc-800 rounded w-full" />
-                    </td>
-                  </tr>
-                ))
+                Array(5)
+                  .fill(0)
+                  .map((_, i) => (
+                    <tr key={i} className="border-b border-white/5">
+                      <td colSpan="5" className="px-6 py-4">
+                        <div className="h-4 bg-zinc-800 rounded w-32 animate-pulse" />
+                      </td>
+                    </tr>
+                  ))
               ) : waitlist.length > 0 ? (
                 waitlist.map((entry) => (
-                  <tr key={entry._id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                  <tr key={entry._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
@@ -313,21 +301,21 @@ const WaitlistManagement = () => {
                     </td>
                     <td className="px-6 py-4 font-medium text-white">{entry.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs px-3 py-1 rounded-full font-bold ${
-                        entry.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 
-                        entry.status === 'contacted' ? 'bg-blue-500/20 text-blue-400' : 
-                        'bg-green-500/20 text-green-400'
-                      }`}>
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full font-medium ${
+                          entry.status === 'pending'
+                            ? 'bg-yellow-500/20 text-yellow-400'
+                            : entry.status === 'contacted'
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : 'bg-green-500/20 text-green-400'
+                        }`}
+                      >
                         {entry.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-zinc-400">{formatDate(entry.joinedAt)}</td>
                     <td className="px-6 py-4">
-                      <button 
-                        onClick={() => handleDeleteEntry(entry._id)}
-                        className="text-zinc-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100" 
-                        title="Remove"
-                      >
+                      <button className="text-zinc-400 hover:text-red-400 transition-colors" title="Remove">
                         <FiTrash2 size={16} />
                       </button>
                     </td>
@@ -335,7 +323,9 @@ const WaitlistManagement = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-zinc-500">No entries found</td>
+                  <td colSpan="5" className="px-6 py-8 text-center text-zinc-500">
+                    No waitlist entries found
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -350,11 +340,11 @@ const WaitlistManagement = () => {
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="p-2 hover:bg-white/10 rounded-lg disabled:opacity-50 transition-colors text-white"
+                className="p-2 hover:bg-white/10 rounded-lg disabled:opacity-50 transition-colors"
               >
                 <FiChevronLeft size={16} />
               </button>
-              <button onClick={() => setCurrentPage(currentPage + 1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white">
+              <button onClick={() => setCurrentPage(currentPage + 1)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                 <FiChevronRight size={16} />
               </button>
             </div>
@@ -364,22 +354,17 @@ const WaitlistManagement = () => {
 
       {/* Email Modal */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-surface-alt border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-w-md w-full animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-surface">
-              <h2 className="text-xl font-bold text-white">Send Notification</h2>
-              <button onClick={() => setShowEmailModal(false)} className="text-zinc-500 hover:text-white transition-colors">
-                <FiX size={20} />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface-alt border border-white/10 rounded-xl p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold text-white mb-4">Send Notification Email</h2>
 
-            <div className="p-6 space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-zinc-400 mb-2 block">Email Template</label>
+                <label className="text-sm text-zinc-400 mb-2 block">Email Template</label>
                 <select
                   value={emailTemplate}
                   onChange={(e) => setEmailTemplate(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-surface border border-white/10 rounded-lg text-white focus:border-primary/50 outline-none transition-colors"
+                  className="w-full px-4 py-2 bg-surface border border-white/10 rounded-lg text-white focus:border-primary/50 outline-none"
                 >
                   <option value="launch">Platform Launch</option>
                   <option value="early_access">Early Access Offer</option>
@@ -387,23 +372,21 @@ const WaitlistManagement = () => {
                 </select>
               </div>
 
-              <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl">
-                <p className="text-sm text-primary">Sending to <strong>{selectedEmails.length}</strong> recipients.</p>
-              </div>
+              <p className="text-sm text-zinc-400">Sending to {selectedEmails.length} recipients</p>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3">
                 <button
                   onClick={() => setShowEmailModal(false)}
-                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 transition-colors font-bold"
+                  className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSendBulkEmail}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-black rounded-xl hover:bg-primary-hover transition-all font-bold shadow-lg shadow-primary/20"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary text-black rounded-lg hover:bg-primary hover:scale-105 transition-all font-medium"
                 >
                   <FiSend size={16} />
-                  Send Now
+                  Send
                 </button>
               </div>
             </div>

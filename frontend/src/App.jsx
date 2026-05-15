@@ -46,11 +46,11 @@ import CheckoutPage from "./pages/CheckoutPage";
 import AdminLayout from "./components/layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
-import UserDetail from "./pages/admin/UserDetail";
 import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
 import ContactManagement from "./pages/admin/ContactManagement";
 import WaitlistManagement from "./pages/admin/WaitlistManagement";
+import QuestionManagement from "./pages/admin/QuestionManagement";
 import InterviewAnalysis from "./pages/admin/InterviewAnalysis";
 import ToolAnalysis from "./pages/admin/ToolAnalysis";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
@@ -281,14 +281,6 @@ function App() {
              } 
            />
            <Route 
-             path="/admin/users/:userId" 
-             element={
-               <AdminLayout>
-                 <UserDetail />
-               </AdminLayout>
-             } 
-           />
-           <Route 
              path="/admin/subscriptions" 
              element={
                <AdminLayout>
@@ -320,14 +312,14 @@ function App() {
                </AdminLayout>
              } 
            />
-           {/* <Route 
+           <Route 
              path="/admin/questions" 
              element={
                <AdminLayout>
                  <QuestionManagement />
                </AdminLayout>
              } 
-           /> */}
+           />
            <Route 
              path="/admin/interviews" 
              element={

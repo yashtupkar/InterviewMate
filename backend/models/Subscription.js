@@ -19,11 +19,6 @@ const subscriptionSchema = new mongoose.Schema({
     planExpiry: {
         type: Date
     },
-    status: {
-        type: String,
-        enum: ['active', 'cancelled', 'expired'],
-        default: 'active'
-    },
     leftoverFreeCredits: {
         type: Number,
         default: 0
