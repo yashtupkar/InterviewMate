@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useUser, useClerk } from '@clerk/clerk-react';
+import React, { useState, useRef, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useUser, useClerk } from "@clerk/clerk-react";
 import {
   FiMenu,
   FiX,
@@ -8,7 +8,6 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiLogOut,
-  FiHome,
   FiUsers,
   FiCreditCard,
   FiMessageSquare,
@@ -18,12 +17,11 @@ import {
   FiVideo,
   FiTrendingUp,
   FiSettings,
-} from 'react-icons/fi';
-import { MdSpaceDashboard } from 'react-icons/md';
-import Logo from '../common/Logo';
+} from "react-icons/fi";
+import { MdSpaceDashboard } from "react-icons/md";
+import Logo from "../common/Logo";
 
 const AdminLayout = ({ children }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -39,20 +37,29 @@ const AdminLayout = ({ children }) => {
         setIsProfileOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const adminModules = [
-    { label: 'Dashboard', icon: <MdSpaceDashboard />, path: '/admin', exact: true },
-    { label: 'Users', icon: <FiUsers />, path: '/admin/users' },
-    { label: 'Subscriptions', icon: <FiCreditCard />, path: '/admin/subscriptions' },
-    { label: 'Feedback', icon: <FiMessageSquare />, path: '/admin/feedback' },
-    { label: 'Contacts', icon: <FiMail />, path: '/admin/contacts' },
-    { label: 'Waitlist', icon: <FiList />, path: '/admin/waitlist' },
-    { label: 'Questions', icon: <FiBook />, path: '/admin/questions' },
-    { label: 'Interviews', icon: <FiVideo />, path: '/admin/interviews' },
-    { label: 'Analytics', icon: <FiTrendingUp />, path: '/admin/analytics' },
+    {
+      label: "Dashboard",
+      icon: <MdSpaceDashboard />,
+      path: "/admin",
+      exact: true,
+    },
+    { label: "Users", icon: <FiUsers />, path: "/admin/users" },
+    {
+      label: "Subscriptions",
+      icon: <FiCreditCard />,
+      path: "/admin/subscriptions",
+    },
+    { label: "Feedback", icon: <FiMessageSquare />, path: "/admin/feedback" },
+    { label: "Contacts", icon: <FiMail />, path: "/admin/contacts" },
+    { label: "Waitlist", icon: <FiList />, path: "/admin/waitlist" },
+    { label: "Questions", icon: <FiBook />, path: "/admin/questions" },
+    { label: "Interviews", icon: <FiVideo />, path: "/admin/interviews" },
+    { label: "Analytics", icon: <FiTrendingUp />, path: "/admin/analytics" },
   ];
 
   const isActive = (path, exact = false) => {
@@ -62,7 +69,7 @@ const AdminLayout = ({ children }) => {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate("/");
   };
 
   return (
@@ -70,15 +77,15 @@ const AdminLayout = ({ children }) => {
       {/* Sidebar */}
       <aside
         className={`fixed md:relative left-0 top-0 h-screen bg-surface border-r border-white/10 transition-all duration-300 z-40 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        } ${isCollapsed ? 'md:w-20' : 'w-64'}`}
+          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        } ${isCollapsed ? "w-56 md:w-16" : "w-56 md:w-56"}`}
       >
         {/* Logo Section */}
-        <div className="flex items-center justify-between px-4 py-6 border-b border-white/10">
+        <div className="flex items-center justify-between px-3 py-4 border-b border-white/10">
           {!isCollapsed && (
             <>
               <Link to="/" className="flex items-center gap-2">
-                <Logo size={32} />
+                <Logo size={28} />
               </Link>
               <button
                 onClick={() => setIsMobileOpen(false)}
@@ -88,36 +95,34 @@ const AdminLayout = ({ children }) => {
               </button>
             </>
           )}
-          {isCollapsed && (
-            <Logo size={32} />
-          )}
+          {isCollapsed && <Logo size={28} />}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-2 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
           {adminModules.map((module) => (
             <Link
               key={module.path}
               to={module.path}
               onClick={() => setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative ${
+              className={`flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg transition-all group relative ${
                 isActive(module.path, module.exact)
-                  ? 'bg-primary/20 text-primary'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  ? "bg-primary/20 text-primary"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
               }`}
-              title={isCollapsed ? module.label : ''}
+              title={isCollapsed ? module.label : ""}
             >
-              <span className="text-lg shrink-0">{module.icon}</span>
+              <span className="text-base shrink-0">{module.icon}</span>
               {!isCollapsed && (
                 <>
                   <span className="font-medium text-sm">{module.label}</span>
                   {isActive(module.path, module.exact) && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full" />
                   )}
                 </>
               )}
               {isCollapsed && (
-                <div className="absolute left-full ml-4 px-2 py-1 bg-surface-alt rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap text-xs border border-white/10 shadow-xl z-50">
+                <div className="absolute left-full ml-3 px-2 py-1 bg-surface-alt rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap text-xs border border-white/10 shadow-lg z-50">
                   {module.label}
                 </div>
               )}
@@ -128,16 +133,20 @@ const AdminLayout = ({ children }) => {
         {/* Collapse Toggle */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden md:flex absolute -right-3 top-20 bg-primary text-black hover:bg-primary hover:scale-110 items-center justify-center rounded-full w-6 h-6 transition-all shadow-lg z-50"
+          className="hidden md:flex absolute -right-3 top-16 bg-primary text-black hover:bg-primary hover:scale-110 items-center justify-center rounded-full w-6 h-6 transition-all shadow-lg z-50"
         >
-          {isCollapsed ? <FiChevronRight size={14} /> : <FiChevronLeft size={14} />}
+          {isCollapsed ? (
+            <FiChevronRight size={14} />
+          ) : (
+            <FiChevronLeft size={14} />
+          )}
         </button>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-surface border-b border-white/10 px-4 md:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+        <header className="bg-surface border-b border-white/10 px-3 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsMobileOpen(!isMobileOpen)}
@@ -146,8 +155,12 @@ const AdminLayout = ({ children }) => {
               <FiMenu size={24} />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-white">Admin Panel</h1>
-              <p className="text-xs text-zinc-500">Welcome, {user?.firstName || 'Admin'}</p>
+              <h1 className="text-lg font-semibold text-white leading-tight">
+                Admin Panel
+              </h1>
+              <p className="text-[11px] text-zinc-500 leading-tight">
+                Welcome, {user?.firstName || "Admin"}
+              </p>
             </div>
           </div>
 
@@ -155,30 +168,39 @@ const AdminLayout = ({ children }) => {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/5 transition-colors"
             >
               <img
-                src={user?.imageUrl || 'https://via.placeholder.com/32'}
+                src={user?.imageUrl || "https://via.placeholder.com/32"}
                 alt={user?.fullName}
-                className="w-8 h-8 rounded-full"
+                className="w-7 h-7 rounded-full"
               />
               {!isCollapsed && (
                 <>
-                  <span className="text-sm font-medium text-white">{user?.firstName}</span>
-                  <FiChevronDown size={16} className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                  <span className="hidden sm:inline text-sm font-medium text-white">
+                    {user?.firstName}
+                  </span>
+                  <FiChevronDown
+                    size={16}
+                    className={`transition-transform ${isProfileOpen ? "rotate-180" : ""}`}
+                  />
                 </>
               )}
             </button>
 
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-surface-alt border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-white/10">
-                  <p className="text-sm font-semibold text-white">{user?.fullName}</p>
-                  <p className="text-xs text-zinc-500">{user?.emailAddresses?.[0]?.emailAddress}</p>
+              <div className="absolute right-0 mt-2 w-44 bg-surface-alt border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className="px-3 py-2.5 border-b border-white/10">
+                  <p className="text-sm font-semibold text-white">
+                    {user?.fullName}
+                  </p>
+                  <p className="text-xs text-zinc-500 truncate">
+                    {user?.emailAddresses?.[0]?.emailAddress}
+                  </p>
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
                 >
                   <FiLogOut size={16} />
                   Sign Out
@@ -190,9 +212,7 @@ const AdminLayout = ({ children }) => {
 
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto custom-scrollbar bg-background">
-          <div className="p-4 md:p-8">
-            {children}
-          </div>
+          <div className="p-3 md:p-6">{children}</div>
         </main>
       </div>
 

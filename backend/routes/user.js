@@ -1,18 +1,25 @@
-const express = require('express');
-const asyncHandler = require('../utils/asyncHandler');
-const User = require('../models/User');
-const Subscription = require('../models/Subscription');
-const { createClerkClient } = require('@clerk/clerk-sdk-node');
-const { generateReferralCode, processReferral } = require('../controllers/referralController');
+const express = require("express");
+const asyncHandler = require("../utils/asyncHandler");
+const User = require("../models/User");
+const Subscription = require("../models/Subscription");
+const { createClerkClient } = require("@clerk/clerk-sdk-node");
+const {
+  generateReferralCode,
+  processReferral,
+} = require("../controllers/referralController");
 const router = express.Router();
 
-const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY,
+});
 
-router.post('/sync', asyncHandler(async (req, res) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    
+router.post(
+  "/sync",
+  asyncHandler(async (req, res) => {
+    const token = req.headers.authorization?.split(" ")[1];
+
     if (!token) {
-        return res.status(401).json({ message: "No token provided" });
+      return res.status(401).json({ message: "No token provided" });
     }
 
     const decoded = await clerkClient.verifyToken(token);
@@ -24,71 +31,82 @@ router.post('/sync', asyncHandler(async (req, res) => {
 
     // 2. If not found by clerkId, check if a soft-deleted user exists with the same email
     if (!user) {
-        user = await User.findOne({ email, status: 'deleted' });
-        
-        if (user) {
-            console.log(`Reactivating soft-deleted account for email: ${email}`);
-            user.clerkId = clerkUser.id; // Link new Clerk ID
-            user.status = 'active';
-            user.deletedAt = undefined;
-        }
+      user = await User.findOne({ email, status: "deleted" });
+
+      if (user) {
+        console.log(`Reactivating soft-deleted account for email: ${email}`);
+        user.clerkId = clerkUser.id; // Link new Clerk ID
+        user.status = "active";
+        user.deletedAt = undefined;
+      }
     }
 
     // 3. Update or create the user record
     if (user) {
-        user.email = email;
-        user.firstName = clerkUser.firstName;
-        user.lastName = clerkUser.lastName;
-        user.avatar = clerkUser.imageUrl;
-        user.status = 'active';
-        await user.save();
+      user.email = email;
+      user.firstName = clerkUser.firstName;
+      user.lastName = clerkUser.lastName;
+      user.avatar = clerkUser.imageUrl;
+      user.status = "active";
+      user.lastLogin = new Date();
+      await user.save();
     } else {
-        user = await User.create({
-            clerkId: clerkUser.id,
-            email: email,
-            firstName: clerkUser.firstName,
-            lastName: clerkUser.lastName,
-            avatar: clerkUser.imageUrl,
-            status: 'active'
-        });
+      user = await User.create({
+        clerkId: clerkUser.id,
+        email: email,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        avatar: clerkUser.imageUrl,
+        status: "active",
+        lastLogin: new Date(),
+      });
     }
 
-
     const isNewUser = !user.referralCode;
-    
+
     // Auto-create subscription if it doesn't exist
     if (!user.subscription) {
-        const subscription = await Subscription.create({ user: user._id });
-        user.subscription = subscription._id;
-        await user.save();
+      const subscription = await Subscription.create({ user: user._id });
+      user.subscription = subscription._id;
+      await user.save();
     }
 
     // Generate referral code for new users
     if (isNewUser) {
-        user.referralCode = await generateReferralCode();
-        await user.save();
-        
-        // Process referral if provided
-        if (req.body.referralCode) {
-            await processReferral(user._id, req.body.referralCode);
-        }
+      user.referralCode = await generateReferralCode();
+      await user.save();
+
+      // Process referral if provided
+      if (req.body.referralCode) {
+        await processReferral(user._id, req.body.referralCode);
+      }
+    }
+
+    if (!user.lastLogin) {
+      user.lastLogin = new Date();
+      await user.save();
     }
 
     res.status(200).json({
-        success: true,
-        message: "User synced successfully",
-        user,
-        isNewUser
+      success: true,
+      message: "User synced successfully",
+      user,
+      isNewUser,
     });
-}));
+  }),
+);
 
-const { clerkAuth } = require('../middleware/auth');
+const { clerkAuth } = require("../middleware/auth");
 
-router.get('/profile', clerkAuth, asyncHandler(async (req, res) => {
+router.get(
+  "/profile",
+  clerkAuth,
+  asyncHandler(async (req, res) => {
     res.status(200).json({
-        success: true,
-        user: req.user
+      success: true,
+      user: req.user,
     });
-}));
+  }),
+);
 
 module.exports = router;
