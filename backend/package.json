@@ -16,6 +16,8 @@
     "@deepgram/sdk": "^5.0.0",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.13.6",
+    "bull": "^4.11.5",
+    "canvas": "^2.11.2",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -26,9 +28,13 @@
     "multer": "^2.1.1",
     "openai": "^6.32.0",
     "pdf-parse": "^1.1.1",
+    "python-shell": "^5.0.0",
     "razorpay": "^2.9.6",
+    "redis": "^4.6.13",
+    "sharp": "^0.33.1",
     "svix": "^1.88.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "ws": "^8.15.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
