@@ -18,8 +18,9 @@ import {
   FiSend,
   FiLink,
 } from "react-icons/fi";
-import { SiWhatsapp, SiLinkedin } from "react-icons/si";
+import { SiWhatsapp} from "react-icons/si";
 import toast from "react-hot-toast";
+import { FaLinkedin } from "react-icons/fa6";
 
 const Referrals = () => {
   const { getToken } = useAuth();
@@ -164,7 +165,7 @@ const Referrals = () => {
                       onClick={() => shareVia("linkedin")}
                       className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg flex items-center gap-3 transition-colors text-sm font-medium"
                     >
-                      <SiLinkedin className="w-4 h-4 text-blue-400" /> LinkedIn
+                      <FaLinkedin className="w-4 h-4 text-blue-400" /> LinkedIn
                     </button>
                     <button
                       onClick={() => shareVia("email")}

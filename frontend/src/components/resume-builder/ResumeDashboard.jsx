@@ -230,7 +230,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
           <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
             Resume Builder
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-2xl md:text-3xl  text-white tracking-tight leading-tight">
             Build your{" "}
             <span className="text-[#bef264] italic">ATS Friendly</span> Resumes
           </h1>

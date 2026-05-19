@@ -37,7 +37,7 @@ const Reports = () => {
         <div className="max-w-6xl mx-auto px-2 sm:px-6 w-full mt-4 sm:mt-8">
           {/* Page Header */}
           <div className="flex  items-start sm:items-center justify-between mb-6 gap-4">
-            <h2 className="text-lg sm:text-2xl ml-2 md:ml-0 font-bold dark:text-white text-black">
+            <h2 className="text-lg sm:text-2xl ml-2 md:ml-0  dark:text-white text-black">
               {activeTab === "interviews" ? "Your Interviews" : "Your GDs"}
             </h2>
             <button

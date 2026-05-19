@@ -7,6 +7,7 @@ import CTA from '../components/home/CTA';
 import toast from 'react-hot-toast';
 import SocialLinks from '../components/common/SocialLinks';
 import axios from 'axios';
+import { COMPANY_DETAILS } from '../constants/company';
 
 const Contact = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -59,12 +60,12 @@ const Contact = () => {
     {
       icon: <Mail className="text-primary" size={20} />,
       title: "Email",
-      details: "support@placemateai.com",
+      details: COMPANY_DETAILS.email,
     },
     {
       icon: <MapPin className="text-primary" size={20} />,
       title: "Location",
-      details: "MP Nagar, Bhopal, MP, 462003",
+      details: COMPANY_DETAILS.address,
     }
   ];
 

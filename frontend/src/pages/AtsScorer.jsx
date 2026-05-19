@@ -291,27 +291,28 @@ const AtsScorer = () => {
                 className={`w-full lg:w-1/2 flex flex-col lg:sticky lg:top-16 h-fit space-y-4 sm:space-y-5 animate-in slide-in-from-left-8 fade-in duration-700 ${isSmallScreen && mobileStage === 2 ? "hidden" : ""}`}
               >
                 <div className="space-y-3">
-                  <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] block">
+                  <div className="text-[#bef264] text-[10px] underline font-black uppercase tracking-[0.3em] block">
                     ATS Resume Scanner
                   </div>
-                  <h1 className="text-2xl sm:text-3xl md:text-[44px] font-black text-white  ">
-                    Optimize your resume for
+                  <h1 className="text-2xl md:text-3xl   text-white  ">
+                    Optimize your resume for{" "}
+                    <span className="text-2xl md:text-3xl italic  text-[#bef264]   ">
+                      ATS shortlisting
+                    </span>
                   </h1>
-                  <h1 className="text-2xl sm:text-3xl italic md:text-[44px] font-black text-[#bef264]   ">
-                    ATS shortlisting
-                  </h1>
-                  <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-md">
+
+                  <p className="text-zinc-300 text-sm  leading-relaxed max-w-full">
                     Compare your resume against a target role and get compact,
                     actionable feedback on missing keywords, formatting issues,
                     and content quality.
                   </p>
                 </div>
 
-                <div className="w-fit rounded-2xl border border-white/10 bg-black/30 p-2">
+                <div className="w-full rounded-2xl border border-white/10 bg-white/10 p-2">
                   <img
                     src="/assets/resume-ats-check.png"
                     alt="Resume ATS check"
-                    className="w-full max-w-md h-auto object-contain rounded-xl"
+                    className="w-full max-w-full h-auto object-contain rounded-xl"
                   />
                 </div>
 
@@ -324,7 +325,7 @@ const AtsScorer = () => {
                   </button>
                 )}
 
-                <div className="sm:bg-black p-4 sm:p-6 shadow-xl sm:rounded-2xl sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5 space-y-3">
+                <div className="sm:bg-white/10 p-4 sm:p-6 shadow-xl sm:rounded-2xl sm:border dark:border-white/5 border-gray-100 ring-1 ring-black/5 space-y-3">
                   <h3 className="text-sm font-bold dark:text-white text-black flex items-center uppercase tracking-widest">
                     <FiShield className="mr-2.5 text-[#bef264] text-lg" /> What
                     We Check

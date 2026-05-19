@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import Logo from "../common/Logo";
 import SocialLinks from "../common/SocialLinks";
+import { COMPANY_DETAILS } from "../../constants/company";
 
 const Footer = () => {
     const currentYear = new Date().getFullYear();
@@ -12,17 +13,9 @@ const Footer = () => {
             links: [
                 { name: "AI Interviews", path: "/interview" },
                 { name: "Group Discussions", path: "/gd" },
-                { name: "LinkedIn Pro", path: "/dashboard/linkedin" },
-                { name: "Pricing Plans", path: "/pricing" }
-            ]
-        },
-        {
-            title: "Resources",
-            links: [
-                { name: "Help Center", path: "/help" },
-                { name: "Interview Tips", path: "#" },
-                { name: "Success Stories", path: "/#testimonials" },
-                { name: "API Status", path: "#" }
+                { name: "Resume Builder", path: "/resume-builder" },
+                { name: "Interview Question Bank", path: "/interview-questions" },
+                { name: "ATS Scanner", path: "/ats-scorer" }
             ]
         },
         {
@@ -33,7 +26,16 @@ const Footer = () => {
                 { name: "Terms of Service", path: "/terms" },
                 { name: "Contact Us", path: "/contact" }
             ]
-        }
+        },
+        {
+            title: "Resources",
+            links: [
+                { name: "Help Center", path: "/help" },
+                { name: "Blogs", path: "/blog" },
+
+            ]
+        },
+     
     ];
 
     return (
@@ -47,11 +49,11 @@ const Footer = () => {
                                 <Logo size={28} />
                             </div>
                             <span className="text-2xl font-black tracking-tighter text-white">
-                                PlaceMate<span className="text-primary italic">AI</span>
+                                PlaceMate<span className="text-primary ">AI</span>
                             </span>
                         </Link>
                         <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
-                            Empowering candidates to conquer their dream interviews with state-of-the-art AI simulations and real-time feedback.
+                            {COMPANY_DETAILS.description}
                         </p>
                         <SocialLinks />
                     </div>
@@ -84,7 +86,7 @@ const Footer = () => {
                 {/* Bottom Bar */}
                 <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.15em]">
-                        &copy; {currentYear} PlaceMateAI. All rights reserved.
+                        &copy; {currentYear} {COMPANY_DETAILS.name}. All rights reserved.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4 text-[10px] font-black uppercase tracking-[0.15em] text-gray-500">
                         <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
