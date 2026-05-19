@@ -40,7 +40,7 @@ const Hero = ({ backendStatus }) => {
         </div>
 
         {/* Heading */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-tight max-w-4xl text-white mb-3">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl  tracking-tight leading-tight max-w-4xl text-white mb-3">
           Become{" "}
           <span className="italic text-[#bef264]">Unstoppable</span>{" "}
           <br className="hidden sm:block" />

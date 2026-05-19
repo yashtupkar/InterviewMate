@@ -81,11 +81,11 @@ const Referrals = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="p-3 bg-[#bef264]/10 rounded-full">
-            <FiLoader className="w-8 h-8 text-[#bef264] animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="p-2 bg-[#bef264]/10 rounded-full">
+            <FiLoader className="w-6 h-6 text-[#bef264] animate-spin" />
           </div>
-          <p className="text-zinc-400 text-sm font-medium">
+          <p className="text-zinc-400 text-xs font-medium">
             Loading referral data...
           </p>
         </div>
@@ -98,29 +98,29 @@ const Referrals = () => {
       <Helmet>
         <title>Referrals | PlaceMateAI</title>
       </Helmet>
-      <div className="min-h-screen text-white py-12 px-4 md:px-8 border-l border-white/5 animate-fade-in custom-scrollbar overflow-y-auto">
-        <div className="max-w-5xl mx-auto pb-24">
+      <div className="min-h-screen text-white py-8 px-4 md:px-8 border-l border-white/5 animate-fade-in custom-scrollbar overflow-y-auto">
+        <div className="max-w-4xl mx-auto pb-16">
           {/* Header */}
-          <div className="mb-12">
-            <span className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
+          <div className="mb-8">
+            <span className="text-[#bef264] text-[10px] font-bold uppercase tracking-[0.2em] mb-2 block">
               Growth Program
             </span>
-            <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">
-              Refer a Friend, <br />
-              <span className="text-[#bef264]">Earn Rewards.</span>
+            <h1 className="text-2xl md:text-3xl  mb-2 tracking-tight">
+              Refer a Friend, 
+              <span className="text-[#bef264]"> Earn Rewards.</span>
             </h1>
-            <p className="text-zinc-500 font-medium text-base md:text-lg max-w-2xl leading-relaxed">
+            <p className="text-zinc-400 text-sm md:text-base max-w-2xl leading-relaxed">
               Helping others prepare for their dream job? Get rewarded for it.
               Share your unique code and boost both of your preparation credits.
             </p>
           </div>
 
           {/* Main Share Card - Minimal & Clean */}
-          <div className="bg-gradient-to-br from-[#bef264]/5 to-transparent border border-[#bef264]/20 rounded-2xl p-8 mb-12">
-            <div className="space-y-6">
+          <div className="bg-gradient-to-br from-[#bef264]/10 to-transparent border border-[#bef264]/20 rounded-xl p-5 sm:p-6 mb-8">
+            <div className="space-y-4">
               {/* Share Link Input */}
               <div>
-                <label className="text-xs font-black uppercase tracking-widest text-zinc-400 mb-3 block">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 block">
                   Your Referral Link
                 </label>
                 <div className="flex gap-2">
@@ -128,144 +128,146 @@ const Referrals = () => {
                     type="text"
                     value={referralLink}
                     readOnly
-                    className="flex-1 bg-black border border-white/10 rounded-lg px-4 py-3 text-sm text-zinc-300 font-mono focus:outline-none focus:border-[#bef264]/50"
+                    className="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-zinc-300 font-mono focus:outline-none focus:border-[#bef264]/50"
                   />
-                  <button
-                    onClick={() =>
-                      copyToClipboard(referralLink, "Link copied!")
-                    }
-                    disabled={referralLink === "Generating link..."}
-                    className="px-4 py-3 bg-[#bef264] text-black rounded-lg font-black hover:bg-[#d9ff96] transition-all disabled:opacity-50"
-                  >
-                    <FiCopy />
-                  </button>
+                 
+                  {/* Share Buttons */}
+                  <div className="relative flex gap-2">
+                    <button
+                      onClick={() =>
+                        copyToClipboard(referralLink, "Link copied!")
+                      }
+                      disabled={referralLink === "Generating link..."}
+                      className="px-4 bg-white text-black rounded-lg font-bold hover:bg-[#d9ff96] transition-all flex items-center justify-center"
+                    >
+                      <FiCopy size={16} />
+                    </button>
+                    <button
+                      onClick={() => setShowShareMenu(!showShareMenu)}
+                      className="w-full py-2.5 px-4 bg-[#bef264] text-black rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-[#d9ff96] transition-all flex items-center justify-center gap-2"
+                    >
+                      <FiShare2 className="w-4 h-4" />
+                      Share Link
+                    </button>
+
+                    {/* Share Menu Dropdown */}
+                    {showShareMenu && (
+                      <div className="absolute top-full mt-2 right-0 z-50 bg-zinc-900 border border-white/10 rounded-lg shadow-xl p-1.5 min-w-[200px]">
+                        <button
+                          onClick={() => shareVia("whatsapp")}
+                          className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-md flex items-center gap-3 transition-colors text-xs font-medium"
+                        >
+                          <SiWhatsapp className="w-4 h-4 text-green-400" /> WhatsApp
+                        </button>
+                        <button
+                          onClick={() => shareVia("linkedin")}
+                          className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-md flex items-center gap-3 transition-colors text-xs font-medium"
+                        >
+                          <FaLinkedin className="w-4 h-4 text-blue-400" /> LinkedIn
+                        </button>
+                        <button
+                          onClick={() => shareVia("email")}
+                          className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-md flex items-center gap-3 transition-colors text-xs font-medium"
+                        >
+                          <FiMail className="w-4 h-4 text-zinc-400" /> Email
+                        </button>
+                        <div className="h-px bg-white/10 my-1" />
+                        <button
+                          onClick={() => shareVia("copy")}
+                          className="w-full text-left px-3 py-2.5 hover:bg-white/5 rounded-md flex items-center gap-3 transition-colors text-xs font-medium"
+                        >
+                          <FiCopy className="w-4 h-4 text-zinc-400" /> Copy Link
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Share Buttons */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowShareMenu(!showShareMenu)}
-                  className="w-full py-3 px-4 bg-[#bef264] text-black rounded-lg font-black uppercase tracking-widest hover:bg-[#d9ff96] transition-all flex items-center justify-center gap-2"
-                >
-                  <FiShare2 className="w-4 h-4" />
-                  Share Link
-                </button>
-
-                {/* Share Menu Dropdown */}
-                {showShareMenu && (
-                  <div className="absolute top-full mt-2 right-0 z-50 bg-zinc-900 border border-white/10 rounded-lg shadow-xl p-2 min-w-[200px]">
-                    <button
-                      onClick={() => shareVia("whatsapp")}
-                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg flex items-center gap-3 transition-colors text-sm font-medium"
-                    >
-                      <SiWhatsapp className="w-4 h-4 text-green-400" /> WhatsApp
-                    </button>
-                    <button
-                      onClick={() => shareVia("linkedin")}
-                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg flex items-center gap-3 transition-colors text-sm font-medium"
-                    >
-                      <FaLinkedin className="w-4 h-4 text-blue-400" /> LinkedIn
-                    </button>
-                    <button
-                      onClick={() => shareVia("email")}
-                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg flex items-center gap-3 transition-colors text-sm font-medium"
-                    >
-                      <FiMail className="w-4 h-4 text-zinc-400" /> Email
-                    </button>
-                    <div className="h-px bg-white/10 my-2" />
-                    <button
-                      onClick={() => shareVia("copy")}
-                      className="w-full text-left px-4 py-3 hover:bg-white/5 rounded-lg flex items-center gap-3 transition-colors text-sm font-medium"
-                    >
-                      <FiCopy className="w-4 h-4 text-zinc-400" /> Copy Link
-                    </button>
-                  </div>
-                )}
-              </div>
+           
             </div>
           </div>
 
           {/* Rewards Info - Minimal Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="p-2 bg-[#bef264]/10 rounded-lg">
-                  <FiUsers className="w-4 h-4 text-[#bef264]" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="bg-white/10 border border-white/10 rounded-lg p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 bg-[#bef264]/10 rounded-md">
+                  <FiUsers className="w-3.5 h-3.5 text-[#bef264]" />
                 </div>
-                <h3 className="text-sm font-black uppercase">
+                <h3 className="text-xs font-bold uppercase tracking-wider">
                   Your Friend Gets
                 </h3>
               </div>
-              <p className="text-2xl font-black text-[#bef264] mb-1">
+              <p className="text-xl font-bold text-[#bef264] mb-0.5">
                 50 Credits
               </p>
-              <p className="text-xs text-zinc-400">Instantly upon signup</p>
+              <p className="text-[10px] text-zinc-400">Instantly upon signup</p>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="p-2 bg-[#bef264]/10 rounded-lg">
-                  <FiGift className="w-4 h-4 text-[#bef264]" />
+            <div className="bg-white/10 border border-white/10 rounded-lg p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 bg-[#bef264]/10 rounded-md">
+                  <FiGift className="w-3.5 h-3.5 text-[#bef264]" />
                 </div>
-                <h3 className="text-sm font-black uppercase">You Get</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider">You Get</h3>
               </div>
-              <p className="text-2xl font-black text-[#bef264] mb-1">
+              <p className="text-xl font-bold text-[#bef264] mb-0.5">
                 50 Credits
               </p>
-              <p className="text-xs text-zinc-400">
+              <p className="text-[10px] text-zinc-400">
                 After they complete first session
               </p>
             </div>
           </div>
 
           {/* Referral History */}
-          <div className="mb-12">
-            <h2 className="text-2xl font-black mb-6 flex items-center gap-2">
-              <FiUsers className="w-6 h-6 text-[#bef264]" />
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <FiUsers className="w-5 h-5 text-[#bef264]" />
               Referral History
             </h2>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+            <div className="bg-white/10 border border-white/10 rounded-lg overflow-hidden">
               {stats?.history?.length > 0 ? (
                 <div className="divide-y divide-white/5">
                   {stats.history.map((ref, idx) => (
                     <div
                       key={idx}
-                      className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between"
+                      className="py-3 px-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between"
                     >
                       <div className="flex items-center gap-3 flex-1">
                         <img
                           src={ref.referee?.avatar}
-                          className="w-8 h-8 rounded-full border border-white/10"
+                          className="w-7 h-7 rounded-full border border-white/10"
                           alt=""
                         />
                         <div className="min-w-0">
-                          <p className="text-sm font-bold text-white truncate">
+                          <p className="text-xs font-semibold text-white truncate">
                             {ref.referee?.firstName} {ref.referee?.lastName}
                           </p>
-                          <p className="text-xs text-zinc-500">
+                          <p className="text-[10px] text-zinc-500">
                             {new Date(ref.createdAt).toDateString()}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.1em] ${
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${
                             ref.status === "rewarded"
                               ? "bg-[#bef264]/10 text-[#bef264] border border-[#bef264]/20"
                               : "bg-zinc-800/50 text-zinc-400 border border-white/5"
                           }`}
                         >
                           {ref.status === "rewarded" ? (
-                            <FiCheckCircle />
+                            <FiCheckCircle className="w-3 h-3" />
                           ) : (
-                            <FiClock />
+                            <FiClock className="w-3 h-3" />
                           )}
                           {ref.status === "rewarded" ? "Rewarded" : "Pending"}
                         </span>
                         <span
-                          className={`text-xs font-black ${ref.status === "rewarded" ? "text-[#bef264]" : "text-zinc-600"}`}
+                          className={`text-xs font-bold ${ref.status === "rewarded" ? "text-[#bef264]" : "text-zinc-500"}`}
                         >
                           {ref.status === "rewarded" ? "+50" : "Pending"}
                         </span>
@@ -274,11 +276,11 @@ const Referrals = () => {
                   ))}
                 </div>
               ) : (
-                <div className="p-12 text-center">
-                  <div className="p-4 bg-[#bef264]/10 rounded-lg w-fit mx-auto mb-3">
-                    <FiGift className="w-6 h-6 text-[#bef264]" />
+                <div className="p-8 text-center">
+                  <div className="p-3 bg-[#bef264]/10 rounded-lg w-fit mx-auto mb-2">
+                    <FiGift className="w-5 h-5 text-[#bef264]" />
                   </div>
-                  <p className="text-zinc-400">
+                  <p className="text-zinc-400 text-xs font-medium">
                     No referrals yet. Share your link to get started!
                   </p>
                 </div>
@@ -287,32 +289,40 @@ const Referrals = () => {
           </div>
 
           {/* Stats Summary */}
-          <div className="grid grid-cols-3 gap-4 mb-12">
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-              <p className="text-xs text-zinc-400 font-bold uppercase mb-1">
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            <div className="bg-white/10 border border-white/10 rounded-lg p-3 text-center">
+              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">
                 Total Referrals
               </p>
-              <p className="text-2xl font-black text-[#bef264]">
+              <p className="text-lg font-bold text-[#bef264]">
                 {stats?.totalReferrals || 0}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-              <p className="text-xs text-zinc-400 font-bold uppercase mb-1">
+            <div className="bg-white/10 border border-white/10 rounded-lg p-3 text-center">
+              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">
                 Rewarded
               </p>
-              <p className="text-2xl font-black text-[#bef264]">
+              <p className="text-lg font-bold text-[#bef264]">
                 {stats?.rewardedReferrals || 0}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-              <p className="text-xs text-zinc-400 font-bold uppercase mb-1">
+            <div className="bg-white/10 border border-white/10 rounded-lg p-3 text-center">
+              <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">
                 Pending
               </p>
-              <p className="text-2xl font-black text-zinc-400">
+              <p className="text-lg font-bold text-zinc-400">
                 {stats?.potentialRewards || 0}
               </p>
             </div>
           </div>
+
+          {/* Terms Button */}
+          <button
+            onClick={() => setShowTerms(true)}
+            className="w-full py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all text-zinc-400"
+          >
+            View Program Terms
+          </button>
 
           {/* Terms Modal */}
           {showTerms && (
@@ -321,19 +331,19 @@ const Referrals = () => {
                 className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                 onClick={() => setShowTerms(false)}
               ></div>
-              <div className="relative bg-zinc-900 border border-white/10 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col animate-fade-in shadow-2xl">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between bg-zinc-900/50 sticky top-0">
-                  <h2 className="text-xl font-black tracking-tight">
+              <div className="relative bg-zinc-900 border border-white/10 rounded-xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col animate-fade-in shadow-2xl">
+                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-zinc-900/90 sticky top-0">
+                  <h2 className="text-lg font-semibold tracking-tight">
                     Program <span className="text-[#bef264]">Terms</span>
                   </h2>
                   <button
                     onClick={() => setShowTerms(false)}
-                    className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-zinc-400 hover:text-white"
                   >
-                    <FiX className="w-5 h-5" />
+                    <FiX className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="p-6 overflow-y-auto custom-scrollbar space-y-6">
+                <div className="p-5 overflow-y-auto custom-scrollbar space-y-5">
                   <TermSection
                     title="1. ELIGIBILITY"
                     items={[
@@ -366,10 +376,10 @@ const Referrals = () => {
                     ]}
                   />
                 </div>
-                <div className="p-6 border-t border-white/5 bg-zinc-900/50">
+                <div className="p-4 border-t border-white/10 bg-zinc-900/90">
                   <button
                     onClick={() => setShowTerms(false)}
-                    className="w-full py-3 bg-[#bef264] text-black rounded-lg font-black uppercase tracking-widest text-sm hover:bg-[#d9ff96] transition-all"
+                    className="w-full py-2.5 bg-[#bef264] text-black rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-[#d9ff96] transition-all"
                   >
                     Close
                   </button>
@@ -377,14 +387,6 @@ const Referrals = () => {
               </div>
             </div>
           )}
-
-          {/* Terms Button */}
-          <button
-            onClick={() => setShowTerms(true)}
-            className="w-full py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-widest transition-all text-zinc-400"
-          >
-            View Program Terms
-          </button>
         </div>
       </div>
     </>
@@ -392,17 +394,17 @@ const Referrals = () => {
 };
 
 const TermSection = ({ title, items }) => (
-  <div className="space-y-3">
-    <h4 className="text-[#bef264] text-[9px] font-black uppercase tracking-widest">
+  <div className="space-y-2">
+    <h4 className="text-[#bef264] text-[9px] font-bold uppercase tracking-widest">
       {title}
     </h4>
-    <ul className="space-y-2">
+    <ul className="space-y-1.5">
       {items.map((item, i) => (
         <li
           key={i}
-          className="flex gap-2 text-xs text-zinc-400 font-medium leading-relaxed"
+          className="flex gap-2 text-[11px] text-zinc-400 font-medium leading-relaxed"
         >
-          <span className="flex-shrink-0 mt-1 w-1 h-1 rounded-full bg-[#bef264]/60"></span>
+          <span className="flex-shrink-0 mt-1.5 w-1 h-1 rounded-full bg-[#bef264]/60"></span>
           {item}
         </li>
       ))}

@@ -173,7 +173,7 @@ const QuestionBankDashboard = () => {
     <div className="min-h-screen text-white px-4 sm:px-6 md:px-8 pt-44 max-w-7xl mx-auto overflow-x-hidden relative">
       {/* --- HERO SECTION --- */}
       <div className="relative mb-12 text-center z-10">
-        <h1 className="text-4xl lg:text-4xl font-black leading-tight tracking-tight mb-4">
+        <h1 className="text-2xl lg:text-4xl  mb-4">
           What <span className="text-[#bef264]">interview</span> are you
           preparing for?
         </h1>

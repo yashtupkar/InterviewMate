@@ -45,7 +45,7 @@ const FAQ = ({ category = "home" }) => {
         </div>
 
         {/* Heading */}
-        <h2 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
+        <h2 className="text-3xl md:text-5xl  text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
           {headingInfo.title} <span className="text-primary">{headingInfo.highlight}</span>{headingInfo.suffix}
         </h2>
 

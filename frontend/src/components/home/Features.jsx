@@ -81,7 +81,7 @@ const Features = () => {
         <div className="text-[#bef264] font-bold tracking-wider uppercase text-xs mb-3">
           Core Capabilities
         </div>
-        <h2 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
+        <h2 className="text-3xl md:text-5xl  text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
           Everything you need to <span className="text-primary">break through</span>
         </h2>
         <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
@@ -96,7 +96,7 @@ const Features = () => {
             {/* Content Half */}
             <div className="flex-1 space-y-6 w-full">
               <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{feature.subtitle}</div>
-              <h3 className="text-3xl md:text-[2.75rem] font-bold text-white leading-[1.15] tracking-tight">
+              <h3 className="text-3xl md:text-[2.75rem]  text-white leading-[1.15] tracking-tight">
                 {feature.title}
               </h3>
               <p className="text-gray-400 text-lg leading-relaxed max-w-lg">

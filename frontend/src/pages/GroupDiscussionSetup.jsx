@@ -264,7 +264,7 @@ const GroupDiscussionSetup = () => {
               <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 GD Simulator AI
               </div>
-              <h1 className="text-2xl md:text-3xl  text-white tracking-tight leading-tight">
+              <h1 className="text-2xl md:text-3xl  text-white ">
                 Master the <span className="text-[#bef264] italic">GD</span>{" "}
                 Dynamics
               </h1>
