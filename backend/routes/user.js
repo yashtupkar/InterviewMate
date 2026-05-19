@@ -7,6 +7,7 @@ const {
   generateReferralCode,
   processReferral,
 } = require("../controllers/referralController");
+const Waitlist = require("../models/Waitlist");
 const router = express.Router();
 
 const clerkClient = createClerkClient({
@@ -49,6 +50,7 @@ router.post(
       user.avatar = clerkUser.imageUrl;
       user.status = "active";
       user.lastLogin = new Date();
+      if (req.body.browser) user.browser = req.body.browser;
       await user.save();
     } else {
       user = await User.create({
@@ -59,6 +61,7 @@ router.post(
         avatar: clerkUser.imageUrl,
         status: "active",
         lastLogin: new Date(),
+        browser: req.body.browser || "Unknown",
       });
     }
 
@@ -66,7 +69,24 @@ router.post(
 
     // Auto-create subscription if it doesn't exist
     if (!user.subscription) {
-      const subscription = await Subscription.create({ user: user._id });
+      const subscriptionParams = { user: user._id };
+
+      // Check if user was on the waitlist and accepted
+      if (isNewUser) {
+        const waitlistEntry = await Waitlist.findOne({ email, status: "accepted" });
+        if (waitlistEntry) {
+          subscriptionParams.credits = 100;
+          subscriptionParams.manualAdjustments = [{
+            date: new Date(),
+            type: "credit_add",
+            amount: 100,
+            reason: "Early Access Bonus",
+          }];
+          console.log(`Granted 100 Early Access credits to ${email}`);
+        }
+      }
+
+      const subscription = await Subscription.create(subscriptionParams);
       user.subscription = subscription._id;
       await user.save();
     }

@@ -39,7 +39,7 @@ const InterviewAnalysis = () => {
     setLoading(true);
     setError("");
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const params = {
         page: currentPage,
         limit: 20,
@@ -70,7 +70,7 @@ const InterviewAnalysis = () => {
 
   const fetchOverview = async () => {
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const res = await axios.get(
         `${backendURL}/api/admin/interviews/overview`,
         {

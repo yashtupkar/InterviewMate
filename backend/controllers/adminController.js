@@ -435,14 +435,32 @@ const activateUser = asyncHandler(async (req, res) => {
   res.json({ success: true, data: user });
 });
 
+const { sendAdminPromotionEmail } = require("../utils/emailService");
+const crypto = require("crypto");
+
 const changeUserRole = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const { role } = req.body;
   if (!["user", "admin"].includes(role)) {
     throw new ApiError(400, "Invalid role");
   }
-  const user = await User.findByIdAndUpdate(userId, { role }, { new: true });
+  
+  const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
+
+  const oldRole = user.role;
+  user.role = role;
+
+  if (role === "admin" && oldRole !== "admin") {
+    // Generate 6-char alphanumeric secret
+    const secretCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+    user.adminSecretCode = secretCode;
+    
+    // Send email without awaiting to prevent blocking response
+    sendAdminPromotionEmail(user.email, secretCode).catch(console.error);
+  }
+
+  await user.save();
   res.json({ success: true, data: user });
 });
 
@@ -707,6 +725,8 @@ const deleteWaitlistEntry = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Waitlist entry deleted successfully" });
 });
 
+const { sendWaitlistEmail } = require("../utils/emailService");
+
 const grantWaitlistAccess = asyncHandler(async (req, res) => {
   const { emails, tier = "Student Flash" } = req.body;
 
@@ -714,13 +734,23 @@ const grantWaitlistAccess = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Provide array of emails");
   }
 
-  // TODO: Implement creating subscriptions for these emails
-  // For now, just update waitlist status
+  // Update waitlist status
   await Waitlist.updateMany({ email: { $in: emails } }, { status: "accepted" });
+
+  // Send early access emails
+  let sentCount = 0;
+  for (const email of emails) {
+    const success = await sendWaitlistEmail(email, "early_access");
+    if (success) sentCount++;
+  }
+
+  if (sentCount === 0) {
+    throw new ApiError(500, "Failed to send early access emails. Check backend terminal for Brevo API errors (ensure BREVO_API_KEY is set and sender is verified).");
+  }
 
   res.json({
     success: true,
-    message: `Access granted to ${emails.length} users`,
+    message: `Access granted to ${emails.length} users. Emails sent: ${sentCount}`,
   });
 });
 
@@ -731,16 +761,24 @@ const sendWaitlistNotification = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Provide array of email recipients");
   }
 
-  // TODO: Implement email sending with templates
-  // For now, just mark as contacted
   await Waitlist.updateMany(
     { email: { $in: recipients } },
     { status: "contacted" },
   );
 
+  let sentCount = 0;
+  for (const email of recipients) {
+    const success = await sendWaitlistEmail(email, template || "welcome");
+    if (success) sentCount++;
+  }
+
+  if (sentCount === 0) {
+    throw new ApiError(500, "Failed to send emails. Check your backend terminal for Brevo API errors (ensure BREVO_API_KEY is set and sender is verified).");
+  }
+
   res.json({
     success: true,
-    message: `Notification sent to ${recipients.length} recipients`,
+    message: `Notification sent to ${recipients.length} recipients. Emails sent: ${sentCount}`,
   });
 });
 
@@ -1167,19 +1205,51 @@ const getInterviewDetail = asyncHandler(async (req, res) => {
   res.json({ success: true, data: interview });
 });
 
+const getBrowserAnalytics = asyncHandler(async (req, res) => {
+  const browserStats = await User.aggregate([
+    {
+      $group: {
+        _id: { $ifNull: ["$browser", "Unknown"] },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $project: {
+        browser: "$_id",
+        count: 1,
+        _id: 0
+      }
+    },
+    { $sort: { count: -1 } }
+  ]);
+
+  res.json({
+    success: true,
+    data: browserStats
+  });
+});
+
 module.exports = {
   getDashboardMetrics,
   getUsers,
   getUserDetail,
   getUserBillingHistory,
   updateUserStatus,
+  deleteUser,
+  suspendUser,
+  activateUser,
+  changeUserRole,
+  updateUserCredits,
   updateUserSubscription,
   getSubscriptions,
   getSubscriptionDetail,
+  updateSubscription,
+  deleteSubscription,
   getFeedback,
   getContacts,
   updateContactStatus,
   getWaitlist,
+  deleteWaitlistEntry,
   grantWaitlistAccess,
   sendWaitlistNotification,
   getQuestions,
@@ -1189,4 +1259,5 @@ module.exports = {
   getInterviewDetail,
   getInterviewOverview,
   getToolAnalytics,
+  getBrowserAnalytics,
 };

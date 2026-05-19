@@ -22,7 +22,7 @@ const ToolAnalysis = () => {
     setLoading(true);
     setError("");
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const res = await axios.get(`${backendURL}/api/admin/analytics/tools`, {
         params: { days },
         headers: { Authorization: `Bearer ${token}` },

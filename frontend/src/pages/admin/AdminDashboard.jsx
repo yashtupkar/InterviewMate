@@ -12,33 +12,48 @@ import {
   FiActivity,
   FiMessageSquare,
 } from "react-icons/fi";
+import { FaGlobe } from "react-icons/fa";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import toast from "react-hot-toast";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 const StatCard = ({ label, value, icon, hint, loading }) => (
-  <div className="bg-surface-alt border border-white/10 rounded-xl p-6 hover:border-primary/30 transition-all">
+  <div className="bg-surface-alt border border-white/10 rounded-xl p-4 hover:border-primary/30 transition-all flex flex-col justify-center">
     <div className="flex items-start justify-between">
       <div className="flex-1">
-        <p className="text-zinc-400 text-sm font-medium">{label}</p>
+        <p className="text-zinc-400 text-xs font-medium">{label}</p>
         {loading ? (
-          <div className="h-8 bg-zinc-800 rounded mt-2 w-24 animate-pulse" />
+          <div className="h-6 bg-zinc-800 rounded mt-1 w-20 animate-pulse" />
         ) : (
-          <p className="text-3xl font-bold text-white mt-2">{value}</p>
+          <p className="text-xl font-bold text-white mt-1">{value}</p>
         )}
-        {hint && <p className="text-xs mt-2 text-zinc-400">{hint}</p>}
       </div>
-      <div className="w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center text-primary">
-        {icon}
+      <div className="w-8 h-8 bg-primary/20 rounded-md flex items-center justify-center text-primary shrink-0">
+        {React.cloneElement(icon, { size: 16 })}
       </div>
     </div>
   </div>
 );
 
+const getBrowserIcon = (browserName) => {
+  const name = browserName?.toLowerCase();
+  const cdnBase = "https://raw.githubusercontent.com/alrra/browser-logos/main/src";
+  const validBrowsers = ["chrome", "firefox", "safari", "edge", "opera", "brave"];
+  if (validBrowsers.includes(name)) {
+    return (
+      <img src={`${cdnBase}/${name}/${name}.svg`} alt={browserName} className="w-5 h-5 object-contain" />
+    );
+  }
+  return <FaGlobe className="text-zinc-400" size={16} />;
+};
+const COLORS = ['#bef264', '#3b82f6', '#f97316', '#ef4444', '#8b5cf6', '#64748b'];
+
 const AdminDashboard = () => {
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const [metrics, setMetrics] = useState(null);
+  const [browserAnalytics, setBrowserAnalytics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [days, setDays] = useState(30);
@@ -51,13 +66,21 @@ const AdminDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = await getToken();
-      const res = await axios.get(`${backendURL}/api/admin/dashboard/metrics`, {
-        params: { days },
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const token = localStorage.getItem("adminToken");
+      const [res, browserRes] = await Promise.all([
+        axios.get(`${backendURL}/api/admin/dashboard/metrics`, {
+          params: { days },
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${backendURL}/api/admin/analytics/browsers`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ]);
       if (res.data.success) {
         setMetrics(res.data.data);
+      }
+      if (browserRes.data.success) {
+        setBrowserAnalytics(browserRes.data.data);
       }
     } catch (err) {
       console.error("Failed to fetch metrics:", err);
@@ -166,7 +189,7 @@ const AdminDashboard = () => {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {topCards.map((card) => (
           <StatCard key={card.label} {...card} loading={loading} />
         ))}
@@ -174,221 +197,135 @@ const AdminDashboard = () => {
 
       {!loading && metrics && (
         <>
-          {/* Revenue + Growth */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-surface-alt border border-white/10 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">
-                  Revenue & Payment Health
-                </h2>
-                <button
-                  onClick={() => navigate("/admin/subscriptions")}
-                  className="text-xs px-3 py-1.5 rounded-md bg-primary/20 text-primary hover:bg-primary/30"
-                >
-                  Open Subscriptions
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Paid Revenue</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {formatCurrency(metrics.revenue?.paidRevenue)}
-                  </p>
+          {/* Compact Main Layout */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            
+            {/* Column 1: Combined Revenue & Growth */}
+            <div className="space-y-6">
+              <div className="bg-surface-alt border border-white/10 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-white">Revenue & Growth</h2>
+                  <button onClick={() => navigate("/admin/subscriptions")} className="text-xs text-primary hover:underline">View All</button>
                 </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Refunded Amount</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {formatCurrency(metrics.revenue?.refundedAmount)}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Paid Orders</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.revenue?.paidOrders || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Failed Orders</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.revenue?.failedOrders || 0}
-                  </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-surface rounded-lg p-3 border border-white/5">
+                    <p className="text-[10px] text-zinc-400 uppercase">Paid Revenue</p>
+                    <p className="text-lg font-semibold text-white mt-1">{formatCurrency(metrics.revenue?.paidRevenue)}</p>
+                  </div>
+                  <div className="bg-surface rounded-lg p-3 border border-white/5">
+                    <p className="text-[10px] text-zinc-400 uppercase">Refunded</p>
+                    <p className="text-lg font-semibold text-white mt-1">{formatCurrency(metrics.revenue?.refundedAmount)}</p>
+                  </div>
+                  <div className="bg-surface rounded-lg p-3 border border-white/5">
+                    <p className="text-[10px] text-zinc-400 uppercase">Signups (7d)</p>
+                    <p className="text-lg font-semibold text-white mt-1">{metrics.growth?.weeklySignups || 0}</p>
+                  </div>
+                  <div className="bg-surface rounded-lg p-3 border border-white/5">
+                    <p className="text-[10px] text-zinc-400 uppercase">Waitlist Pending</p>
+                    <p className="text-lg font-semibold text-white mt-1">{metrics.growth?.waitlistPending || 0}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-surface-alt border border-white/10 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">Growth Funnel</h2>
-                <button
-                  onClick={() => navigate("/admin/users")}
-                  className="text-xs px-3 py-1.5 rounded-md bg-primary/20 text-primary hover:bg-primary/30"
-                >
-                  Open Users
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">New Signups (7d)</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.growth?.weeklySignups || 0}
-                  </p>
+              <div className="bg-surface-alt border border-white/10 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-base font-bold text-white">Platform Quality</h2>
+                  <button onClick={() => navigate("/admin/interviews")} className="text-xs text-primary hover:underline">View All</button>
                 </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Daily Active Users</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.dau || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Waitlist Pending</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.growth?.waitlistPending || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">
-                    New Waitlist ({metrics.periodDays}d)
-                  </p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.growth?.newWaitlistEntries || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quality + Support */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-surface-alt border border-white/10 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">
-                  Interview & GD Quality
-                </h2>
-                <button
-                  onClick={() => navigate("/admin/interviews")}
-                  className="text-xs px-3 py-1.5 rounded-md bg-primary/20 text-primary hover:bg-primary/30"
-                >
-                  Open Interviews
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Interview Completed</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.quality?.interviewCompleted || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">GD Completed</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.quality?.gdCompleted || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Avg Interview Score</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.quality?.avgInterviewScore || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Avg GD Score</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.quality?.avgGdScore || 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-surface-alt border border-white/10 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">Support Load</h2>
-                <button
-                  onClick={() => navigate("/admin/feedback")}
-                  className="text-xs px-3 py-1.5 rounded-md bg-primary/20 text-primary hover:bg-primary/30"
-                >
-                  Open Feedback
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">New Contacts</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.support?.newContacts || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5">
-                  <p className="text-xs text-zinc-400">Feedback Entries</p>
-                  <p className="text-xl font-semibold text-white mt-1">
-                    {metrics.support?.feedbackCount || 0}
-                  </p>
-                </div>
-                <div className="bg-surface rounded-lg p-4 border border-white/5 col-span-2">
-                  <p className="text-xs text-zinc-400">Average Rating</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <FiMessageSquare className="text-primary" />
-                    <p className="text-xl font-semibold text-white">
-                      {metrics.avgRating || 0} / 5
-                    </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-surface rounded-lg p-3 border border-white/5">
+                    <p className="text-[10px] text-zinc-400 uppercase">Interview Avg</p>
+                    <p className="text-lg font-semibold text-white mt-1">{metrics.quality?.avgInterviewScore || 0}</p>
+                  </div>
+                  <div className="bg-surface rounded-lg p-3 border border-white/5">
+                    <p className="text-[10px] text-zinc-400 uppercase">GD Avg</p>
+                    <p className="text-lg font-semibold text-white mt-1">{metrics.quality?.avgGdScore || 0}</p>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Alerts + Activity */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-surface-alt border border-white/10 rounded-xl p-6">
-              <h2 className="text-lg font-bold text-white mb-4">
-                Operational Alerts
-              </h2>
-              <div className="space-y-3">
-                {(metrics.alerts || []).map((alert, idx) => (
-                  <button
-                    key={`${alert.label}-${idx}`}
-                    onClick={() => navigate(alert.route || "/admin")}
-                    className="w-full text-left p-4 rounded-lg bg-surface border border-white/5 hover:border-primary/30 transition-colors"
-                  >
-                    <p className="text-sm font-semibold text-white">
-                      {alert.label}
-                    </p>
-                    <p className="text-xs text-zinc-400 mt-1">{alert.detail}</p>
-                  </button>
+            {/* Column 2: Browser Distribution */}
+            <div className="bg-surface-alt border border-white/10 rounded-xl p-5 flex flex-col">
+              <h2 className="text-base font-bold text-white mb-2">Browser Distribution</h2>
+              <div className="flex-1 flex flex-col justify-center min-h-[220px]">
+                {browserAnalytics.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={browserAnalytics}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="count"
+                        nameKey="browser"
+                        stroke="none"
+                      >
+                        {browserAnalytics.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                        itemStyle={{ color: '#fff', fontSize: '12px' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center text-xs text-zinc-500 h-full">No browser data.</div>
+                )}
+              </div>
+              <div className="mt-4 space-y-2">
+                {browserAnalytics.slice(0, 5).map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-surface/50 rounded p-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-white/5 p-1 flex items-center justify-center border border-white/10">
+                        {getBrowserIcon(item.browser)}
+                      </div>
+                      <span className="text-xs text-white font-medium capitalize">{item.browser}</span>
+                    </div>
+                    <span className="text-xs text-zinc-400 font-semibold">{item.count}</span>
+                  </div>
                 ))}
               </div>
             </div>
 
-            <div className="bg-surface-alt border border-white/10 rounded-xl p-6">
-              <h2 className="text-lg font-bold text-white mb-4">
-                Recent Activity
-              </h2>
-              <div className="space-y-3">
-                {(metrics.activityFeed || []).length === 0 && (
-                  <p className="text-sm text-zinc-400">
-                    No recent activity available for this period.
-                  </p>
-                )}
-                {(metrics.activityFeed || []).map((item, idx) => (
-                  <button
-                    key={`${item.kind}-${idx}`}
-                    onClick={() => navigate(item.route || "/admin")}
-                    className="w-full p-3 rounded-lg bg-surface border border-white/5 text-left hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm text-white font-medium">
-                        {item.label}
-                      </p>
-                      {typeof item.amount === "number" && (
-                        <span className="text-xs text-primary">
-                          {formatCurrency(item.amount)}
-                        </span>
-                      )}
+            {/* Column 3: Alerts & Activity (Compact) */}
+            <div className="space-y-6 flex flex-col h-full">
+              {metrics.alerts?.length > 0 && (
+                <div className="bg-surface-alt border border-white/10 rounded-xl p-5">
+                  <h2 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+                    <FiAlertCircle className="text-red-400" /> Alerts
+                  </h2>
+                  <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar pr-1">
+                    {metrics.alerts.map((alert, idx) => (
+                      <div key={idx} onClick={() => navigate(alert.route || "/admin")} className="p-3 rounded-lg bg-surface border border-white/5 cursor-pointer hover:border-red-500/30">
+                        <p className="text-xs font-semibold text-white">{alert.label}</p>
+                        <p className="text-[10px] text-zinc-400 mt-0.5">{alert.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-surface-alt border border-white/10 rounded-xl p-5 flex-1 flex flex-col">
+                <h2 className="text-base font-bold text-white mb-3">Recent Activity</h2>
+                <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[300px]">
+                  {(metrics.activityFeed || []).map((item, idx) => (
+                    <div key={idx} onClick={() => navigate(item.route || "/admin")} className="p-3 rounded-lg bg-surface border border-white/5 cursor-pointer hover:border-primary/30 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs text-white font-medium truncate max-w-[150px]">{item.label}</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">{item.status}</p>
+                      </div>
+                      <span className="text-[10px] text-zinc-400">{new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      {item.status} •{" "}
-                      {new Date(item.createdAt).toLocaleString()}
-                    </p>
-                  </button>
-                ))}
+                  ))}
+                  {(metrics.activityFeed || []).length === 0 && (
+                    <p className="text-xs text-zinc-500">No recent activity.</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

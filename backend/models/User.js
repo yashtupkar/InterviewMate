@@ -17,11 +17,18 @@ const userSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    browser: {
+      type: String,
+      default: "Unknown",
+    },
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
+    adminSecretCode: String,
+    adminOtp: String,
+    adminOtpExpires: Date,
     subscription: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Subscription",

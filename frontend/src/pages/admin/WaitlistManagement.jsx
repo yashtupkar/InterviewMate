@@ -24,7 +24,7 @@ const WaitlistManagement = () => {
   const fetchWaitlist = async () => {
     setLoading(true);
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const params = new URLSearchParams({
         page: currentPage,
         limit: 20,
@@ -111,7 +111,7 @@ const WaitlistManagement = () => {
     }
 
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const res = await axios.post(
         `${backendURL}/api/admin/waitlist/send-notification`,
         { recipients: selectedEmails, template: emailTemplate },
@@ -136,7 +136,7 @@ const WaitlistManagement = () => {
     }
 
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const res = await axios.post(
         `${backendURL}/api/admin/waitlist/grant-access`,
         { emails: selectedEmails, tier: 'Student Flash' },

@@ -45,6 +45,7 @@ import SeedQuestions from "./pages/adminScreens/SeedQuestions";
 import CheckoutPage from "./pages/CheckoutPage";
 import AdminLayout from "./components/layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLogin from "./pages/admin/AdminLogin";
 import UserManagement from "./pages/admin/UserManagement";
 import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
 import FeedbackManagement from "./pages/admin/FeedbackManagement";
@@ -80,6 +81,23 @@ function App() {
         try {
           const token = await getToken();
           const referralCode = localStorage.getItem("referralCode");
+          
+          let browser = "Unknown";
+          const ua = navigator.userAgent;
+          if (navigator.brave && await navigator.brave.isBrave()) {
+            browser = "Brave";
+          } else if (ua.match(/edg/i)) {
+            browser = "Edge";
+          } else if (ua.match(/opr\//i)) {
+            browser = "Opera";
+          } else if (ua.match(/chrome|chromium|crios/i)) {
+            browser = "Chrome";
+          } else if (ua.match(/firefox|fxios/i)) {
+            browser = "Firefox";
+          } else if (ua.match(/safari/i)) {
+            browser = "Safari";
+          }
+          
           console.log("Syncing user with referral code:", referralCode);
           const response = await fetch(`${backendURL}/api/users/sync`, {
             method: "POST",
@@ -87,7 +105,7 @@ function App() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ referralCode }),
+            body: JSON.stringify({ referralCode, browser }),
           });
           const data = await response.json();
           if (referralCode && data.success) {
@@ -261,6 +279,9 @@ function App() {
             </Layout>
           }
         />
+
+        {/* Admin Login - Standalone */}
+        <Route path="/admin/login" element={<AdminLogin />} />
 
         {/* Admin Routes */}
         <Route element={<AdminRoute />}>

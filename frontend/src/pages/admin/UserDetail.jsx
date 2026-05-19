@@ -81,7 +81,7 @@ const UserDetail = () => {
   }, [user, billingPage]);
 
   const authHeaders = async () => {
-    const token = await getToken();
+    const token = localStorage.getItem("adminToken");
     return { Authorization: `Bearer ${token}` };
   };
 

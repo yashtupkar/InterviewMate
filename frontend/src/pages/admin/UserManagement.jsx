@@ -28,6 +28,7 @@ const backendURL = import.meta.env.VITE_BACKEND_URL;
 const UserManagement = () => {
   const { getToken } = useAuth();
   const [users, setUsers] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Filters mapped
@@ -57,7 +58,7 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const params = new URLSearchParams({
         page: currentPage,
         limit: 20,
@@ -103,7 +104,7 @@ const UserManagement = () => {
       return;
 
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       await axios.patch(
         `${backendURL}/api/admin/users/${user._id}/${endpoint}`,
         {},
@@ -123,7 +124,7 @@ const UserManagement = () => {
     if (!window.confirm("Are you sure you want to soft delete this user?"))
       return;
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       await axios.delete(`${backendURL}/api/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -137,7 +138,7 @@ const UserManagement = () => {
 
   const handleRoleChange = async (role) => {
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       await axios.patch(
         `${backendURL}/api/admin/users/${selectedUser._id}/role`,
         { role },
@@ -156,7 +157,7 @@ const UserManagement = () => {
 
   const handleCreditsUpdate = async (amount) => {
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       await axios.patch(
         `${backendURL}/api/admin/users/${selectedUser._id}/credits`,
         { credits: amount },

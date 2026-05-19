@@ -44,7 +44,7 @@ const QuestionManagement = () => {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const params = new URLSearchParams({
         page: currentPage,
         limit: 10,
@@ -71,7 +71,7 @@ const QuestionManagement = () => {
   const handleCreateOrUpdate = async (e) => {
     e.preventDefault();
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const url = isEditing 
         ? `${backendURL}/api/admin/questions/${currentQuestion._id}`
         : `${backendURL}/api/admin/questions`;
@@ -97,7 +97,7 @@ const QuestionManagement = () => {
     if (!window.confirm('Are you sure you want to delete this question?')) return;
     
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const res = await axios.delete(`${backendURL}/api/admin/questions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -120,7 +120,7 @@ const QuestionManagement = () => {
     formData.append('file', bulkFile);
 
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const res = await axios.post(`${backendURL}/api/questions/admin/bulk-upload`, formData, {
         headers: { 
           Authorization: `Bearer ${token}`,

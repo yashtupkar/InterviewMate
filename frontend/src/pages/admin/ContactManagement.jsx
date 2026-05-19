@@ -22,7 +22,7 @@ const ContactManagement = () => {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const token = await getToken();
+      const token = localStorage.getItem("adminToken");
       const params = new URLSearchParams({
         page: currentPage,
         limit: 20,
