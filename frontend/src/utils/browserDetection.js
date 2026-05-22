@@ -143,7 +143,9 @@ export const getDeviceType = () => {
  */
 export const logTTSBackendSelection = () => {
   const userAgent = navigator.userAgent;
-  const backend = shouldUseBrowserNativeTTS() ? "Browser Native" : "AWS Polly";
+  const backend = shouldUseBrowserNativeTTS()
+    ? "Browser Native"
+    : "Edge TTS (backend)";
   const browser = getBrowserName();
   const device = getDeviceType();
 
