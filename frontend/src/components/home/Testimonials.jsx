@@ -56,7 +56,7 @@ const Testimonials = () => {
           <div className="text-[#bef264] font-bold tracking-wider uppercase text-xs mb-3">
             Testimonials
           </div>
-        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+        <h2 className="text-4xl md:text-5xl  text-white mb-6">
 What people are saying about us          </h2>
           <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
             Hear from our incredible customers who are building at lightning speed.

@@ -83,6 +83,7 @@ const CustomInterviewSession = () => {
 
   const { localVideoRef, agentVolumeCircleRef } = refs;
   const preloadedAgentVideosRef = useRef([]);
+  const sessionRootRef = useRef(null);
   const {
     toggleMute,
     toggleVideo,
@@ -147,6 +148,36 @@ const CustomInterviewSession = () => {
   const userAvatar =
     user?.imageUrl || user?.profileImageUrl || user?.avatarUrl || "";
 
+  useEffect(() => {
+    if (callStatus !== "active" || !sessionRootRef.current) return undefined;
+
+    const el = sessionRootRef.current;
+    const requestFullscreen = async () => {
+      if (document.fullscreenElement) return;
+      if (el.requestFullscreen) return el.requestFullscreen();
+      if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+      if (el.mozRequestFullScreen) return el.mozRequestFullScreen();
+      if (el.msRequestFullscreen) return el.msRequestFullscreen();
+    };
+
+    requestFullscreen().catch(() => {});
+    return undefined;
+  }, [callStatus]);
+
+  useEffect(() => {
+    if (!hasCallEnded || !document.fullscreenElement) return undefined;
+
+    const exitFullscreen = async () => {
+      if (document.exitFullscreen) return document.exitFullscreen();
+      if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+      if (document.mozCancelFullScreen) return document.mozCancelFullScreen();
+      if (document.msExitFullscreen) return document.msExitFullscreen();
+    };
+
+    exitFullscreen().catch(() => {});
+    return undefined;
+  }, [hasCallEnded]);
+
   const isCodingActionDisabled = isAgentSpeaking;
   const reloadGuard = useInterviewReloadProtection({
     sessionId,
@@ -193,14 +224,14 @@ const CustomInterviewSession = () => {
   }, [agentVisualState, currentAgentAnimations, isLoopedVideoAvatarEnabled]);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans overflow-hidden relative">
-      {/* ── Mesh Background Effects ───────────────── */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] animate-pulse-slow" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse-slow delay-700" />
-      </div>
+    <div ref={sessionRootRef} className="min-h-screen bg-[#09090b] text-zinc-100 font-sans overflow-hidden relative">
+        {/* ── Mesh Background Effects ───────────────── */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] animate-pulse-slow" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse-slow delay-700" />
+        </div>
 
-      {/* ── Full-Screen CodingSpace (after Attempt clicked) ───────────────── */}
+        {/* ── Full-Screen CodingSpace (after Attempt clicked) ───────────────── */}
       {activeCodingTask && (
         <div className="fixed inset-0 z-[120] flex flex-col animate-in fade-in zoom-in-95 duration-300">
           <CodingSpace

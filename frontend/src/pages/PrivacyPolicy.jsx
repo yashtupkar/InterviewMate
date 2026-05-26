@@ -1,6 +1,7 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 import Layout from "../components/layouts/layout";
+import { COMPANY_DETAILS } from "../constants/company";
 
 const PrivacyPolicy = () => {
   return (
@@ -53,7 +54,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-xl font-bold text-white mb-3">6. Contact Us</h2>
               <p>
-                If you have questions about this Privacy Policy, please contact us at support@prepipai.com.
+                If you have questions about this Privacy Policy, please contact us at {COMPANY_DETAILS.email}.
               </p>
             </section>
           </div>

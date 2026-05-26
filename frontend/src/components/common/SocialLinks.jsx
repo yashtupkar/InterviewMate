@@ -1,17 +1,10 @@
 import React from 'react';
-
-const socials = [
-  { label: 'Instagram', icon: 'skill-icons:instagram.svg', url: 'https://www.instagram.com/placemateai/', size: 22 },
-  { label: 'LinkedIn', icon: 'logos:linkedin-icon.svg', url: 'https://www.linkedin.com/in/placemateai-private-limited-092a143b8/', size: 22 },
-  { label: 'X', icon: 'simple-icons:x.svg?color=white', url: 'https://x.com/PlaceMateAI', size: 20 },
-  { label: 'WhatsApp', icon: 'logos:whatsapp-icon.svg', url: 'https://whatsapp.com/channel/0029VbDWsV8B4hdYG13kSP2T', size: 22 },
-  { label: 'Email', icon: 'logos:google-gmail.svg', url: 'mailto:placemateai@gmail.com', size: 22 },
-];
+import { COMPANY_DETAILS } from '../../constants/company';
 
 const SocialLinks = () => {
   return (
     <div className="flex flex-wrap gap-4">
-      {socials.map((social) => (
+      {COMPANY_DETAILS.socials.map((social) => (
         <a
           key={social.label}
           href={social.url}

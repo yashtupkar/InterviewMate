@@ -156,18 +156,25 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen bg-black border-r border-white/20 flex flex-col z-[50] transition-all duration-300 ease-in-out md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"} ${isCollapsed ? "w-18 " : "w-64"}`}
+      className={`fixed left-0 top-0 h-screen bg-zinc-900 border-r border-white/10 flex flex-col z-[50] transition-all duration-300 ease-in-out md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"} ${isCollapsed ? "w-18 " : "w-60"}`}
     >
       {/* Logo */}
       <div
-        className={`px-4 py-4 flex items-center h-16 relative ${isCollapsed ? "justify-center" : "justify-between"}`}
+        className={`px-4 py-4 mt-2 flex items-center h-16 relative ${isCollapsed ? "justify-center" : "justify-between"}`}
       >
         <Link to="/" className="flex items-center gap-2">
           {<Logo size={isCollapsed ? 32 : 32} />}
           {!isCollapsed && (
-            <span className="text-white text-xl cursor-pointer font-semibold tracking-tight">
-              PlaceMate<span className="text-primary">AI</span>
-            </span>
+            <div className="flex flex-col items-start relative ">
+              <div className="flex items-center gap-2">
+                <span className="text-white text-xl cursor-pointer font-light tracking-tight">
+                  PlaceMate<span className="text-primary">AI</span>
+                </span>
+              </div>
+              <span className=" absolute -top-4 -right-10 px-2 py-0.5 text-[8px] font-black bg-[#bef264]/20 text-[#bef264] rounded  uppercase tracking-wider">
+                Early Access
+              </span>
+            </div>
           )}
         </Link>
         <button
@@ -209,11 +216,6 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
       >
         {/* Main Section */}
         <div>
-          {!isCollapsed && (
-            <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-2">
-              Main
-            </h3>
-          )}
           <div className="space-y-1">
             {menuItems.map((item) =>
               item.subItems ? (
@@ -235,17 +237,16 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                       }
                     }}
                     title={isCollapsed ? item.name : ""}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${
-                      item.active || openDropdowns[item.name]
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-light transition-colors relative group ${item.active || openDropdowns[item.name]
                         ? "bg-[#bef264]/10 text-[#bef264]"
-                        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
-                    }`}
+                        : "text-white hover:bg-zinc-800/50 hover:text-white"
+                      }`}
                   >
                     <div
                       className={`flex items-center ${isCollapsed ? "justify-center w-full" : "gap-2"}`}
                     >
                       <span
-                        className={`text-lg shrink-0 ${item.active || openDropdowns[item.name] ? "text-[#bef264]" : "text-zinc-500"}`}
+                        className={`text-lg shrink-0 ${item.active || openDropdowns[item.name] ? "text-[#bef264]" : "text-white"}`}
                       >
                         {item.icon}
                       </span>
@@ -269,15 +270,14 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                           key={subItem.name}
                           to={subItem.path}
                           onClick={onClose}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            subItem.active
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-light transition-colors ${subItem.active
                               ? "text-[#bef264] bg-[#bef264]/5"
-                              : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
-                          }`}
+                              : "text-white hover:text-white hover:bg-zinc-800/50"
+                            }`}
                         >
                           <span className="truncate">{subItem.name}</span>
                           {subItem.badge && (
-                            <span className="text-[9px]  bg-[#bef264] px-3 py-0.2 rounded text-black whitespace-nowrap shrink-0 ml-2">
+                            <span className="text-[10px]  bg-[#bef264] px-2 rounded text-black whitespace-nowrap shrink-0 ml-2">
                               {subItem.badge}
                             </span>
                           )}
@@ -292,14 +292,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                   to={item.path}
                   onClick={onClose}
                   title={isCollapsed ? item.name : ""}
-                  className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"} px-3 py-2 rounded-lg text-sm font-medium transition-colors relative group ${
-                    item.active
+                  className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"} font-light px-3 py-2 rounded-lg text-sm transition-colors relative group ${item.active
                       ? "bg-[#bef264]/10 text-[#bef264]"
-                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
-                  }`}
+                      : "text-white hover:bg-zinc-800/50 hover:text-white"
+                    }`}
                 >
                   <span
-                    className={`text-lg shrink-0 ${item.active ? "text-[#bef264]" : "text-zinc-500"}`}
+                    className={`text-lg shrink-0 ${item.active ? "text-[#bef264]" : "text-white"}`}
                   >
                     {item.icon}
                   </span>
@@ -315,7 +314,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
           </div>
         </div>
         {/* Exposure Section */}
-        <div>
+        {/* <div>
           {!isCollapsed && (
             <h3 className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider px-2 mb-2">
               Exposure
@@ -327,7 +326,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                 <div
                   key={item.name}
                   title={isCollapsed ? item.name : ""}
-                  className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-500 cursor-not-allowed group relative`}
+                  className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-lg text-sm font-medium text-white cursor-not-allowed group relative`}
                 >
                   <div
                     className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"}`}
@@ -386,7 +385,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
               ),
             )}
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Bottom Section */}
@@ -403,11 +402,9 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                   onClose && onClose();
                 }}
                 title={isCollapsed ? item.name : ""}
-                className={`w-full flex items-center ${isCollapsed ? "justify-center" : "gap-2 text-left"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors relative group`}
+                className={`w-full flex items-center ${isCollapsed ? "justify-center" : "gap-2 text-left"} px-3 py-2 rounded-lg text-sm font-light text-white hover:bg-zinc-800/50 hover:text-white transition-colors relative group`}
               >
-                <span className="text-lg shrink-0 text-zinc-500">
-                  {item.icon}
-                </span>
+                <span className="text-lg shrink-0 text-white">{item.icon}</span>
                 {!isCollapsed && <span>{item.name}</span>}
                 {isCollapsed && (
                   <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
@@ -421,11 +418,9 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                 to={item.path}
                 onClick={onClose}
                 title={isCollapsed ? item.name : ""}
-                className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"} px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white transition-colors relative group`}
+                className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2"} px-3 py-2 rounded-lg text-sm font-light text-white hover:bg-zinc-800/50 hover:text-white transition-colors relative group`}
               >
-                <span className="text-lg shrink-0 text-zinc-500">
-                  {item.icon}
-                </span>
+                <span className="text-lg shrink-0 text-white">{item.icon}</span>
                 {!isCollapsed && <span>{item.name}</span>}
                 {isCollapsed && (
                   <div className="absolute left-full ml-4 px-2 py-1 bg-zinc-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[60] border border-white/10 shadow-xl">
@@ -447,7 +442,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
               className="relative bg-[#bef264] rounded-xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 cursor-pointer"
             >
               <div className="flex items-center justify-between px-0.5">
-                <span className="text-[10px] font-black text-black uppercase tracking-[0.2em] leading-none opacity-80">
+                <span className="text-[10px] font-black text-black uppercase  leading-none opacity-80">
                   {subscription.tier}
                 </span>
                 <Link
@@ -456,7 +451,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
                     e.stopPropagation();
                     onClose();
                   }}
-                  className="text-[10px] font-black text-black/60 hover:text-black transition-all uppercase tracking-widest leading-none border-b border-black/10 hover:border-black pb-0.5"
+                  className="text-[10px] font-black text-black/60 hover:text-black transition-all uppercase  leading-none border-b border-black/10 hover:border-black pb-0.5"
                 >
                   Upgrade
                 </Link>

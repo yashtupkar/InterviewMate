@@ -82,8 +82,8 @@ const PricingSection = ({
             <h2 className="text-[#bef264] font-bold tracking-wider uppercase text-xs mb-3">
               Pricing &amp; Plans
             </h2>
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-6">
-              Affordable Plans for Every Ambition
+            <h2 className="text-3xl md:text-5xl  text-white mb-6">
+              Affordable Plans for <span className='text-[#bef264] italic'>Every Ambition</span>
             </h2>
             <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
               Discover our flexible pricing plans designed to meet the needs of students, job seekers, and professionals.

@@ -934,6 +934,8 @@ const InterviewSession = () => {
     setIsUserFocus((prev) => !prev);
   };
 
+  const pageRootRef = useRef(null);
+
   const displayData = isPreview ? MOCK_INTERVIEW_DATA : interviewData;
 
   const agentImages = {
@@ -953,6 +955,36 @@ const InterviewSession = () => {
   const getAgentImage = (agentName) => {
     return agentImages[agentName] || "/assets/interviewers/male1.png";
   };
+
+  useEffect(() => {
+    if (callStatus !== "active" || !pageRootRef.current) return undefined;
+
+    const el = pageRootRef.current;
+    const requestFullscreen = async () => {
+      if (document.fullscreenElement) return;
+      if (el.requestFullscreen) return el.requestFullscreen();
+      if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+      if (el.mozRequestFullScreen) return el.mozRequestFullScreen();
+      if (el.msRequestFullscreen) return el.msRequestFullscreen();
+    };
+
+    requestFullscreen().catch(() => {});
+    return undefined;
+  }, [callStatus]);
+
+  useEffect(() => {
+    if (!hasCallEnded || !document.fullscreenElement) return undefined;
+
+    const exitFullscreen = async () => {
+      if (document.exitFullscreen) return document.exitFullscreen();
+      if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+      if (document.mozCancelFullScreen) return document.mozCancelFullScreen();
+      if (document.msExitFullscreen) return document.msExitFullscreen();
+    };
+
+    exitFullscreen().catch(() => {});
+    return undefined;
+  }, [hasCallEnded]);
 
   return (
     <div className="min-h-screen bg-background dark:text-zinc-100 text-gray-900 font-sans overflow-hidden">
@@ -975,7 +1007,7 @@ const InterviewSession = () => {
         onCancel={reloadGuard.cancelReload}
       />
 
-      <div className="h-full flex flex-col min-h-[90vh]">
+      <div ref={pageRootRef} className="h-full flex flex-col min-h-[90vh]">
         <header className="px-4 md:px-6 py-3 flex items-center justify-between bg-zinc-950/80 border-b dark:border-white/5 border-black/5 backdrop-blur-xl sticky top-0 z-40">
           <div className="flex items-center gap-3 md:gap-4">
             <button

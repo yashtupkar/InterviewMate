@@ -264,11 +264,11 @@ const GroupDiscussionSetup = () => {
               <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 GD Simulator AI
               </div>
-              <h1 className="text-2xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              <h1 className="text-2xl md:text-3xl  text-white ">
                 Master the <span className="text-[#bef264] italic">GD</span>{" "}
                 Dynamics
               </h1>
-              <p className="text-zinc-400 text-sm font-medium leading-relaxed max-w-md">
+              <p className="text-zinc-300 text-sm  leading-relaxed max-w-full">
                 Prepare for group discussions with 4 unique AI personas. They
                 interact naturally, allowing you to simulate a high-pressure
                 corporate GD environment.

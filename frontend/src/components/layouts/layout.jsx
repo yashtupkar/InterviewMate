@@ -132,7 +132,7 @@ const Layout = ({ children }) => {
             <Logo size={32} />
             <Link
               to="/"
-              className="text-2xl font-semibold tracking-tight text-white"
+              className="text-2xl  tracking-tight text-white"
             >
               PlaceMate<span className="text-primary">AI</span>
             </Link>

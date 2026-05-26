@@ -1,33 +1,32 @@
 import { useState } from 'react';
 import { Plus, Minus, Sparkles } from 'lucide-react';
+import { FAQS } from '../../constants/company';
 
-const FAQ = () => {
-  const faqs = [
-    { 
-      q: "What types of AI capabilities does your platform offer?", 
-      a: "Our platform features state-of-the-art AI for real-time voice interview simulation, detailed performance analytics, automated resume parsing/scoring, and intelligent group discussion agents with distinct personas." 
+const FAQ = ({ category = "home" }) => {
+  const faqs = FAQS[category] || FAQS.home;
+
+  const headings = {
+    home: {
+      badge: "FAQ's",
+      title: "Answers to the Most ",
+      highlight: "Common",
+      suffix: " Questions"
     },
-    { 
-      q: "How does your platform ensure data privacy and security?", 
-      a: "We prioritize your data security with end-to-end encryption for all sessions. Your audio and personal data are never used to train global models without explicit consent, and we comply with industry-standard privacy regulations." 
+    pricing: {
+      badge: "Pricing FAQ",
+      title: "Got ",
+      highlight: "Questions?",
+      suffix: ""
     },
-    { 
-      q: "Can your platform integrate with our existing software systems?", 
-      a: "Yes, we offer flexible API integrations for enterprise partners, allowing you to sync interview results and candidate scores directly with your ATS or HRM systems." 
-    },
-    { 
-      q: "What kind of support and training do you provide to users?", 
-      a: "We offer comprehensive onboarding materials, 24/7 technical support, and detailed guides for every feature. Premium users also get access to dedicated account managers for personalized coaching strategies." 
-    },
-    { 
-      q: "How scalable is your platform as our business grows?", 
-      a: "PlaceMateAI is built on a cloud-native architecture that scales horizontally. Whether you're a single user or an enterprise conducting thousands of interviews daily, our system handles the load with sub-500ms latency." 
-    },
-    { 
-      q: "Is there a trial period or demo available before committing to a subscription?", 
-      a: "Absolutely! We offer a generous free tier that includes basic interview practice and resume scoring. You can also request a personalized demo to explore our advanced enterprise features." 
+    help: {
+      badge: "Support FAQ",
+      title: "How can we ",
+      highlight: "help",
+      suffix: " you?"
     }
-  ];
+  };
+
+  const headingInfo = headings[category] || headings.home;
 
   const [openIndex, setOpenIndex] = useState(null);
 
@@ -42,12 +41,12 @@ const FAQ = () => {
         {/* Badge */}
         <div className="text-[#bef264] font-bold tracking-wider  text-xs mb-3">
         
-          <span>FAQ's</span>
+          <span>{headingInfo.badge}</span>
         </div>
 
         {/* Heading */}
-        <h2 className="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
-          Answers to the Most  <span className="text-primary">Common</span> Questions
+        <h2 className="text-3xl md:text-5xl  text-white mb-6 tracking-tight max-w-3xl leading-[1.1]">
+          {headingInfo.title} <span className="text-primary">{headingInfo.highlight}</span>{headingInfo.suffix}
         </h2>
 
         {/* FAQ List */}

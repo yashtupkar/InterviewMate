@@ -48,6 +48,7 @@ import BlogList from "./pages/Blog/BlogList";
 import BlogDetail from "./pages/Blog/BlogDetail";
 import BlogManagement from "./pages/adminScreens/BlogManagement";
 import CheckoutPage from "./pages/CheckoutPage";
+import ProctoringTestPage from "./pages/ProctoringTestPage";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -417,6 +418,7 @@ function App() {
           {/* Testing routes */}
           <Route path="/voices" element={<VoiceTest />} />
           <Route path="/code-space" element={<QuestionCodePage />} />
+          <Route path="/proctoring-test" element={<ProctoringTestPage />} />
           <Route
             path="/interview-question/:skills/:questionId/code-space"
             element={<QuestionCodePage />}
