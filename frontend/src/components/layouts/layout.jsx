@@ -27,6 +27,7 @@ const Layout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useUser();
   const { signOut, openUserProfile } = useClerk();
   const navigate = useNavigate();
@@ -71,6 +72,12 @@ const Layout = ({ children }) => {
     setIsMobileMenuOpen(false);
     setIsToolsOpen(false);
   }, [location.pathname]);
+
+  // Check if user is admin
+  useEffect(() => {
+    const adminToken = localStorage.getItem("adminToken");
+    setIsAdmin(!!adminToken);
+  }, []);
 
   const toolsMenuItems = [
     {
@@ -130,10 +137,7 @@ const Layout = ({ children }) => {
         <div className="flex justify-between items-center px-4 md:px-8 lg:px-16 h-[72px] w-full">
           <div className="flex items-center gap-2">
             <Logo size={32} />
-            <Link
-              to="/"
-              className="text-2xl  tracking-tight text-white"
-            >
+            <Link to="/" className="text-2xl  tracking-tight text-white">
               PlaceMate<span className="text-primary">AI</span>
             </Link>
           </div>
@@ -232,6 +236,14 @@ const Layout = ({ children }) => {
             <SignedOut>
               <button
                 onClick={() => {
+                  navigate("/signin");
+                }}
+                className="hidden md:block border border-[#bef264] text-[#bef264] px-3 py-1.5 rounded-md font-semibold hover:bg-[#bef264]/10 transition-all text-sm"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => {
                   const el = document.getElementById("waitlist");
                   if (el) {
                     el.scrollIntoView({ behavior: "smooth" });
@@ -239,14 +251,22 @@ const Layout = ({ children }) => {
                     navigate("/#waitlist");
                   }
                 }}
-                className="hidden md:block bg-[#bef264] text-black px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm"
+                className="hidden md:block bg-[#bef264] text-black px-3 py-1.5 rounded-md font-semibold hover:brightness-110 transition-all text-sm"
               >
                 Join Waitlist
               </button>
             </SignedOut>
             <SignedIn>
+              {isAdmin && (
+                <Link to="/admin" className="hidden md:block">
+                  <button className=" border border-[#bef264] text-[#bef264] px-3 py-1.5 rounded-md font-semibold hover:bg-[#bef264]/10 transition-all text-sm">
+                    {" "}
+                    Admin Panel
+                  </button>
+                </Link>
+              )}
               <Link to="/dashboard" className="hidden md:block">
-                <button className="bg-[#bef264] text-black px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all text-sm">
+                <button className="bg-[#bef264] text-black px-3 py-1.5 rounded-md font-semibold hover:brightness-110 transition-all text-sm">
                   Dashboard
                 </button>
               </Link>
@@ -457,6 +477,14 @@ const Layout = ({ children }) => {
               >
                 Dashboard
               </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="text-black bg-white px-4 py-2.5 rounded-xl text-sm text-center transition-all font-bold hover:brightness-110"
+                >
+                  Admin Panel
+                </Link>
+              )}
               <button
                 onClick={() => openUserProfile()}
                 className="text-white text-sm text-center hover:text-[#bef264] bg-zinc-800 px-4 py-2.5 rounded-xl transition-all font-semibold"
@@ -471,6 +499,15 @@ const Layout = ({ children }) => {
               </button>
             </SignedIn>
             <SignedOut>
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigate("/sign-in");
+                }}
+                className="text-[#bef264] border border-[#bef264] px-4 py-2.5 rounded-xl text-sm text-center transition-all font-bold hover:bg-[#bef264]/10"
+              >
+                Sign In
+              </button>
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
