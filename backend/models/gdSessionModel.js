@@ -11,7 +11,7 @@ const transcriptEntrySchema = new mongoose.Schema({
 const gdSessionSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "userModel",
+    ref: "User",
     required: true,
   },
   topic: { type: String, required: true },
@@ -25,7 +25,7 @@ const gdSessionSchema = new mongoose.Schema({
       name: String,
       personality: String,
       voiceId: String, // browser speech synthesis voice
-      color: String,   // UI color
+      color: String, // UI color
       avatarSeed: String,
     },
   ],

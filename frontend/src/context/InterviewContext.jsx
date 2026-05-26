@@ -34,12 +34,20 @@ export const InterviewProvider = ({ children }) => {
   const [interviewDuration, setInterviewDuration] = useState(0);
 
   // Camera and Mic states with localStorage persistence
-  const [isCameraEnabled, setIsCameraEnabled] = useState(() =>
-    getStoredBoolean("interview_camera_enabled", true),
-  );
-  const [isMicEnabled, setIsMicEnabled] = useState(() =>
-    getStoredBoolean("interview_mic_enabled", true),
-  );
+  const [isCameraEnabled, setIsCameraEnabled] = useState(() => {
+    const stored = localStorage.getItem("interview_camera_enabled");
+    if (stored !== null && stored !== "undefined") {
+      try { return JSON.parse(stored); } catch (e) {}
+    }
+    return true;
+  });
+  const [isMicEnabled, setIsMicEnabled] = useState(() => {
+    const stored = localStorage.getItem("interview_mic_enabled");
+    if (stored !== null && stored !== "undefined") {
+      try { return JSON.parse(stored); } catch (e) {}
+    }
+    return true;
+  });
 
   const setAndStoreCameraStatus = (status) => {
     setIsCameraEnabled(status);

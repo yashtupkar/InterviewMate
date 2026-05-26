@@ -21,6 +21,7 @@ const questionRoutes = require("./routes/questionRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const ttsRoutes = require("./routes/ttsRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const proctoringRoutes = require("./routes/proctoringRoutes");
 const ProctoringReport = require("./models/ProctoringReport");
@@ -57,6 +58,7 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/tts", ttsRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/proctoring", proctoringRoutes);
 
