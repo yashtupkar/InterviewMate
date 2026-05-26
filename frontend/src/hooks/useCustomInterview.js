@@ -6,7 +6,7 @@ import { useUser, useAuth } from "@clerk/clerk-react";
 import { useInterview } from "../context/InterviewContext";
 import { AppContext } from "../context/AppContext";
 import { interviewAgents } from "../constants/agents";
-import usePollyTTS from "./usePollyTTS";
+import useEdgeTTS from "./useEdgeTTS";
 import { analyzeCodeSubmission } from "../utils/codeSubmissionUtils";
 
 export const useCustomInterview = () => {
@@ -78,8 +78,8 @@ export const useCustomInterview = () => {
     "Write a JavaScript function to check if a given string is a palindrome.";
   const debugCodingTimeRaw = Number(searchParams.get("codingTime"));
 
-  // AWS Polly TTS Hook
-  const { speakText, stopSpeaking } = usePollyTTS();
+  // Edge-TTS Hook
+  const { speakText, stopSpeaking } = useEdgeTTS();
 
   // Refs
   const recognitionRef = useRef(null);
@@ -735,7 +735,7 @@ export const useCustomInterview = () => {
             }, 500);
           },
           onError: (err) => {
-            console.error("[TTS] Polly error:", err);
+            console.error("[TTS] Edge-TTS error:", err);
             isAgentSpeakingRef.current = false;
             setIsAgentSpeaking(false);
             if (

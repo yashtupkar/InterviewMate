@@ -105,14 +105,13 @@ export const isEdge = () => {
 
 /**
  * Check if should use browser native TTS
- * Strategy: Use browser native TTS for Chrome Desktop only
- * Reason: Chrome native TTS is instant, free, and good quality for this use case
- * Fallback: AWS Polly for all other browsers/devices
+ * Strategy: Use browser native TTS for Chrome (both desktop and mobile)
+ * Reason: Chrome native TTS is instant, free, and extremely low latency
+ * Fallback: Edge-TTS for all other browsers/devices
  * @returns {boolean}
  */
 export const shouldUseBrowserNativeTTS = () => {
-  const useBrowserTTS = isChrome() && isDesktop();
-  return useBrowserTTS;
+  return isChrome();
 };
 
 /**
@@ -143,7 +142,7 @@ export const getDeviceType = () => {
  */
 export const logTTSBackendSelection = () => {
   const userAgent = navigator.userAgent;
-  const backend = shouldUseBrowserNativeTTS() ? "Browser Native" : "AWS Polly";
+  const backend = shouldUseBrowserNativeTTS() ? "Browser Native" : "Edge-TTS";
   const browser = getBrowserName();
   const device = getDeviceType();
 

@@ -3,7 +3,7 @@ import axios from "axios";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 import { AppContext } from "../context/AppContext";
-import usePollyTTS from "./usePollyTTS";
+import useEdgeTTS from "./useEdgeTTS";
 import { interviewAgents } from "../constants/agents";
 
 const AGENT_COLORS = interviewAgents.reduce((acc, agent) => {
@@ -75,7 +75,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     getTokenRef.current = getToken;
   }, [getToken]);
 
-  const { speakText: hookSpeakText, stopSpeaking } = usePollyTTS();
+  const { speakText: hookSpeakText, stopSpeaking } = useEdgeTTS();
 
   // ── Timer ─────────────────────────────────────────────────────────────────
   useEffect(() => {

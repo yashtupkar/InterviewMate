@@ -1,25 +1,35 @@
-const { Polly } = require("aws-sdk");
+const { Communicate } = require("edge-tts-universal");
 const crypto = require("crypto");
+const { Readable } = require("stream");
 
-// Initialize Polly client
-const polly = new Polly({
-  region: process.env.AWS_REGION || "us-east-1",
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-});
-
-// Voice mapping for agents
+// Voice mapping for agents to Edge Neural voices
 const VOICE_MAPPING = {
-  sophia: "Joanna", // Female - Professional
-  rohan: "Matthew", // Male - Professional
-  marcus: "Liam", // Male - Formal
-  emma: "Ivy", // Female - Young
-  // Fallback voices
-  default_female: "Joanna",
-  default_male: "Matthew",
+  // Agent mappings
+  sophia: "en-US-AriaNeural", // Female - Professional
+  rohan: "en-US-GuyNeural", // Male - Professional
+  marcus: "en-US-ChristopherNeural", // Male - Bold/Direct
+  emma: "en-US-AvaNeural", // Female - Creative/Friendly
+  drew: "en-US-AndrewNeural", // Male - Deep/Solid
+  rachel: "en-US-EmmaNeural", // Female - Clear/Articulate
+
+  // Backward compatibility Polly mappings
+  joanna: "en-US-AriaNeural",
+  matthew: "en-US-GuyNeural",
+  liam: "en-US-ChristopherNeural",
+  ivy: "en-US-AvaNeural",
+  joey: "en-US-ChristopherNeural",
+  justin: "en-US-AndrewNeural",
+  kimberly: "en-US-EmmaNeural",
+  kendra: "en-US-AvaNeural",
+  salli: "en-US-EmmaNeural",
+  kevin: "en-US-GuyNeural",
+
+  // Fallback defaults
+  default_female: "en-US-AriaNeural",
+  default_male: "en-US-GuyNeural",
 };
 
-// Cache metadata (can be stored in Redis or memory)
+// Cache metadata
 const cacheMetadata = new Map();
 
 /**
@@ -37,38 +47,25 @@ const generateCacheId = (text, voiceId) => {
 };
 
 /**
- * Get AWS Polly voice ID from agent name or custom voice
+ * Get Edge voice ID from agent name, custom voice or legacy Polly ID
  * @param {string} voiceId - Agent name or voice ID
- * @returns {string} AWS Polly voice ID
+ * @returns {string} Edge neural voice ID
  */
-const getPollyVoiceId = (voiceId) => {
+const getEdgeVoiceId = (voiceId) => {
   if (!voiceId) return VOICE_MAPPING.default_female;
 
   const mapped = VOICE_MAPPING[voiceId.toLowerCase()];
   if (mapped) return mapped;
 
-  // If it's already a valid Polly voice, use it
-  const validVoices = [
-    "Joanna",
-    "Ivy",
-    "Kimberly",
-    "Salli",
-    "Kendra",
-    "Matthew",
-    "Justin",
-    "Liam",
-    "Joey",
-    "Kevin",
-  ];
-
-  if (validVoices.includes(voiceId)) return voiceId;
+  // If it's already a valid Edge neural voice, use it
+  if (voiceId.endsWith("Neural")) return voiceId;
 
   // Fallback to default
   return VOICE_MAPPING.default_female;
 };
 
 /**
- * Clean text for TTS (remove special characters that Polly doesn't handle well)
+ * Clean text for TTS (remove special characters that TTS engines don't handle well)
  * @param {string} text
  * @returns {string} Cleaned text
  */
@@ -98,9 +95,9 @@ const cleanTextForPolly = (text) => {
 };
 
 /**
- * Generate TTS audio from text using AWS Polly
+ * Generate TTS audio from text using Edge-TTS
  * @param {string} text - Text to convert to speech
- * @param {string} voiceId - Voice ID (agent name or Polly voice)
+ * @param {string} voiceId - Voice ID (agent name or Edge neural voice)
  * @param {Object} options - Additional options
  * @returns {Promise<Object>} { audioBuffer, cacheId, duration, format }
  */
@@ -111,46 +108,57 @@ const generateTTS = async (text, voiceId = "Sophia", options = {}) => {
     }
 
     const cleanedText = cleanTextForPolly(text);
-    const pollyVoiceId = getPollyVoiceId(voiceId);
-    const cacheId = generateCacheId(cleanedText, pollyVoiceId);
+    const edgeVoiceId = getEdgeVoiceId(voiceId);
+    const cacheId = generateCacheId(cleanedText, edgeVoiceId);
 
     // Store cache metadata
     cacheMetadata.set(cacheId, {
       text: cleanedText,
-      voiceId: pollyVoiceId,
+      voiceId: edgeVoiceId,
       createdAt: new Date(),
       expiresAt: new Date(
         Date.now() + (process.env.AUDIO_CACHE_TTL || 2592000) * 1000,
       ),
     });
 
-    const params = {
-      Text: cleanedText,
-      OutputFormat: options.outputFormat || "mp3",
-      VoiceId: pollyVoiceId,
-      Engine: options.engine || "neural",
-      ...options.pollyOptions,
-    };
+    // Synthesize speech using edge-tts-universal Communicate
+    const communicate = new Communicate(cleanedText, {
+      voice: edgeVoiceId,
+      rate: options.rate || "+0%",
+      pitch: options.pitch || "+0Hz",
+      volume: options.volume || "+0%",
+    });
 
-    const result = await polly.synthesizeSpeech(params).promise();
+    const audioChunks = [];
+    for await (const chunk of communicate.stream()) {
+      if (chunk.type === "audio" && chunk.data) {
+        audioChunks.push(chunk.data);
+      }
+    }
+
+    if (audioChunks.length === 0) {
+      throw new Error("No audio chunks received from Edge-TTS");
+    }
+
+    const audioBuffer = Buffer.concat(audioChunks);
 
     return {
-      audioBuffer: result.AudioStream,
+      audioBuffer,
       cacheId,
-      voiceId: pollyVoiceId,
-      format: params.OutputFormat,
-      contentType: result.ContentType,
+      voiceId: edgeVoiceId,
+      format: "mp3",
+      contentType: "audio/mpeg",
       duration: estimateDuration(cleanedText), // Rough estimate
     };
   } catch (error) {
-    console.error("Polly TTS Error:", error);
+    console.error("Edge-TTS Service Error:", error);
     throw error;
   }
 };
 
 /**
  * Estimate audio duration based on text length
- * Rough estimate: average 250 characters per minute
+ * Rough estimate: average 2.5 words per second
  * @param {string} text
  * @returns {number} Estimated duration in seconds
  */
@@ -180,7 +188,7 @@ const getCacheMetadata = (cacheId) => {
 };
 
 /**
- * Clear cache (can be called periodically)
+ * Clear cache
  * @param {string} cacheId - Optional: clear specific cache
  */
 const clearCache = (cacheId = null) => {
@@ -239,25 +247,25 @@ const batchGenerateTTS = async (items) => {
 
     return results;
   } catch (error) {
-    console.error("Batch TTS Error:", error);
+    console.error("Batch Edge-TTS Error:", error);
     throw error;
   }
 };
 
 /**
  * Stream TTS audio (for WebSocket/streaming endpoints)
- * Returns an object that can be piped to response
+ * Returns a Readable stream
  * @param {string} text
  * @param {string} voiceId
  * @param {Object} options
- * @returns {Promise<Stream>}
+ * @returns {Promise<Readable>}
  */
 const streamTTS = async (text, voiceId = "Sophia", options = {}) => {
   try {
     const result = await generateTTS(text, voiceId, options);
-    return result.audioBuffer; // This is already a stream from Polly
+    return Readable.from(result.audioBuffer);
   } catch (error) {
-    console.error("Stream TTS Error:", error);
+    console.error("Stream Edge-TTS Error:", error);
     throw error;
   }
 };
@@ -268,23 +276,9 @@ const streamTTS = async (text, voiceId = "Sophia", options = {}) => {
  * @returns {boolean}
  */
 const isValidVoiceId = (voiceId) => {
-  const validVoices = [
-    "Joanna",
-    "Ivy",
-    "Kimberly",
-    "Salli",
-    "Kendra",
-    "Matthew",
-    "Justin",
-    "Liam",
-    "Joey",
-    "Kevin",
-    "Sophia",
-    "Rohan",
-    "Marcus",
-    "Emma",
-  ];
-  return validVoices.includes(voiceId);
+  if (!voiceId) return true;
+  const normalized = voiceId.toLowerCase();
+  return VOICE_MAPPING.hasOwnProperty(normalized) || voiceId.endsWith("Neural");
 };
 
 module.exports = {
@@ -294,8 +288,8 @@ module.exports = {
   getCacheMetadata,
   clearCache,
   getCacheStats,
-  getPollyVoiceId,
-  cleanTextForPolly,
+  getEdgeVoiceId,
+  cleanTextForPolly, // exported with old name for compatibility
   isValidVoiceId,
   generateCacheId,
   estimateDuration,

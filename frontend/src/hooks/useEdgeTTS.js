@@ -1,26 +1,25 @@
 import { useState, useCallback, useRef, useContext, useEffect } from "react";
 import axios from "axios";
-import { toast } from "react-hot-toast";
 import { AppContext } from "../context/AppContext";
 import { getAudioPlayer } from "../utils/audioPlayer";
 import * as audioCache from "../utils/audioCache";
-import { getVoiceIdFromAgent } from "../constants/voices";
+import { getVoiceIdFromAgent } from "../constants/edgeVoices";
 import {
   shouldUseBrowserNativeTTS,
   logTTSBackendSelection,
 } from "../utils/browserDetection";
 
 /**
- * Custom Hook for Hybrid TTS Integration
+ * Custom Hook for Hybrid Edge-TTS Integration
  * Strategy:
- * - Chrome Desktop: Use browser native TTS (fast, free)
- * - All other browsers: Use AWS Polly (consistent, reliable)
+ * - Chrome: Use browser native speech (Web Speech API - fast, free)
+ * - All other browsers: Use Edge-TTS via backend (consistent, premium neural voices)
  *
  * Usage:
- * const { speakText, stopSpeaking, isPlaying } = usePollyTTS();
- * await speakText("Hello world", "Sophia", { engine: "neural" });
+ * const { speakText, stopSpeaking, isPlaying } = useEdgeTTS();
+ * await speakText("Hello world", "Sophia");
  */
-export const usePollyTTS = () => {
+export const useEdgeTTS = () => {
   const { backend_URL } = useContext(AppContext);
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -67,13 +66,15 @@ export const usePollyTTS = () => {
         playerRef.current.destroy();
       }
       // Cancel any ongoing speech synthesis
-      window.speechSynthesis.cancel();
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
   // Chrome loads voices lazily. Prime and wait once so first click uses the intended voice.
   useEffect(() => {
-    if (!ttsBehaviorRef.useBrowserNative || typeof window === "undefined") {
+    if (!ttsBehaviorRef.useBrowserNative || typeof window === "undefined" || !window.speechSynthesis) {
       return;
     }
 
@@ -108,12 +109,15 @@ export const usePollyTTS = () => {
       window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
 
       timeoutId = setTimeout(() => {
-        window.speechSynthesis.removeEventListener(
-          "voiceschanged",
-          handleVoicesChanged,
-        );
-        // Proceed even if no voices are available yet; this avoids a hard lock.
-        resolve(window.speechSynthesis.getVoices());
+        if (typeof window !== "undefined" && window.speechSynthesis) {
+          window.speechSynthesis.removeEventListener(
+            "voiceschanged",
+            handleVoicesChanged,
+          );
+          resolve(window.speechSynthesis.getVoices());
+        } else {
+          resolve([]);
+        }
       }, 1500);
     });
 
@@ -123,7 +127,7 @@ export const usePollyTTS = () => {
   }, [ttsBehaviorRef.useBrowserNative]);
 
   const getReadyBrowserVoices = useCallback(async () => {
-    if (!ttsBehaviorRef.useBrowserNative) {
+    if (!ttsBehaviorRef.useBrowserNative || typeof window === "undefined" || !window.speechSynthesis) {
       return [];
     }
 
@@ -147,10 +151,10 @@ export const usePollyTTS = () => {
   }, [ttsBehaviorRef.useBrowserNative]);
 
   /**
-   * Fetch audio from Polly API
+   * Fetch audio from Edge-TTS API
    * @private
    */
-  const fetchAudioFromPolly = useCallback(
+  const fetchAudioFromEdgeTTS = useCallback(
     async (text, voiceId) => {
       try {
         setIsLoading(true);
@@ -158,7 +162,7 @@ export const usePollyTTS = () => {
 
         const payload = {
           text: text.trim(),
-          voiceId: voiceId || "Sophia",
+          voiceId: voiceId || "en-US-AriaNeural",
           engine: "neural",
         };
 
@@ -179,7 +183,7 @@ export const usePollyTTS = () => {
           );
         }
       } catch (err) {
-        console.error("Polly TTS error:", err.response?.data || err.message);
+        console.error("Edge-TTS API error:", err.response?.data || err.message);
         setError(err.response?.data?.message || err.message);
         setIsLoading(false);
         throw err;
@@ -189,14 +193,18 @@ export const usePollyTTS = () => {
   );
 
   /**
-   * Use browser native TTS (for Chrome Desktop)
+   * Use browser native TTS (for Chrome)
    * Maps agent names to browser voices
    * @private
    */
   const useBrowserNativeTTS = useCallback((text, agentName) => {
     return new Promise((resolve, reject) => {
       try {
-        // Only cancel if something is actually pending or playing
+        if (typeof window === "undefined" || !window.speechSynthesis) {
+          throw new Error("Speech synthesis not supported in this environment");
+        }
+
+        // Only cancel if something is actually pending or speaking
         if (window.speechSynthesis.pending || window.speechSynthesis.speaking) {
           window.speechSynthesis.cancel();
           // Small delay to let cancel complete
@@ -220,42 +228,55 @@ export const usePollyTTS = () => {
    */
   const speakWithNativeTTS = useCallback(async (text, agentName, resolve, reject) => {
     try {
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        throw new Error("Speech synthesis not supported");
+      }
+
       // Voice mapping for browser native TTS with unique pitch and speed for each agent
       const voiceConfig = {
         Sophia: {
           gender: "female",
-          pitch: 1.0, // Higher pitched female
-          // Slightly faster
+          pitch: 1.0,
           keywords: ["Google US English", "Samantha", "Female"],
         },
         Rohan: {
           gender: "male",
-          pitch: 1.1, // Higher pitched male
-          rate: 1.0, // Slightly slower
-          keywords: ["Google UK English Male", "David", "Male"],
+          pitch: 1.15, // Refined/intellectual tone
+          rate: 1.05, // Swift/analytical pace
+          keywords: [
+            "Google UK English Male",
+            "Microsoft David",
+            "David",
+            "Google US English Male",
+            "Alex",
+            "Male",
+          ],
         },
         Marcus: {
           gender: "male",
-          pitch: 0.9, // Lower pitched male
-          rate: 1.0, // Normal speed
-          keywords: ["Google UK English Male", "David", "Male"],
+          pitch: 0.85, // Bold/deeper voice
+          rate: 0.95, // Deliberate/commanding pace
+          keywords: ["Google UK English Male", "Daniel", "David", "Male"],
         },
         Emma: {
           gender: "female",
-          pitch: 1.3, // Neutral female
-          // Fast
-          keywords: ["Google US English", "Samantha", "Female"],
+          pitch: 1.25, // Energetic/creative tone
+          keywords: ["Google UK English Female", "Google UK English", "Samantha", "Female"],
         },
         Drew: {
           gender: "male",
-          pitch: 1.2, // Medium-high pitched male
-          rate: 0.9, // Slower
-          keywords: ["Google UK English Male", "David", "Male"],
+          pitch: 1.1,
+          rate: 0.9, // Slower and deliberate
+          keywords: [
+            "Google India English Male",
+            "Google IN English Male",
+            "Microsoft David",
+            "Male",
+          ],
         },
         Rachel: {
           gender: "female",
-          pitch: 0.8, // Lower pitched female
-          // Slightly faster
+          pitch: 0.8,
           keywords: ["Google US English", "Samantha", "Female"],
         },
       };
@@ -264,7 +285,7 @@ export const usePollyTTS = () => {
         gender: "female",
         pitch: 1.0,
         rate: 1.0,
-        keywords: ["Google US English"],
+        keywords: [agentName, "Google US English"],
       };
 
       // Validate rate and pitch are finite numbers
@@ -295,8 +316,8 @@ export const usePollyTTS = () => {
 
       const utterance = new SpeechSynthesisUtterance(text);
       if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.rate = validRate; // Use validated rate
-      utterance.pitch = validPitch; // Use validated pitch
+      utterance.rate = validRate;
+      utterance.pitch = validPitch;
       utterance.volume = 1.0;
 
       utterance.onstart = () => {
@@ -311,7 +332,6 @@ export const usePollyTTS = () => {
       };
 
       utterance.onerror = (event) => {
-        // Only reject on actual errors, not on interrupts during normal flow
         if (event.error !== "interrupted") {
           setIsPlaying(false);
           utteranceRef.current = null;
@@ -338,7 +358,6 @@ export const usePollyTTS = () => {
     async (text, voiceId) => {
       try {
         // 1. Check local cache first
-        const cacheKey = `${text}:${voiceId}`;
         const cachedAudio = await audioCache.getAudioByTextAndVoice(
           text,
           voiceId,
@@ -352,20 +371,20 @@ export const usePollyTTS = () => {
           };
         }
 
-        // 2. Fetch from Polly API
-        const pollyResponse = await fetchAudioFromPolly(text, voiceId);
+        // 2. Fetch from Edge-TTS API
+        const ttsResponse = await fetchAudioFromEdgeTTS(text, voiceId);
 
-        if (!pollyResponse) {
-          throw new Error("Failed to fetch audio from Polly");
+        if (!ttsResponse) {
+          throw new Error("Failed to fetch audio from Edge-TTS backend");
         }
 
-        // 3. Cache the audio (non-blocking - don't fail if cache fails)
+        // 3. Cache the audio (non-blocking)
         try {
-          const audioBlob = audioCache.base64ToBlob(pollyResponse.audioBase64);
+          const audioBlob = audioCache.base64ToBlob(ttsResponse.audioBase64);
           await audioCache.saveAudio(
-            pollyResponse.cacheId,
+            ttsResponse.cacheId,
             text,
-            pollyResponse.voiceId,
+            ttsResponse.voiceId,
             audioBlob,
           );
         } catch (cacheErr) {
@@ -373,19 +392,18 @@ export const usePollyTTS = () => {
             "Failed to cache audio (will still play):",
             cacheErr.message,
           );
-          // Don't throw - audio can still play without cache
         }
 
         return {
-          ...pollyResponse,
+          ...ttsResponse,
           fromCache: false,
         };
       } catch (err) {
-        console.error("Error getting audio:", err);
+        console.error("Error getting Edge-TTS audio:", err);
         throw err;
       }
     },
-    [fetchAudioFromPolly],
+    [fetchAudioFromEdgeTTS],
   );
 
   /**
@@ -405,7 +423,6 @@ export const usePollyTTS = () => {
           audioQueueRef.current.shift();
 
         try {
-          // Rate limiting: minimum 100ms between requests
           const timeSinceLastSpeak = Date.now() - lastSpeakTimeRef.current;
           if (timeSinceLastSpeak < 100) {
             await new Promise((resolve) =>
@@ -438,8 +455,8 @@ export const usePollyTTS = () => {
 
   /**
    * Main speak function - Hybrid approach
-   * Uses browser native TTS for Chrome Desktop
-   * Falls back to AWS Polly for other browsers/devices
+   * Uses browser native TTS for Chrome
+   * Falls back to Edge-TTS via backend for other browsers/devices
    */
   const speakText = useCallback(
     (text, voiceId = "Sophia", options = {}) => {
@@ -483,8 +500,7 @@ export const usePollyTTS = () => {
                 reject(err);
               });
           } else {
-            // Use AWS Polly (original queue-based approach)
-            // Add to queue with promise callbacks
+            // Use Edge-TTS backend service
             audioQueueRef.current.push({
               text,
               voiceId: resolvedVoiceId,
@@ -514,14 +530,15 @@ export const usePollyTTS = () => {
 
   /**
    * Stop speaking immediately
-   * Works for both browser native and Polly
    */
   const stopSpeaking = useCallback(() => {
     // Stop browser native TTS
-    window.speechSynthesis.cancel();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     utteranceRef.current = null;
 
-    // Stop Polly audio
+    // Stop audio player
     if (playerRef.current) {
       playerRef.current.stop();
     }
@@ -543,9 +560,11 @@ export const usePollyTTS = () => {
    */
   const pauseSpeaking = useCallback(() => {
     // Pause browser native TTS
-    window.speechSynthesis.pause();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.pause();
+    }
 
-    // Pause Polly audio
+    // Pause audio player
     if (playerRef.current) {
       playerRef.current.pause();
     }
@@ -557,9 +576,11 @@ export const usePollyTTS = () => {
    */
   const resumeSpeaking = useCallback(() => {
     // Resume browser native TTS
-    window.speechSynthesis.resume();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.resume();
+    }
 
-    // Resume Polly audio
+    // Resume audio player
     if (playerRef.current && !playerRef.current.getIsPlaying()) {
       playerRef.current.resume();
       setIsPlaying(true);
@@ -612,26 +633,19 @@ export const usePollyTTS = () => {
   }, []);
 
   return {
-    // Core functions
     speakText,
     stopSpeaking,
     pauseSpeaking,
     resumeSpeaking,
-
-    // State
     isPlaying,
     isLoading,
     error,
     currentVoiceId,
-
-    // Settings
     setVolume,
-
-    // Utilities
     getAvailableVoices,
     clearCache,
     getCacheStats,
   };
 };
 
-export default usePollyTTS;
+export default useEdgeTTS;

@@ -14,11 +14,11 @@
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@deepgram/sdk": "^5.0.0",
-    "aws-sdk": "^2.1692.0",
     "axios": "^1.13.6",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "edge-tts-universal": "^1.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
     "joi": "^18.1.2",

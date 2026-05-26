@@ -30,8 +30,8 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import axios from "axios";
 import CodingSpace from "./components/CodingSpace";
-import VoiceTest from "./pages/VoiceTest";
 import HelpPage from "./pages/Help";
+import Voices from "./pages/Voices";
 import AtsScorer from "./pages/AtsScorer";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import MicTest from "./pages/MicTest";
@@ -416,9 +416,9 @@ function App() {
           />
 
           {/* Testing routes */}
-          <Route path="/voices" element={<VoiceTest />} />
+          <Route path="/voices" element={<Voices />} />
           <Route path="/code-space" element={<QuestionCodePage />} />
-          <Route path="/proctoring-test" element={<ProctoringTestPage />} />
+          <Route path="/ " element={<ProctoringTestPage />} />
           <Route
             path="/interview-question/:skills/:questionId/code-space"
             element={<QuestionCodePage />}

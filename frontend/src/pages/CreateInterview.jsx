@@ -27,7 +27,7 @@ import {
 import { CheckmarkIcon, toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
-import usePollyTTS from "../hooks/usePollyTTS";
+import useEdgeTTS from "../hooks/useEdgeTTS";
 import { FEATURE_COSTS } from "../constants/pricing";
 import UniversalPopup from "../components/common/UniversalPopup";
 import Skeleton from "../components/common/Skeleton";
@@ -101,7 +101,7 @@ const CreateInterview = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth < 768 : false,
   );
-  const { speakText, stopSpeaking } = usePollyTTS();
+  const { speakText, stopSpeaking } = useEdgeTTS();
 
   const getDetailedErrorMessage = (error, fallbackMessage) => {
     const statusCode = error?.response?.status;

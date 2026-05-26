@@ -1,4 +1,4 @@
-const pollyService = require("../services/pollyService");
+const edgeTTSService = require("../services/edgeTTSService");
 const asyncHandler = require("../utils/asyncHandler");
 
 /**
@@ -30,7 +30,7 @@ const generateTTS = asyncHandler(async (req, res) => {
       });
     }
 
-    if (voiceId && !pollyService.isValidVoiceId(voiceId)) {
+    if (voiceId && !edgeTTSService.isValidVoiceId(voiceId)) {
       console.error(`Validation failed: Invalid voice ID: ${voiceId}`);
       return res.status(400).json({
         message: "Invalid voice ID",
@@ -40,6 +40,8 @@ const generateTTS = asyncHandler(async (req, res) => {
           "Rohan",
           "Marcus",
           "Emma",
+          "Drew",
+          "Rachel",
           "Joanna",
           "Matthew",
           "Liam",
@@ -55,7 +57,7 @@ const generateTTS = asyncHandler(async (req, res) => {
     }
 
     // Generate TTS
-    const result = await pollyService.generateTTS(text, voiceId || "Sophia", {
+    const result = await edgeTTSService.generateTTS(text, voiceId || "Sophia", {
       engine,
       outputFormat: "mp3",
     });
@@ -130,10 +132,10 @@ const streamTTS = asyncHandler(async (req, res) => {
     // Set response headers for streaming
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "public, max-age=2592000"); // 30 days
-    res.setHeader("X-Cache-ID", pollyService.generateCacheId(text, voiceId));
+    res.setHeader("X-Cache-ID", edgeTTSService.generateCacheId(text, voiceId));
 
     // Stream the audio directly
-    const audioStream = await pollyService.streamTTS(
+    const audioStream = await edgeTTSService.streamTTS(
       text,
       voiceId || "Sophia",
       {
@@ -194,7 +196,7 @@ const batchGenerateTTS = asyncHandler(async (req, res) => {
     }
 
     // Generate all TTS
-    const results = await pollyService.batchGenerateTTS(items);
+    const results = await edgeTTSService.batchGenerateTTS(items);
 
     // Convert audio buffers to base64
     const processedResults = results.map((result) => {
@@ -235,7 +237,7 @@ const getCacheInfo = asyncHandler(async (req, res) => {
   try {
     const { cacheId } = req.params;
 
-    const metadata = pollyService.getCacheMetadata(cacheId);
+    const metadata = edgeTTSService.getCacheMetadata(cacheId);
 
     if (!metadata) {
       return res
@@ -263,7 +265,7 @@ const getCacheInfo = asyncHandler(async (req, res) => {
  */
 const getCacheStats = asyncHandler(async (req, res) => {
   try {
-    const stats = pollyService.getCacheStats();
+    const stats = edgeTTSService.getCacheStats();
 
     res.status(200).json({
       success: true,
@@ -287,14 +289,14 @@ const clearCache = asyncHandler(async (req, res) => {
     const { cacheId } = req.params;
 
     if (cacheId === "all") {
-      pollyService.clearCache();
+      edgeTTSService.clearCache();
       return res.status(200).json({
         success: true,
         message: "All cache cleared",
       });
     }
 
-    pollyService.clearCache(cacheId);
+    edgeTTSService.clearCache(cacheId);
 
     res.status(200).json({
       success: true,
