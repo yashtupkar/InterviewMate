@@ -423,6 +423,8 @@ const ResumeBuilder = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     {[
+                      "grid",
+                      "simple",
                       "modern",
                       "elegant",
                       "classic",

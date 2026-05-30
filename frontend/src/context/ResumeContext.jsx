@@ -14,6 +14,8 @@ export const useResume = () => {
 };
 
 export const TEMPLATE_THEMES = {
+  grid: "#ea580c",
+  simple: "#1e293b",
   modern: "#bef264",
   elegant: "#94a3b8",
   classic: "#1e293b",
@@ -28,21 +30,24 @@ const initialResumeState = {
   title: "Untitled Resume",
   template: "modern",
   personalInfo: {
-    firstName: "",
-    lastName: "",
-    fullName: "",
-    email: "",
-    phone: "",
-    location: "",
-    jobTitle: "",
-    objective: "",
-    photoUrl: "",
-    links: [],
+    firstName: "Jonathan",
+    lastName: "Doe",
+    fullName: "Jonathan Doe",
+    email: "jonathan.doe@example.com",
+    phone: "+1 (555) 000-1111",
+    location: "San Francisco, CA",
+    jobTitle: "Senior Software Engineer",
+    objective: "Results-oriented Senior Software Engineer with over 8 years of experience in designing and implementing scalable web applications. Proven track record of leading development teams, optimizing system performance, and delivering high-quality user experiences. Expertise in React, Node.js, and cloud-native architectures.",
+    photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=150&h=150",
+    links: [
+      { label: "LinkedIn", url: "https://linkedin.com/in/jonathandoe" },
+      { label: "GitHub", url: "https://github.com/jonathandoe" }
+    ],
   },
   profiles: [
     {
       title: "Summary",
-      content: "",
+      content: "Results-oriented Senior Software Engineer with over 8 years of experience in designing and implementing scalable web applications. Proven track record of leading development teams, optimizing system performance, and delivering high-quality user experiences. Expertise in React, Node.js, and cloud-native architectures.",
       visible: true,
     },
   ],
@@ -56,13 +61,129 @@ const initialResumeState = {
     achievements: "Achievements",
     certifications: "Certifications",
   },
-  experience: [],
-  education: [],
-  skills: [],
-  projects: [],
-  achievements: [],
-  certifications: [],
-  customSections: [], // Array of { id, title, entries: [{ title, content, visible }] }
+  experience: [
+    {
+      company: "Tech Innovators Inc.",
+      title: "Lead Software Architect",
+      location: "San Francisco, CA",
+      startDate: "2021-03-01",
+      current: true,
+      description: "Implemented a microservices architecture that reduced server costs by 35%.\nLed a team of 12 engineers in the successful rollout of an AI-driven analytics dashboard.\nCollaborated with product teams to define technical roadmaps and ensure architectural integrity.",
+      visible: true,
+    },
+    {
+      company: "Global Stack Solutions",
+      title: "Senior Full Stack Developer",
+      location: "New York, NY",
+      startDate: "2018-06-01",
+      endDate: "2021-02-28",
+      description: "Developed and maintained a high-traffic fintech platform serving 500k+ active users.\nOptimized database queries and API response times, resulting in a 50% performance improvement.\nDesigned reusable UI components and a design system used across 5 core products.",
+      visible: true,
+    }
+  ],
+  education: [
+    {
+      institution: "Stanford University",
+      degree: "M.S. in Computer Science",
+      field: "Artificial Intelligence",
+      startDate: "2013-09-01",
+      endDate: "2015-05-15",
+      location: "Stanford, CA",
+      gpa: "3.9/4.0",
+      visible: true,
+    },
+    {
+      institution: "University of California, Berkeley",
+      degree: "B.S. in Electrical Engineering & Computer Sciences",
+      startDate: "2009-09-01",
+      endDate: "2013-05-20",
+      location: "Berkeley, CA",
+      gpa: "3.8/4.0",
+      visible: true,
+    }
+  ],
+  skills: [
+    {
+      category: "Frontend",
+      subSkills: "React, Next.js, Redux, TailwindCSS, TypeScript, HTML5, CSS3",
+      visible: true,
+    },
+    {
+      category: "Backend & DB",
+      subSkills: "Node.js, Express, Python, Django, PostgreSQL, MongoDB, Redis",
+      visible: true,
+    },
+    {
+      category: "DevOps & Cloud",
+      subSkills: "AWS (S3, EC2, ECS), Docker, Kubernetes, CI/CD, Git",
+      visible: true,
+    }
+  ],
+  projects: [
+    {
+      title: "SmartScribe AI Platform",
+      link: "https://github.com/jdoe/smartscribe",
+      githubUrl: "https://github.com/jdoe/smartscribe",
+      startDate: "2022-01-01",
+      endDate: "2022-06-01",
+      description: "Developed an open-source real-time transcription and summary platform powered by OpenAI Whisper and GPT-4.\nImplemented clean audio chunking pipelines and achieved 98% transcription accuracy with 200ms latency.\nSecured over 1,500 Github stars and supported 20,000+ monthly active users during launch.",
+      visible: true,
+    },
+    {
+      title: "FlowState Task Engine",
+      link: "https://flowstate-engine.io",
+      startDate: "2020-08-01",
+      endDate: "2020-12-01",
+      description: "Built a high-throughput job queue manager using Redis and Node.js that executes complex workflows with custom retries.\nDesigned an interactive DAG builder in React, allowing users to orchestrate tasks visually.\nDecreased job execution delays by 40% compared to existing open-source alternatives.",
+      visible: true,
+    }
+  ],
+  achievements: [
+    {
+      title: "1st Place Winner",
+      description: "TechCrunch Disrupt Hackathon (out of 300+ global competing engineering teams)",
+      date: "2022",
+      visible: true,
+    },
+    {
+      title: "Outstanding Engineering Award",
+      description: "Recognized for driving infrastructure virtualization at Tech Innovators",
+      date: "2021",
+      visible: true,
+    }
+  ],
+  certifications: [
+    {
+      name: "AWS Certified Solutions Architect",
+      issuer: "Amazon Web Services",
+      date: "2023",
+      visible: true,
+    },
+    {
+      name: "Certified Kubernetes Administrator (CKA)",
+      issuer: "The Linux Foundation",
+      date: "2022",
+      visible: true,
+    }
+  ],
+  customSections: [
+    {
+      id: "lang-sec",
+      title: "Languages",
+      entries: [
+        {
+          title: "English",
+          subtitle: "Native proficiency",
+          visible: true,
+        },
+        {
+          title: "Spanish",
+          subtitle: "Intermediate fluency",
+          visible: true,
+        }
+      ]
+    }
+  ],
   customizations: {
     language: "English (UK)",
     dateFormat: "DD/MM/YYYY",

@@ -153,8 +153,8 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
               <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-2 sm:mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 Template Selection
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
-                Choose your <span className="text-[#bef264] italic">Style</span>
+              <h1 className="text-2xl md:text-3xl   text-white tracking-tight leading-tight">
+                Choose your <span className="text-[#bef264] ">Style</span>
               </h1>
               <p className="text-zinc-500 font-medium text-sm sm:text-md mt-2 sm:mt-4">
                 Select a professional layout to start your journey

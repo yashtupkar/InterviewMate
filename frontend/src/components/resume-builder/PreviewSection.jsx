@@ -14,6 +14,8 @@ import CorporateTemplate from "./resume-templates/CorporateTemplate";
 import ClassicTemplate from "./resume-templates/ClassicTemplate";
 import ElegantTemplate from "./resume-templates/ElegantTemplate";
 import StandardTemplate from "./resume-templates/StandardTemplate";
+import SimpleTemplate from "./resume-templates/SimpleTemplate";
+import GridTemplate from "./resume-templates/GridTemplate";
 import { useResume } from "../../context/ResumeContext";
 
 const PreviewSection = forwardRef(({ template, onPageCountChange }, ref) => {
@@ -34,6 +36,7 @@ const PreviewSection = forwardRef(({ template, onPageCountChange }, ref) => {
 
   // Mapping template keys to their components
   const templates = {
+    grid: GridTemplate,
     modern: ModernTemplate,
     professional: ProfessionalTemplate,
     creative: CreativeTemplate,
@@ -43,6 +46,7 @@ const PreviewSection = forwardRef(({ template, onPageCountChange }, ref) => {
     classic: ClassicTemplate,
     elegant: ElegantTemplate,
     standard: StandardTemplate,
+    simple: SimpleTemplate,
   };
 
   const SelectedTemplate = templates[template] || ModernTemplate;
