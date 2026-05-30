@@ -432,13 +432,39 @@ export const useEdgeTTS = () => {
 
           lastSpeakTimeRef.current = Date.now();
 
-          // Get or generate audio
-          const audioData = await getOrGenerateAudio(text, voiceId);
+          // 1. Check local cache first
+          const cachedAudio = await audioCache.getAudioByTextAndVoice(
+            text,
+            voiceId,
+          );
 
-          // Play audio
-          await playerRef.current.play(audioData.audioBase64, {
-            volume: 1.0,
-          });
+          if (cachedAudio) {
+            const base64 = await audioCache.blobToBase64(cachedAudio.audio);
+            await playerRef.current.play(base64, { volume: 1.0 });
+          } else {
+            // 2. Stream directly from the GET endpoint for immediate playback
+            const streamUrl = `${backend_URL}/api/tts/stream?text=${encodeURIComponent(text)}&voiceId=${encodeURIComponent(voiceId)}`;
+            
+            await playerRef.current.playFromUrl(streamUrl, { volume: 1.0 });
+
+            // 3. Cache the audio in the background (non-blocking) for future instant hits
+            (async () => {
+              try {
+                const ttsResponse = await fetchAudioFromEdgeTTS(text, voiceId);
+                if (ttsResponse && ttsResponse.success) {
+                  const audioBlob = audioCache.base64ToBlob(ttsResponse.audioBase64);
+                  await audioCache.saveAudio(
+                    ttsResponse.cacheId,
+                    text,
+                    ttsResponse.voiceId,
+                    audioBlob,
+                  );
+                }
+              } catch (cacheErr) {
+                console.warn("Background audio cache failed:", cacheErr);
+              }
+            })();
+          }
 
           setIsPlaying(false);
           onComplete?.();
@@ -451,7 +477,7 @@ export const useEdgeTTS = () => {
     } finally {
       isProcessingQueue.current = false;
     }
-  }, [getOrGenerateAudio]);
+  }, [backend_URL, fetchAudioFromEdgeTTS]);
 
   /**
    * Main speak function - Hybrid approach

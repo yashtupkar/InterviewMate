@@ -262,8 +262,26 @@ const batchGenerateTTS = async (items) => {
  */
 const streamTTS = async (text, voiceId = "Sophia", options = {}) => {
   try {
-    const result = await generateTTS(text, voiceId, options);
-    return Readable.from(result.audioBuffer);
+    const cleanedText = cleanTextForPolly(text);
+    const edgeVoiceId = getEdgeVoiceId(voiceId);
+
+    const communicate = new Communicate(cleanedText, {
+      voice: edgeVoiceId,
+      rate: options.rate || "+0%",
+      pitch: options.pitch || "+0Hz",
+      volume: options.volume || "+0%",
+    });
+
+    // Create an async generator that yields chunks in real-time as they arrive
+    async function* generator() {
+      for await (const chunk of communicate.stream()) {
+        if (chunk.type === "audio" && chunk.data) {
+          yield chunk.data;
+        }
+      }
+    }
+
+    return Readable.from(generator());
   } catch (error) {
     console.error("Stream Edge-TTS Error:", error);
     throw error;

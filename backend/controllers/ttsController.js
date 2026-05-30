@@ -115,8 +115,11 @@ const generateTTS = asyncHandler(async (req, res) => {
  */
 const streamTTS = asyncHandler(async (req, res) => {
   try {
-    const { text, voiceId, engine = "neural", sessionId } = req.body;
-    const userId = req.user?._id || req.body.userId;
+    const text = req.method === "GET" ? req.query.text : req.body.text;
+    const voiceId = req.method === "GET" ? req.query.voiceId : req.body.voiceId;
+    const engine = req.method === "GET" ? req.query.engine : req.body.engine || "neural";
+    const sessionId = req.method === "GET" ? req.query.sessionId : req.body.sessionId;
+    const userId = req.user?._id || (req.method === "GET" ? req.query.userId : req.body.userId);
 
     // Validation
     if (!text || text.trim().length === 0) {

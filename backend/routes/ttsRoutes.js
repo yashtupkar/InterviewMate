@@ -15,11 +15,13 @@ const ttsController = require("../controllers/ttsController");
 router.post("/generate", ttsController.generateTTS);
 
 /**
- * POST /api/tts/stream
+ * POST & GET /api/tts/stream
  * Stream TTS audio directly
- * Body: { text, voiceId, engine, sessionId }
+ * Body (POST) or Query (GET): { text, voiceId, engine, sessionId }
  */
-router.post("/stream", ttsController.streamTTS);
+router.route("/stream")
+  .post(ttsController.streamTTS)
+  .get(ttsController.streamTTS);
 
 /**
  * POST /api/tts/batch
