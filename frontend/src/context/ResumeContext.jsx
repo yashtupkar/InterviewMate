@@ -16,14 +16,15 @@ export const useResume = () => {
 export const TEMPLATE_THEMES = {
   grid: "#ea580c",
   simple: "#1e293b",
-  modern: "#bef264",
-  elegant: "#94a3b8",
+  modern: "#000000",
+  elegant: "#E5E6E3",
   classic: "#1e293b",
   tech: "#3b82f6",
   corporate: "#0f172a",
   executive: "#4338ca",
-  professional: "#059669",
+  professional: "#000000",
   creative: "#db2777",
+  standard: "#000000",
 };
 
 const initialResumeState = {
@@ -200,7 +201,7 @@ const initialResumeState = {
     colors: {
       mode: "basic", // basic, advanced, border
       subMode: "accent", // accent, multi, image
-      accent: "#bef264",
+      accent: "#000000",
       text: "#18181b",
       background: "#ffffff",
       border: { style: "single", color: "#e4e4e7" },
@@ -216,7 +217,7 @@ const initialResumeState = {
         linkIcons: false,
       },
     },
-    fonts: { body: "Inter", headings: "Inter" },
+    fonts: { body: "Source Serif Pro", headings: "Source Serif Pro" },
     sectionHeadings: {
       capitalization: "uppercase",
     },

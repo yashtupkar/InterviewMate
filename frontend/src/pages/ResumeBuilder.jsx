@@ -44,6 +44,21 @@ import ResumeCardPreview, {
 import { TEMPLATE_THEMES } from "../context/ResumeContext";
 import Logo from "../components/common/Logo";
 
+const BUILDER_CATEGORIES = {
+  all: "All",
+  classic: "Classic",
+  professional: "Prof",
+  creative: "Creative",
+  modern: "Modern"
+};
+
+const BUILDER_CATEGORY_MAP = {
+  classic: ["classic", "simple", "standard"],
+  professional: ["professional", "corporate", "executive", "grid"],
+  creative: ["creative", "elegant"],
+  modern: ["modern", "tech"]
+};
+
 const ResumeBuilder = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -59,6 +74,7 @@ const ResumeBuilder = () => {
     setResumeData,
   } = useResume();
   const [activeTab, setActiveTab] = useState("content"); // content, design, templates
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [zoom, setZoom] = useState(0.85);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -421,20 +437,44 @@ const ResumeBuilder = () => {
                       Choose a professional layout for your resume.
                     </p>
                   </div>
+
+                  {/* Sidebar Categories Pill Selector */}
+                  <div className="flex flex-wrap items-center gap-1.5 mb-5 bg-zinc-900/80 p-1 rounded-xl border border-zinc-800/80 max-w-full">
+                    {Object.keys(BUILDER_CATEGORIES).map((catKey) => {
+                      const isActive = selectedCategory === catKey;
+                      return (
+                        <button
+                          key={catKey}
+                          onClick={() => setSelectedCategory(catKey)}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${
+                            isActive
+                              ? "bg-lime-400 text-zinc-950 shadow-[0_0_10px_rgba(190,242,100,0.15)]"
+                              : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          {BUILDER_CATEGORIES[catKey]}
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
-                    {[
-                      "grid",
-                      "simple",
-                      "modern",
-                      "elegant",
-                      "classic",
-                      "tech",
-                      "corporate",
-                      "executive",
-                      "professional",
-                      "creative",
-                      "standard",
-                    ].map((template) => {
+                    {(selectedCategory === "all"
+                      ? [
+                          "grid",
+                          "simple",
+                          "modern",
+                          "elegant",
+                          "classic",
+                          "tech",
+                          "corporate",
+                          "executive",
+                          "professional",
+                          "creative",
+                          "standard",
+                        ]
+                      : BUILDER_CATEGORY_MAP[selectedCategory] || []
+                    ).map((template) => {
                       const themeColor = TEMPLATE_THEMES[template] || "#bef264";
                       const previewData = {
                         ...DUMMY_RESUME_DATA,

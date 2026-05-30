@@ -37,8 +37,8 @@ const ElegantTemplate = ({ data }) => {
     text: c.colors?.text || "#18181b",
     background: c.colors?.background || "#ffffff",
     border: c.colors?.border?.color || "#e5e7eb",
-    fontBody: c.fonts?.body || "Inter",
-    fontHeading: c.fonts?.headings || "Inter",
+    fontBody: c.fonts?.body || "Source Serif Pro",
+    fontHeading: c.fonts?.headings || "Source Serif Pro",
     fontSize: c.layout?.spacing?.fontSize || "11pt",
     lineHeight: c.layout?.spacing?.lineHeight || 1.3,
     margin: c.layout?.spacing?.margin || {
@@ -440,7 +440,6 @@ const ElegantTemplate = ({ data }) => {
                     ? "0"
                     : `${theme.profileImage.borderRadius}px`,
               overflow: "hidden",
-              border: `4px solid ${theme.background}`,
               flexShrink: 0,
             }}
           >

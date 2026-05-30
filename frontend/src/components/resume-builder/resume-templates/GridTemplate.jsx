@@ -51,7 +51,7 @@ const GridTemplate = ({ data }) => {
     text: c.colors?.text || "#1f2937",
     background: c.colors?.background || "#ffffff",
     border: c.colors?.border?.color || "#e5e7eb",
-    fontBody: c.fonts?.body || "Inter",
+    fontBody: c.fonts?.body || "Source Serif Pro",
     fontHeading: c.fonts?.headings || "Lora",
     fontSize: c.layout?.spacing?.fontSize || "10pt",
     lineHeight: c.layout?.spacing?.lineHeight || 1.3,

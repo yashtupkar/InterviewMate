@@ -94,23 +94,35 @@ const ProfessionalTemplate = ({ data }) => {
   const formatDate = (dateStr) =>
     formatResumeDate(dateStr, theme.dateFormat, theme.language);
 
+  // Section Header - Centered between top and bottom borders
   const SectionHeader = ({ title }) => (
-    <h2
+    <div
       style={{
-        color: getColor("headings"),
-        fontFamily: fonts.heading,
-        borderBottom: `2px solid ${theme.applyTo.headingsLine ? theme.accent : theme.border}`,
-        paddingBottom: "0.25rem",
-        marginBottom: "1rem",
-        textTransform: theme.headingCase,
-        fontSize: "1.1em",
-        fontWeight: "bold",
-        letterSpacing: "0.05em",
-        textAlign: "left",
+        borderTop: `1px solid ${theme.applyTo.headingsLine ? theme.accent : "#18181b"}`,
+        borderBottom: `1px solid ${theme.applyTo.headingsLine ? theme.accent : "#18181b"}`,
+        paddingTop: "0.3rem",
+        paddingBottom: "0.3rem",
+        marginTop: "1.4rem",
+        marginBottom: "0.8rem",
+        textAlign: "center",
+        boxSizing: "border-box",
+        width: "100%",
       }}
     >
-      {title}
-    </h2>
+      <h2
+        style={{
+          color: getColor("headings", "#18181b"),
+          fontFamily: fonts.heading,
+          textTransform: "uppercase",
+          fontSize: "1.05em",
+          fontWeight: "bold",
+          letterSpacing: "0.15em",
+          margin: 0,
+        }}
+      >
+        {title}
+      </h2>
+    </div>
   );
 
   const containerStyle = {
@@ -127,12 +139,110 @@ const ProfessionalTemplate = ({ data }) => {
     boxSizing: "border-box",
   };
 
+  // Helper to render customized lists elegantly
+  const renderDescriptionList = (description) => {
+    if (!description) return null;
+    const lines = description.split("\n").map((line) => line.trim()).filter(Boolean);
+    return (
+      <ul
+        style={{
+          marginTop: "0.4rem",
+          marginBottom: "0.4rem",
+          paddingLeft: "1.2rem",
+          fontSize: "0.95em",
+          lineHeight: 1.45,
+          listStyleType: "disc",
+        }}
+      >
+        {lines.map((line, idx) => {
+          const bulletChars = ["-", "*", "•", "·"];
+          let content = line;
+          if (bulletChars.some((c) => line.startsWith(c))) {
+            content = line.substring(1).trim();
+          }
+          return (
+            <li key={idx} style={{ marginBottom: "3px", color: theme.text, fontFamily: fonts.body }}>
+              {content}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
+  // Helper for language proficiency ratings
+  const getProficiencyDots = (subtitle = "") => {
+    const s = subtitle.toLowerCase();
+    if (s.includes("native") || s.includes("bilingual") || s.includes("fluent") || s.includes("5/5") || s.includes("c2") || s.includes("expert")) return 5;
+    if (s.includes("advanced") || s.includes("4/5") || s.includes("c1") || s.includes("highly")) return 4;
+    if (s.includes("intermediate") || s.includes("conversational") || s.includes("3/5") || s.includes("b2") || s.includes("b1")) return 3;
+    if (s.includes("elementary") || s.includes("basic") || s.includes("2/5") || s.includes("a2") || s.includes("a1")) return 2;
+    if (s.includes("beginner") || s.includes("1/5")) return 1;
+    return 4; // default fallback
+  };
+
+  const renderDots = (count) => {
+    const dots = [];
+    for (let i = 1; i <= 5; i++) {
+      dots.push(
+        <span
+          key={i}
+          style={{
+            width: "7px",
+            height: "7px",
+            borderRadius: "50%",
+            backgroundColor: i <= count ? theme.text : "#d1d5db",
+            display: "inline-block",
+            margin: "0 2px",
+          }}
+        />
+      );
+    }
+    return <div style={{ display: "flex", alignItems: "center" }}>{dots}</div>;
+  };
+
+  const renderLanguages = (sec) => {
+    const activeEntries = sec.entries.filter((e) => e.visible !== false);
+    if (activeEntries.length === 0) return null;
+    return (
+      <section key={sec.id} style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+        <SectionHeader title={sec.title || "Languages"} />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: "0.5rem 4rem",
+            fontSize: "0.95em",
+          }}
+        >
+          {activeEntries.map((entry, idx) => {
+            const dotsCount = getProficiencyDots(entry.subtitle);
+            return (
+              <div
+                key={idx}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontFamily: fonts.body,
+                }}
+              >
+                <span style={{ fontWeight: "bold" }}>{entry.title}</span>
+                {renderDots(dotsCount)}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  };
+
   // Section Renderers
   const renderSummary = () => {
     const activeProfiles = profiles.filter((p) => p.visible !== false && p.content);
     if (activeProfiles.length === 0) return null;
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         {activeProfiles.map((profile, i) => (
           <section key={i} style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
             <SectionHeader title={profile.title || titles.profiles || "Summary"} />
@@ -150,44 +260,30 @@ const ProfessionalTemplate = ({ data }) => {
     if (activeExperience.length === 0) return null;
     return (
       <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
-        <SectionHeader title={titles.experience || "Experience"} />
+        <SectionHeader title={titles.experience || "Professional Experience"} />
         <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
           {activeExperience.map((exp, i) => (
-            <div key={i}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "2px",
-                  flexDirection: theme.subtitlePlacement === "next-line" ? "column" : "row",
-                }}
-              >
-                <h3 style={{ fontSize: "1em", fontWeight: "bold", textTransform: "uppercase", alignSelf: "start", fontFamily: fonts.heading }}>
-                  {exp.title}
-                </h3>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    width: theme.subtitlePlacement === "next-line" ? "100%" : "auto",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
-                >
-                  <p style={getSubtitleStyle()}>
-                    {exp.company} {exp.location && `• ${exp.location}`}
-                  </p>
-                  <span style={{ fontSize: "0.8em", color: getColor("dates", "#6b7280"), fontWeight: "bold" }}>
-                    {formatDate(exp.startDate)} - {exp.current ? "Present" : formatDate(exp.endDate)}
-                  </span>
-                </div>
+            <div key={i} style={{ marginBottom: "4px" }}>
+              {/* Row 1 */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontWeight: "bold", fontSize: "0.95em", fontFamily: fonts.heading, color: theme.text }}>
+                  {exp.company}
+                </span>
+                <span style={{ fontSize: "0.9em", color: getColor("dates", "#000000"), fontFamily: fonts.body }}>
+                  {formatDate(exp.startDate)} – {exp.current ? "Present" : formatDate(exp.endDate)}
+                </span>
               </div>
-              {exp.description && (
-                <p style={{ fontSize: "0.9em", marginTop: "0.25rem", whiteSpace: "pre-wrap", fontFamily: fonts.body }}>
-                  {formatDescriptionList(exp.description, theme.listStyle)}
-                </p>
-              )}
+              {/* Row 2 */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "2px" }}>
+                <span style={{ fontStyle: "italic", fontSize: "0.95em", color: getColor("entrySubtitle", "#4b5563"), fontFamily: fonts.body }}>
+                  {exp.title}
+                </span>
+                <span style={{ fontSize: "0.9em", color: "#4b5563", fontFamily: fonts.body }}>
+                  {exp.location}
+                </span>
+              </div>
+              {/* Bullet points */}
+              {exp.description && renderDescriptionList(exp.description)}
             </div>
           ))}
         </div>
@@ -203,46 +299,26 @@ const ProfessionalTemplate = ({ data }) => {
         <SectionHeader title={titles.education || "Education"} />
         <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
           {activeEdu.map((edu, i) => (
-            <div key={i}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "2px",
-                  flexDirection: theme.subtitlePlacement === "next-line" ? "column" : "row",
-                }}
-              >
-                <h3 style={{ fontSize: "0.95em", fontWeight: "bold", textTransform: "uppercase", fontFamily: fonts.heading }}>
-                  {edu.degree} {edu.field && `in ${edu.field}`}
-                </h3>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    width: theme.subtitlePlacement === "next-line" ? "100%" : "auto",
-                    alignItems: "center",
-                    gap: "10px",
-                  }}
-                >
-                  <p style={getSubtitleStyle()}>
-                    {edu.institution} {edu.location && `• ${edu.location}`}
-                  </p>
-                  <span style={{ fontSize: "0.8em", color: getColor("dates", "#6b7280"), fontWeight: "bold" }}>
-                    {formatDate(edu.startDate)} - {formatDate(edu.endDate)}
-                  </span>
-                </div>
+            <div key={i} style={{ marginBottom: "4px" }}>
+              {/* Row 1 */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontWeight: "bold", fontSize: "0.95em", fontFamily: fonts.heading, color: theme.text }}>
+                  {edu.institution}
+                </span>
+                <span style={{ fontSize: "0.9em", color: getColor("dates", "#000000"), fontFamily: fonts.body }}>
+                  {formatDate(edu.startDate)} – {formatDate(edu.endDate)}
+                </span>
               </div>
-              {edu.gpa && (
-                <p style={{ fontSize: "0.8em", color: getColor("dotsBarsBubbles", "#4b5563"), fontFamily: fonts.body }}>
-                  GPA: {edu.gpa}
-                </p>
-              )}
-              {edu.description && (
-                <p style={{ fontSize: "0.85em", marginTop: "4px", color: "#4b5563", whiteSpace: "pre-wrap", fontFamily: fonts.body }}>
-                  {formatDescriptionList(edu.description, theme.listStyle)}
-                </p>
-              )}
+              {/* Row 2 */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "2px" }}>
+                <span style={{ fontStyle: "italic", fontSize: "0.95em", color: getColor("entrySubtitle", "#4b5563"), fontFamily: fonts.body }}>
+                  {edu.degree}{edu.field && ` in ${edu.field}`}{edu.gpa && ` (GPA: ${edu.gpa})`}
+                </span>
+                <span style={{ fontSize: "0.9em", color: "#4b5563", fontFamily: fonts.body }}>
+                  {edu.location}
+                </span>
+              </div>
+              {edu.description && renderDescriptionList(edu.description)}
             </div>
           ))}
         </div>
@@ -258,43 +334,37 @@ const ProfessionalTemplate = ({ data }) => {
         <SectionHeader title={titles.projects || "Projects"} />
         <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
           {activeProjects.map((proj, i) => (
-            <div key={i}>
-              <div style={{ display: "flex", justifycontent: "space-between", alignItems: "center", marginBottom: "2px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div key={i} style={{ marginBottom: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontWeight: "bold", fontSize: "0.95em", fontFamily: fonts.heading, color: theme.text }}>
                   {proj.link ? (
                     <a
                       href={proj.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ fontSize: "1em", fontWeight: "bold", textTransform: "uppercase", color: theme.text, textDecoration: "none", fontFamily: fonts.heading }}
+                      style={{ color: theme.text, textDecoration: "none" }}
                     >
                       {proj.title} ↗
                     </a>
                   ) : (
-                    <h3 style={{ fontSize: "1em", fontWeight: "bold", textTransform: "uppercase", fontFamily: fonts.heading }}>
-                      {proj.title}
-                    </h3>
+                    proj.title
                   )}
                   {proj.githubUrl && (
                     <a
                       href={proj.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ fontSize: "0.8em", fontWeight: "bold", color: theme.accent, textDecoration: "none" }}
+                      style={{ fontSize: "0.8em", fontWeight: "bold", color: theme.accent, textDecoration: "none", marginLeft: "8px" }}
                     >
                       [Code]
                     </a>
                   )}
-                </div>
-                <span style={{ fontSize: "0.85em", color: getColor("dates", "#6b7280"), fontWeight: "bold", marginLeft: "auto" }}>
-                  {proj.startDate && `${formatDate(proj.startDate)} - ${proj.current ? "Present" : formatDate(proj.endDate)}`}
+                </span>
+                <span style={{ fontSize: "0.9em", color: getColor("dates", "#000000"), fontFamily: fonts.body }}>
+                  {proj.startDate && `${formatDate(proj.startDate)} – ${proj.current ? "Present" : formatDate(proj.endDate)}`}
                 </span>
               </div>
-              {proj.description && (
-                <p style={{ fontSize: "0.9em", marginTop: "4px", whiteSpace: "pre-wrap", fontFamily: fonts.body }}>
-                  {formatDescriptionList(proj.description, theme.listStyle)}
-                </p>
-              )}
+              {proj.description && renderDescriptionList(proj.description)}
             </div>
           ))}
         </div>
@@ -305,24 +375,37 @@ const ProfessionalTemplate = ({ data }) => {
   const renderSkills = () => {
     const activeSkills = skills.filter((s) => s.visible !== false);
     if (activeSkills.length === 0) return null;
+
+    // Flatten skill categories and comma-separated sub-skills into clean individual items
+    const flattenedSkills = [];
+    activeSkills.forEach((s) => {
+      if (s.subSkills) {
+        const parts = s.subSkills.split(/[,|•\n]/).map((p) => p.trim()).filter(Boolean);
+        if (parts.length > 0) {
+          flattenedSkills.push(...parts);
+        } else if (s.category) {
+          flattenedSkills.push(s.category);
+        }
+      } else if (s.category) {
+        flattenedSkills.push(s.category);
+      }
+    });
+
     return (
       <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
         <SectionHeader title={titles.skills || "Skills"} />
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: theme.columnLayout === "two" ? "1fr" : "repeat(3, 1fr)",
-            gap: `${theme.spaceBetweenEntries * 0.75}px`,
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "0.5rem 1rem",
+            fontSize: "0.95em",
           }}
         >
-          {activeSkills.map((skill, index) => (
-            <div key={index}>
-              <h3 style={{ fontSize: "0.7em", fontWeight: "bold", textTransform: "uppercase", color: "#a1a1aa", fontFamily: fonts.heading, marginBottom: "2px" }}>
-                {skill.category}
-              </h3>
-              <p style={{ fontSize: "0.85em", fontWeight: "bold", fontFamily: fonts.body }}>
-                {skill.subSkills}
-              </p>
+          {flattenedSkills.map((item, index) => (
+            <div key={index} style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontFamily: fonts.body }}>
+              <span style={{ color: getColor("dotsBarsBubbles", "#000000"), fontSize: "1em", lineHeight: 1 }}>•</span>
+              <span>{item}</span>
             </div>
           ))}
         </div>
@@ -338,16 +421,18 @@ const ProfessionalTemplate = ({ data }) => {
         <SectionHeader title={titles.achievements || "Achievements"} />
         <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries * 0.75}px` }}>
           {activeAchievements.map((ach, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "4px" }}>
               <div style={{ flex: 1 }}>
-                <h3 style={{ fontWeight: "bold", fontSize: "0.9em", fontFamily: fonts.heading }}>
+                <span style={{ fontWeight: "bold", fontSize: "0.95em", fontFamily: fonts.heading, color: theme.text }}>
                   {ach.title}
-                </h3>
-                <p style={{ fontSize: "0.85em", color: "#4b5563", fontFamily: fonts.body }}>
-                  {ach.description}
-                </p>
+                </span>
+                {ach.description && (
+                  <span style={{ fontSize: "0.9em", color: "#4b5563", fontFamily: fonts.body, marginLeft: "8px" }}>
+                    — {ach.description}
+                  </span>
+                )}
               </div>
-              <span style={{ fontSize: "0.8em", fontWeight: "bold", color: getColor("dates", "#a1a1aa"), whiteSpace: "nowrap", marginLeft: "10px" }}>
+              <span style={{ fontSize: "0.9em", color: getColor("dates", "#000000"), fontFamily: fonts.body, whiteSpace: "nowrap", marginLeft: "10px" }}>
                 {ach.date}
               </span>
             </div>
@@ -362,21 +447,26 @@ const ProfessionalTemplate = ({ data }) => {
     if (activeCerts.length === 0) return null;
     return (
       <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
-        <SectionHeader title={titles.certifications || "Certifications"} />
-        <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries * 0.75}px` }}>
+        <SectionHeader title={titles.certifications || "Certificates"} />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "0.5rem 1rem",
+            fontSize: "0.95em",
+          }}
+        >
           {activeCerts.map((cert, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", paddingBottom: "4px", borderBottom: `1px solid ${theme.border}` }}>
+            <div key={i} style={{ display: "flex", gap: "0.4rem", fontFamily: fonts.body }}>
+              <span style={{ color: getColor("dotsBarsBubbles", "#000000"), flexShrink: 0 }}>•</span>
               <div>
-                <h3 style={{ fontSize: "0.85em", fontWeight: "bold", textTransform: "uppercase", fontFamily: fonts.heading }}>
-                  {cert.name}
-                </h3>
-                <p style={{ ...getSubtitleStyle(), fontSize: "0.8em" }}>
-                  {cert.issuer}
-                </p>
+                <span style={{ fontWeight: "bold" }}>{cert.name}</span>
+                {cert.issuer && (
+                  <span style={{ color: "#4b5563", display: "block", fontSize: "0.85em", marginTop: "1px" }}>
+                    {cert.issuer}
+                  </span>
+                )}
               </div>
-              <span style={{ fontSize: "0.8em", fontWeight: "bold", color: getColor("dates", "#a1a1aa") }}>
-                {cert.date}
-              </span>
             </div>
           ))}
         </div>
@@ -385,18 +475,33 @@ const ProfessionalTemplate = ({ data }) => {
   };
 
   const renderCustomSections = () => {
-    const visibleCustomSections = customSections.filter((sec) => sec.entries?.some((e) => e.visible !== false));
-    if (visibleCustomSections.length === 0) return null;
+    // Filter out sections that are Languages, as they are custom-rendered with proficiency dots
+    const visibleCustomSections = customSections.filter(
+      (sec) =>
+        !sec.title?.toLowerCase().includes("lang") &&
+        sec.entries?.some((e) => e.visible !== false)
+    );
+
+    // Find any Language sections to render with custom dots
+    const languageSections = customSections.filter(
+      (sec) =>
+        sec.title?.toLowerCase().includes("lang") &&
+        sec.entries?.some((e) => e.visible !== false)
+    );
+
+    if (visibleCustomSections.length === 0 && languageSections.length === 0) return null;
+
     return (
       <>
+        {languageSections.map((sec) => renderLanguages(sec))}
         {visibleCustomSections.map((sec) => (
           <section key={sec.id} style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
             <SectionHeader title={sec.title} />
             <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
               {sec.entries.filter((e) => e.visible !== false).map((entry, i) => (
-                <div key={i}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
-                    <h3 style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: "0.95em", fontFamily: fonts.heading }}>
+                <div key={i} style={{ marginBottom: "4px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontWeight: "bold", fontSize: "0.95em", fontFamily: fonts.heading, color: theme.text }}>
                       {entry.link ? (
                         <a href={entry.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
                           {entry.title} ↗
@@ -404,21 +509,24 @@ const ProfessionalTemplate = ({ data }) => {
                       ) : (
                         entry.title
                       )}
-                    </h3>
-                    <span style={{ fontSize: "0.8em", fontWeight: "bold", color: getColor("dates", "#71717a") }}>
-                      {entry.startDate && `${formatDate(entry.startDate)} - ${entry.endDate ? formatDate(entry.endDate) : "Present"}`}
+                    </span>
+                    <span style={{ fontSize: "0.9em", color: getColor("dates", "#000000"), fontFamily: fonts.body }}>
+                      {entry.startDate && `${formatDate(entry.startDate)} – ${entry.endDate ? formatDate(entry.endDate) : "Present"}`}
                     </span>
                   </div>
                   {entry.subtitle && (
-                    <p style={{ ...getSubtitleStyle(), fontSize: "0.85em", marginBottom: "4px" }}>
-                      {entry.subtitle} {entry.location && `• ${entry.location}`}
-                    </p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "2px" }}>
+                      <span style={{ fontStyle: "italic", fontSize: "0.95em", color: getSubtitleStyle().color, fontFamily: fonts.body }}>
+                        {entry.subtitle}
+                      </span>
+                      {entry.location && (
+                        <span style={{ fontSize: "0.9em", color: "#4b5563", fontFamily: fonts.body }}>
+                          {entry.location}
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {entry.content && (
-                    <p style={{ fontSize: "0.9em", whiteSpace: "pre-wrap", color: "#52525b", fontFamily: fonts.body }}>
-                      {formatDescriptionList(entry.content, theme.listStyle)}
-                    </p>
-                  )}
+                  {entry.content && renderDescriptionList(entry.content)}
                 </div>
               ))}
             </div>
@@ -430,15 +538,15 @@ const ProfessionalTemplate = ({ data }) => {
 
   return (
     <div style={containerStyle}>
-      {/* Header - Centered for Professional */}
-      <header style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+      {/* Header - Centered for Redesigned Professional, without profile image */}
+      <header style={{ textAlign: "center", marginBottom: "1.2rem" }}>
         <h1
           style={{
-            fontSize: "2.2em",
+            fontSize: "2.3em",
             fontWeight: "bold",
             color: getColor("name"),
-            marginBottom: "0.25rem",
-            textTransform: "uppercase",
+            marginBottom: "0.2rem",
+            textTransform: "none",
             fontFamily: fonts.heading,
           }}
         >
@@ -448,13 +556,14 @@ const ProfessionalTemplate = ({ data }) => {
         </h1>
         <p
           style={{
-            fontSize: "1em",
+            fontSize: "1.05em",
             color: getColor("jobTitle", "#4b5563"),
-            fontWeight: "bold",
-            marginBottom: "0.75rem",
+            fontStyle: "italic",
+            fontWeight: "normal",
+            marginBottom: "0.6rem",
             fontFamily: fonts.heading,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
+            textTransform: "none",
+            letterSpacing: "0.02em",
           }}
         >
           {personalInfo.jobTitle || "Job Title"}
@@ -464,50 +573,31 @@ const ProfessionalTemplate = ({ data }) => {
           style={{
             display: "flex",
             justifyContent: "center",
+            alignItems: "center",
             flexWrap: "wrap",
-            gap: "1rem",
-            fontSize: "0.85em",
-            color: "#4b5563",
-            marginBottom: "1rem",
+            gap: "1.2rem",
+            fontSize: "0.9em",
+            color: "#000000",
+            marginBottom: "0.2rem",
+            fontFamily: fonts.body,
           }}
         >
+          {personalInfo.location && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <MapPin size={13} style={{ color: getColor("headerIcons", "#000000") }} aria-hidden="true" />
+              <span>{personalInfo.location}</span>
+            </div>
+          )}
           {personalInfo.email && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.3rem",
-                color: getColor("headerIcons", "#4b5563"),
-              }}
-            >
-              <Mail size={12} aria-hidden="true" />
-              <span style={{ color: "#4b5563" }}>{personalInfo.email}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <Mail size={13} style={{ color: getColor("headerIcons", "#000000") }} aria-hidden="true" />
+              <span>{personalInfo.email}</span>
             </div>
           )}
           {personalInfo.phone && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.3rem",
-                color: getColor("headerIcons", "#4b5563"),
-              }}
-            >
-              <Phone size={12} aria-hidden="true" />
-              <span style={{ color: "#4b5563" }}>{personalInfo.phone}</span>
-            </div>
-          )}
-          {personalInfo.location && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.3rem",
-                color: getColor("headerIcons", "#4b5563"),
-              }}
-            >
-              <MapPin size={12} aria-hidden="true" />
-              <span style={{ color: "#4b5563" }}>{personalInfo.location}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+              <Phone size={13} style={{ color: getColor("headerIcons", "#000000") }} aria-hidden="true" />
+              <span>{personalInfo.phone}</span>
             </div>
           )}
           {(personalInfo.links || []).map(
@@ -526,39 +616,14 @@ const ProfessionalTemplate = ({ data }) => {
                     textDecoration: "none",
                   }}
                 >
-                  <span style={{ color: getColor("linkIcons", "#4b5563") }}>
-                    {getLinkIcon(link.label, link.url, 12)}
+                  <span style={{ color: getColor("linkIcons", "#000000"), display: "flex" }}>
+                    {getLinkIcon(link.label, link.url, 13)}
                   </span>
-                  <span style={{ color: "#4b5563" }}>{link.label}</span>
+                  <span>{link.label}</span>
                 </a>
               ),
           )}
         </div>
-
-        {personalInfo.photoUrl && (
-          <div
-            style={{
-              width: `${theme.profileImage.size}px`,
-              height: `${theme.profileImage.size}px`,
-              borderRadius:
-                theme.profileImage.style === "circle"
-                  ? "50%"
-                  : theme.profileImage.style === "square"
-                    ? "0"
-                    : `${theme.profileImage.borderRadius}px`,
-              overflow: "hidden",
-              border: `2px solid ${theme.border}`,
-              margin: "1rem auto 0 auto",
-              flexShrink: 0,
-            }}
-          >
-            <img
-              src={personalInfo.photoUrl}
-              alt={`${personalInfo.fullName || "Profile"} photo`}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-        )}
       </header>
 
       {/* Content Area */}

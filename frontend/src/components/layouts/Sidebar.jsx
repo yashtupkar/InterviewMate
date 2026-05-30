@@ -439,7 +439,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
           ) : subscription ? (
             <div
               onClick={() => navigate("/billing")}
-              className="relative bg-[#bef264] rounded-xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 cursor-pointer"
+              className="relative bg-[#bef264] border-b-4  border-lime-800/60 rounded-xl p-4 space-y-4 shadow-[0_10px_30px_-10px_rgba(190,242,100,0.5)] mx-1 group transition-all duration-300 cursor-pointer"
             >
               <div className="flex items-center justify-between px-0.5">
                 <span className="text-[10px] font-black text-black uppercase  leading-none opacity-80">

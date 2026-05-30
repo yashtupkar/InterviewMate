@@ -37,8 +37,8 @@ const TechTemplate = ({ data }) => {
     text: c.colors?.text || "#18181b",
     background: c.colors?.background || "#ffffff",
     border: c.colors?.border?.color || "#e4e4e7",
-    fontBody: c.fonts?.body || "Inter",
-    fontHeading: c.fonts?.headings || "Inter",
+    fontBody: c.fonts?.body || "Source Serif Pro",
+    fontHeading: c.fonts?.headings || "Source Serif Pro",
     fontSize: c.layout?.spacing?.fontSize || "10pt",
     lineHeight: c.layout?.spacing?.lineHeight || 1.15,
     margin: c.layout?.spacing?.margin || {

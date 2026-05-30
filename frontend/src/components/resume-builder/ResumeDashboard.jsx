@@ -102,6 +102,21 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
+const TEMPLATE_CATEGORIES = {
+  all: { title: "All Styles", description: "Explore all of our professional, ATS-optimized resume layouts." },
+  classic: { title: "Classic", description: "Timeless, clean, and highly reliable traditional layouts." },
+  professional: { title: "Professional", description: "Corporate-ready designs tailored for business, finance, and technical executives." },
+  creative: { title: "Creative", description: "Vibrant and expressive layouts perfect for portfolios, designers, and marketers." },
+  modern: { title: "Modern", description: "Sleek, minimal, and high-impact designs suited for start-ups and tech roles." },
+};
+
+const CATEGORY_MAP = {
+  classic: ["classic", "simple", "standard"],
+  professional: ["professional", "corporate", "executive", "grid"],
+  creative: ["creative", "elegant"],
+  modern: ["modern", "tech"],
+};
+
 const ResumeDashboard = ({ onNew, onEdit }) => {
   const { resumes, isLoading, deleteResume } = useResume();
   const [view, setView] = useState("dashboard"); // 'dashboard' or 'templates'
@@ -109,6 +124,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [userTier, setUserTier] = useState({ tier: "Free", limit: 1 });
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { getToken, isSignedIn } = useAuth();
 
   useEffect(() => {
@@ -145,6 +161,10 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
   }
 
   if (view === "templates") {
+    const filteredKeys = selectedCategory === "all"
+      ? Object.keys(templates)
+      : CATEGORY_MAP[selectedCategory] || [];
+
     return (
       <div className="flex-1  p-6 md:p-10 overflow-y-auto custom-scrollbar animate-fade">
         <div className="max-w-7xl mx-auto">
@@ -169,8 +189,32 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
             </button>
           </header>
 
-          <div className="grid grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {Object.keys(templates).map((key) => {
+          {/* Categories Pill Navigation */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 bg-zinc-900/60 p-1.5 rounded-2xl border border-zinc-800/80 max-w-fit shadow-lg backdrop-blur-md">
+            {Object.keys(TEMPLATE_CATEGORIES).map((catKey) => {
+              const isActive = selectedCategory === catKey;
+              return (
+                <button
+                  key={catKey}
+                  onClick={() => setSelectedCategory(catKey)}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+                    isActive
+                      ? "bg-[#bef264] text-zinc-950 shadow-[0_0_20px_rgba(190,242,100,0.15)] scale-105"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                  }`}
+                >
+                  {TEMPLATE_CATEGORIES[catKey].title}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="text-zinc-500 font-medium text-xs tracking-wide mb-8">
+            {TEMPLATE_CATEGORIES[selectedCategory].description}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {filteredKeys.map((key) => {
               const themeColor = TEMPLATE_THEMES[key] || "#bef264";
               const customData = {
                 ...DUMMY_RESUME_DATA,
@@ -187,17 +231,15 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
               return (
                 <div key={key} className="group flex flex-col">
                   <div
-                    className="relative aspect-[210/297] bg-white rounded-xl sm:rounded-2xl shadow-lg border border-zinc-200 overflow-hidden cursor-pointer transform group-hover:-translate-y-2 transition-all duration-500"
+                    className="relative aspect-[210/297] bg-white rounded-md sm:rounded-lg shadow-lg overflow-hidden cursor-pointer transform group-hover:-translate-y-2 transition-all duration-500"
                     onClick={() => onNew(key)}
                   >
                     <ResumeCardPreview resume={customData} />
                     <div className="absolute inset-0 bg-zinc-950/0 group-hover:bg-zinc-950/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <div
-                        className="bg-white text-zinc-950 px-6 py-2 rounded-xl font-black text-[10px] tracking-[0.2em] shadow-2xl border-b-4 border-zinc-200 active:border-b-0 active:translate-y-1 transition-all"
-                        style={{ color: themeColor }}
+                        className="bg-[#bef264] text-black px-6 py-2 rounded-xl font-black text-[10px] tracking-[0.2em] shadow-2xl border-b-4 border-lime-700/30 active:border-b-0 active:translate-y-1 transition-all"
                       >
-                        USE{" "}
-                        <span className="hidden md:block">THIS TEMPLATE</span>
+                        CHOOSE
                       </div>
                     </div>
                   </div>
@@ -262,7 +304,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                 setView("templates");
               }
             }}
-            className="group relative aspect-[210/297] bg-black rounded-xl sm:rounded-2xl border-2 border-dashed border-zinc-700 hover:border-lime-400/50 hover:bg-lime-400/5 transition-all flex flex-col items-center justify-center gap-3"
+            className="group relative aspect-[210/297] bg-black rounded-md sm:rounded-lg border-2 border-dashed border-zinc-700 hover:border-lime-400/50 hover:bg-lime-400/5 transition-all flex flex-col items-center justify-center gap-3"
           >
             <div className="text-zinc-500 group-hover:text-lime-400 transition-colors">
               <FiPlusCircle className="w-10 h-10 stroke-[1.5]" />
@@ -276,7 +318,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
           {resumes.map((resume) => (
             <div key={resume._id} className="group flex flex-col">
               <div
-                className="relative aspect-[210/297] bg-zinc-800 rounded-xl sm:rounded-2xlshadow-sm hover:shadow-2xl hover:shadow-lime-400/10 transition-all overflow-hidden cursor-pointer mb-3 border border-zinc-800"
+                className="relative aspect-[210/297] bg-zinc-800 rounded-md sm:rounded-lg shadow-sm hover:shadow-2xl hover:shadow-lime-400/10 transition-all overflow-hidden cursor-pointer mb-3"
                 onClick={() => onEdit(resume._id)}
               >
                 {/* Real Resume Preview */}

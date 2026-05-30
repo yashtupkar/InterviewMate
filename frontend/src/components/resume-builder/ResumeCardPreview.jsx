@@ -142,7 +142,7 @@ export const DUMMY_RESUME_DATA = {
   ],
   customizations: {
     colors: {
-      accent: "#bef264",
+      accent: "#000000",
       text: "#18181b",
       background: "#ffffff",
       applyTo: {
@@ -152,7 +152,7 @@ export const DUMMY_RESUME_DATA = {
         headingsLine: true,
       },
     },
-    fonts: { body: "Inter", headings: "Inter" },
+    fonts: { body: "Source Serif Pro", headings: "Source Serif Pro" },
     layout: {
       spacing: {
         fontSize: "10pt",
@@ -174,12 +174,12 @@ const ResumeCardPreview = ({ resume }) => {
     personalInfo: resume.personalInfo || {},
     customizations: resume.customizations || {
       colors: {
-        accent: "#bef264",
+        accent: "#000000",
         text: "#18181b",
         background: "#ffffff",
         applyTo: {},
       },
-      fonts: { body: "Inter", headings: "Inter" },
+      fonts: { body: "Source Serif Pro", headings: "Source Serif Pro" },
       layout: {
         spacing: {
           fontSize: "10pt",
