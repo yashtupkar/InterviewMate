@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { AppContext } from "../context/AppContext";
 import usePollyTTS from "./usePollyTTS";
 import { interviewAgents } from "../constants/agents";
+import { createPCMRecorder } from "../utils/pcmRecorder";
 
 const AGENT_COLORS = interviewAgents.reduce((acc, agent) => {
   acc[agent.name] = `#${agent.bg}`;
@@ -56,6 +57,8 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   const lastSpkRef = useRef(null);
   const recRef = useRef(null);
   const recognitionRef = recRef;
+  const socketRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
   const recognitionStoppedByUsRef = useRef(false);
   const proTimRef = useRef(null);
   const silTimRef = useRef(null);
@@ -260,13 +263,6 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
     setIsThinking(false);
 
-    if (recRef.current && !mutedRef.current) {
-      try {
-        recRef.current.stop();
-        recognitionStoppedByUsRef.current = true;
-      } catch (err) { }
-    }
-
     setSpeakingAgent(agent.name);
     agentSpeakingRef.current = true;
 
@@ -283,16 +279,6 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     agentSpeakingRef.current = false;
     busyRef.current = false;
 
-    if (aliveRef.current && !mutedRef.current && recognitionStoppedByUsRef.current && recRef.current) {
-      recognitionStoppedByUsRef.current = false;
-      setTimeout(() => {
-        try {
-          if (recRef.current && aliveRef.current && !mutedRef.current) {
-            recRef.current.start();
-          }
-        } catch (err) { }
-      }, 100);
-    }
 
     if (finalEndpoint === "conclude") {
       setTimeout(triggerEndSession, 2000); // trigger the ending which asks for confirmation logic or automatically confirm?
@@ -348,131 +334,216 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     busyRef.current = false;
     openedRef.current = false;
 
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      toast.error("Speech recognition needs Chrome or Edge.");
-    } else {
-      const recognition = new SR();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
-      recognitionRef.current = recognition;
-      recRef.current = recognition;
+    let ws = null;
+    let mediaRecorder = null;
 
-      let finalBuffer = "";
-      let interimText = "";
-      let finalizeTimer = null;
-
-      recognition.onstart = () => {
-        recognitionStoppedByUsRef.current = false;
-      };
-
-      recognition.onresult = (e) => {
-        if (!aliveRef.current || mutedRef.current || agentSpeakingRef.current) return;
-
-        if (!aiOpeningFiredRef.current && !userInitiatedRef.current) {
-          userInitiatedRef.current = true;
-          if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    const stopSTT = () => {
+      if (mediaRecorder) {
+        try {
+          mediaRecorder.stop();
+        } catch (e) {
+          console.error("[STT:GD] Error stopping PCM Recorder:", e);
         }
-
-        if (prefetchedTurnRef.current) prefetchedTurnRef.current = null;
-        if (proTimRef.current) clearTimeout(proTimRef.current);
-        if (silTimRef.current) clearTimeout(silTimRef.current);
-
-        lastUserSpeechRef.current = Date.now();
-        userSpeakingRef.current = true;
-        setIsUserSpeaking(true);
-
-        interimText = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          if (e.results[i].isFinal) finalBuffer += e.results[i][0].transcript;
-          else interimText += e.results[i][0].transcript;
+        mediaRecorder = null;
+      }
+      if (ws) {
+        try {
+          ws.onclose = null;
+          ws.onerror = null;
+          ws.close();
+        } catch (e) {
+          console.error("[STT:GD] Error closing WebSocket:", e);
         }
-        setLiveText((finalBuffer + " " + interimText).trim());
+        ws = null;
+      }
+    };
 
-        if (finalizeTimer) clearTimeout(finalizeTimer);
-        finalizeTimer = setTimeout(() => {
-          const spoken = finalBuffer.trim();
-          finalBuffer = "";
-          interimText = "";
-          setLiveText("");
-          userSpeakingRef.current = false;
-          setIsUserSpeaking(false);
+    const startSTT = async () => {
+      try {
+        const tokenResp = await getTokenRef.current();
+        const res = await axios.post(
+          `${backend_URL}/api/stt/token`,
+          {},
+          { headers: { Authorization: `Bearer ${tokenResp}` } }
+        );
 
-          if (spoken) {
-            const userEntry = { id: Date.now(), speaker: "You", role: "user", text: spoken, color: "#22c55e" };
-            const lower = spoken.toLowerCase();
-            const keywords = ["conclusion", "conclude", "concluding", "wrap up", "wrapping up", "final point", "thank you everyone", "that is all from my side", "my conclusion", "summarize", "summarizing", "end the discussion"];
-            const isUserConcluding = keywords.some((k) => lower.includes(k));
+        const token = res.data.token;
+        if (!token || !aliveRef.current) return;
 
-            if (isUserConcluding && !concludedRef.current) {
-              concludedRef.current = true;
-              conclusionPendingRef.current = false;
-              if (proTimRef.current) clearTimeout(proTimRef.current);
-              if (silTimRef.current) clearTimeout(silTimRef.current);
+        console.log("[STT:GD] Connecting to Deepgram WebSocket (PCM16 config)...");
+        const wsUrl = "wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&channels=1&smart_format=true&model=nova-2&language=en-US&interim_results=true&utterance_end_ms=1000&vad_events=true";
+        ws = new WebSocket(wsUrl, ["token", token]);
+        socketRef.current = ws;
 
-              toast.success("Conclusion detected. Finalizing discussion...");
-              setTranscript((prev) => {
-                const next = [...prev, userEntry];
-                transcriptRef.current = next;
-                return next;
-              });
+        let finalBuffer = "";
+        let interimText = "";
+        let finalizeTimer = null;
 
-              setTimeout(async () => {
-                try {
-                  const token = await getTokenRef.current();
-                  await axios.post(`${backend_URL}/api/group-discussion/add-user-message`, { sessionId, text: spoken }, { headers: { Authorization: `Bearer ${token}` } });
-                } catch (err) { }
-                if (aliveRef.current) endSession();
-              }, 1200);
-              return;
-            }
-
-            setTranscript((prev) => {
-              const next = [...prev, userEntry];
-              transcriptRef.current = next;
-              return next;
+        ws.onopen = async () => {
+          if (!aliveRef.current) return;
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                channelCount: 1,
+              },
             });
 
-            if (!busyRef.current && !silTimRef.current) {
-              silTimRef.current = setTimeout(() => {
-                if (aliveRef.current) {
-                  runAgentTurnRef.current({
-                    endpoint: isConcludingPhase ? "conclude" : "next-turn",
-                    body: { userMessage: spoken, proactive: false },
-                  });
+            const recorder = await createPCMRecorder(
+              stream,
+              (pcm16Buffer) => {
+                if (ws.readyState === WebSocket.OPEN && !mutedRef.current) {
+                  ws.send(pcm16Buffer);
                 }
-                silTimRef.current = null;
-              }, 300);
-            }
+              },
+              null
+            );
+            mediaRecorder = recorder;
+            toast.success("🎙️ Mic ready — speak when you want to join!");
+          } catch (err) {
+            console.error("[STT:GD] Mic access or PCM Recorder error:", err);
+            toast.error("Couldn't start microphone. Check browser permissions.");
           }
-        }, 3000);
-      };
+        };
 
-      recognition.onerror = (e) => {
-        if (["no-speech", "aborted"].includes(e.error)) return;
-      };
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
 
-      recognition.onend = () => {
-        if (aliveRef.current && !mutedRef.current && !recognitionStoppedByUsRef.current) {
-          setTimeout(() => {
-            try {
-              if (recRef.current && aliveRef.current && !mutedRef.current && !recognitionStoppedByUsRef.current) {
-                recRef.current.start();
+          // Handle Speech started/ended events from VAD
+          if (data.type === "SpeechStarted") {
+            console.log("%c[STT:GD:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
+            // Dynamic Barge-In: immediately stop agent speaking if user starts talking
+            if (agentSpeakingRef.current) {
+              console.log("[STT:GD:Barge-In] User speech start detected. Stopping agent TTS.");
+              stopSpeaking();
+              setSpeakingAgent(null);
+              agentSpeakingRef.current = false;
+              busyRef.current = false;
+            }
+            return;
+          } else if (data.type === "UtteranceEnd") {
+            console.log("%c[STT:GD:VAD] Speech ended detected by Deepgram VAD", "color: #f59e0b; font-weight: bold;");
+            return;
+          }
+
+          const alternative = data.channel?.alternatives?.[0];
+          const transcriptChunk = alternative?.transcript || "";
+          const isFinal = data.is_final;
+          const confidence = alternative?.confidence || 0;
+
+          if (!aliveRef.current || mutedRef.current) return;
+
+          if (transcriptChunk.trim()) {
+            console.log(
+              `[STT:GD:DG] Transcript chunk: "${transcriptChunk}" | Confidence: ${confidence.toFixed(4)} | IsFinal: ${isFinal}`
+            );
+
+            // Double check barge-in in case SpeechStarted was missed
+            if (agentSpeakingRef.current) {
+              console.log("[STT:GD:Barge-In] User transcript received. Stopping agent TTS.");
+              stopSpeaking();
+              setSpeakingAgent(null);
+              agentSpeakingRef.current = false;
+              busyRef.current = false;
+            }
+
+            if (!aiOpeningFiredRef.current && !userInitiatedRef.current) {
+              userInitiatedRef.current = true;
+              if (openTimerRef.current) clearTimeout(openTimerRef.current);
+            }
+
+            if (prefetchedTurnRef.current) prefetchedTurnRef.current = null;
+            if (proTimRef.current) clearTimeout(proTimRef.current);
+            if (silTimRef.current) clearTimeout(silTimRef.current);
+
+            lastUserSpeechRef.current = Date.now();
+            userSpeakingRef.current = true;
+            setIsUserSpeaking(true);
+
+            if (isFinal) {
+              finalBuffer = (finalBuffer + " " + transcriptChunk).trim();
+              interimText = "";
+            } else {
+              interimText = transcriptChunk;
+            }
+            setLiveText((finalBuffer + " " + interimText).trim());
+
+            if (finalizeTimer) clearTimeout(finalizeTimer);
+            finalizeTimer = setTimeout(() => {
+              const spoken = finalBuffer.trim();
+              finalBuffer = "";
+              interimText = "";
+              setLiveText("");
+              userSpeakingRef.current = false;
+              setIsUserSpeaking(false);
+
+              if (spoken) {
+                const userEntry = { id: Date.now(), speaker: "You", role: "user", text: spoken, color: "#22c55e" };
+                const lower = spoken.toLowerCase();
+                const keywords = ["conclusion", "conclude", "concluding", "wrap up", "wrapping up", "final point", "thank you everyone", "that is all from my side", "my conclusion", "summarize", "summarizing", "end the discussion"];
+                const isUserConcluding = keywords.some((k) => lower.includes(k));
+
+                if (isUserConcluding && !concludedRef.current) {
+                  concludedRef.current = true;
+                  conclusionPendingRef.current = false;
+                  if (proTimRef.current) clearTimeout(proTimRef.current);
+                  if (silTimRef.current) clearTimeout(silTimRef.current);
+
+                  toast.success("Conclusion detected. Finalizing discussion...");
+                  setTranscript((prev) => {
+                    const next = [...prev, userEntry];
+                    transcriptRef.current = next;
+                    return next;
+                  });
+
+                  setTimeout(async () => {
+                    try {
+                      const token = await getTokenRef.current();
+                      await axios.post(`${backend_URL}/api/group-discussion/add-user-message`, { sessionId, text: spoken }, { headers: { Authorization: `Bearer ${token}` } });
+                    } catch (err) { }
+                    if (aliveRef.current) confirmEndSession();
+                  }, 1200);
+                  return;
+                }
+
+                setTranscript((prev) => {
+                  const next = [...prev, userEntry];
+                  transcriptRef.current = next;
+                  return next;
+                });
+
+                if (!busyRef.current && !silTimRef.current) {
+                  silTimRef.current = setTimeout(() => {
+                    if (aliveRef.current) {
+                      runAgentTurnRef.current({
+                        endpoint: isConcludingPhase ? "conclude" : "next-turn",
+                        body: { userMessage: spoken, proactive: false },
+                      });
+                    }
+                    silTimRef.current = null;
+                  }, 300);
+                }
               }
-            } catch (err) { }
-          }, 100);
-        }
-      };
+            }, 3000);
+          }
+        };
 
-      try {
-        recognitionStoppedByUsRef.current = false;
-        recognition.start();
-        toast.success("🎙️ Mic ready — speak when you want to join!");
+        ws.onclose = () => {
+          console.log("[STT:GD:WS] Deepgram WS closed in GD.");
+          if (aliveRef.current && !mutedRef.current) {
+            console.log("[STT:GD:WS] Reconnecting in 1000ms...");
+            setTimeout(startSTT, 1000);
+          }
+        };
+
       } catch (err) {
-        toast.error("Couldn't start microphone. Check browser permissions.");
+        console.error("[STT:GD] Deepgram initialization error in GD:", err);
       }
-    }
+    };
+
+    startSTT();
 
     (async () => {
       try {
@@ -514,10 +585,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       if (prepTimerRef.current) clearInterval(prepTimerRef.current);
       if (proTimRef.current) clearTimeout(proTimRef.current);
       if (silTimRef.current) clearTimeout(silTimRef.current);
-      if (recRef.current) {
-        try { recRef.current.stop(); } catch (_) { }
-        recRef.current = null;
-      }
+      stopSTT();
     };
   }, [sessionId]);
 
@@ -525,29 +593,6 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     const next = !mutedRef.current;
     mutedRef.current = next;
     setIsMuted(next);
-    if (recRef.current) {
-      if (next) {
-        try {
-          recRef.current.stop();
-          recognitionStoppedByUsRef.current = true;
-        } catch (err) { }
-      } else {
-        recognitionStoppedByUsRef.current = false;
-        setTimeout(() => {
-          try {
-            if (recRef.current && !mutedRef.current) {
-              recRef.current.start();
-            }
-          } catch (err) {
-            setTimeout(() => {
-              try {
-                if (recRef.current && !mutedRef.current) recRef.current.start();
-              } catch (_) { }
-            }, 500);
-          }
-        }, 50);
-      }
-    }
   };
 
   useEffect(() => {
@@ -607,9 +652,20 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
     if (proTimRef.current) clearTimeout(proTimRef.current);
     if (silTimRef.current) clearTimeout(silTimRef.current);
-    if (recRef.current) {
-      try { recRef.current.stop(); } catch (_) { }
-      recRef.current = null;
+    if (mediaRecorderRef.current) {
+      try {
+        if (mediaRecorderRef.current.state !== "inactive") {
+          mediaRecorderRef.current.stop();
+        }
+      } catch (_) {}
+      mediaRecorderRef.current = null;
+    }
+    if (socketRef.current) {
+      try {
+        socketRef.current.onclose = null;
+        socketRef.current.close();
+      } catch (_) {}
+      socketRef.current = null;
     }
 
     try {

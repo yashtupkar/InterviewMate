@@ -8,6 +8,7 @@ import { AppContext } from "../context/AppContext";
 import { interviewAgents } from "../constants/agents";
 import usePollyTTS from "./usePollyTTS";
 import { analyzeCodeSubmission } from "../utils/codeSubmissionUtils";
+import { createPCMRecorder } from "../utils/pcmRecorder";
 
 export const useCustomInterview = () => {
   const {
@@ -83,6 +84,9 @@ export const useCustomInterview = () => {
 
   // Refs
   const recognitionRef = useRef(null);
+  const socketRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const isMutedRef = useRef(!isMicEnabled);
   const transcriptRef = useRef([]); // Internal JSON transcript for LLM
   const silenceTimerRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -688,11 +692,6 @@ export const useCustomInterview = () => {
       try {
         isAgentSpeakingRef.current = true;
         setIsAgentSpeaking(true);
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.abort();
-          } catch (e) {}
-        }
 
         // Use AWS Polly TTS instead of browser native
         await speakText(cleanText, agentName, {
@@ -723,30 +722,12 @@ export const useCustomInterview = () => {
                 handleEndCall();
                 return;
               }
-              if (
-                !hasCallEndedRef.current &&
-                !activeCodingTaskRef.current &&
-                recognitionRef.current
-              ) {
-                try {
-                  recognitionRef.current.start();
-                } catch (e) {}
-              }
             }, 500);
           },
           onError: (err) => {
             console.error("[TTS] Polly error:", err);
             isAgentSpeakingRef.current = false;
             setIsAgentSpeaking(false);
-            if (
-              !hasCallEndedRef.current &&
-              !activeCodingTaskRef.current &&
-              recognitionRef.current
-            ) {
-              try {
-                recognitionRef.current.start();
-              } catch (e) {}
-            }
           },
         });
       } catch (err) {
@@ -820,119 +801,210 @@ export const useCustomInterview = () => {
     countdownMessageIdRef.current = null;
   }, []);
 
-  const startSTT = useCallback(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      toast.error("Speech recognition not supported.");
-      setConnectionStatus("Error: Browser Not Supported");
-      return;
-    }
-    if (recognitionRef.current) return;
-
-    const recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onstart = () => {
-      setCallStatus("active");
-      setConnectionStatus("Connected");
-      sttFinalBufferRef.current = "";
-      lastRecognizedTextRef.current = "";
-      lastSpeechEventTimeRef.current = 0;
-      if (transcriptRef.current.length === 0) handleAiChat();
-    };
-
-    recognition.onresult = (e) => {
-      const now = Date.now();
-      const isCoolingDown = now - lastAiFinishTimeRef.current < 1500;
-      if (
-        isAgentSpeakingRef.current ||
-        isAiThinkingRef.current ||
-        isCoolingDown ||
-        hasCallEndedRef.current
-      )
-        return;
-
-      let interimTranscript = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const transcriptChunk = e.results[i][0].transcript;
-        if (e.results[i].isFinal) sttFinalBufferRef.current += transcriptChunk;
-        else interimTranscript += transcriptChunk;
+  const stopSTT = useCallback(() => {
+    if (mediaRecorderRef.current) {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.error("[STT] Error stopping PCM Recorder:", e);
       }
+      mediaRecorderRef.current = null;
+    }
+    if (socketRef.current) {
+      try {
+        socketRef.current.onclose = null;
+        socketRef.current.onerror = null;
+        socketRef.current.close();
+      } catch (e) {
+        console.error("[STT] Error closing WebSocket:", e);
+      }
+      socketRef.current = null;
+    }
+  }, []);
 
-      const currentText = (
-        sttFinalBufferRef.current + interimTranscript
-      ).trim();
-      if (currentText) {
-        // Ignore duplicate/no-change recognition events to prevent countdown flicker.
-        const hasSpeechUpdate = currentText !== lastRecognizedTextRef.current;
-        if (!hasSpeechUpdate && !interimTranscript.trim()) return;
+  const startSTT = useCallback(() => {
+    if (socketRef.current || mediaRecorderRef.current) return;
 
-        lastRecognizedTextRef.current = currentText;
-        lastSpeechEventTimeRef.current = Date.now();
+    const connectDeepgram = async () => {
+      try {
+        setConnectionStatus("Connecting...");
+        const tokenResp = await getToken();
+        // Fetch temporary token securely from backend
+        const res = await axios.post(
+          `${backend_URL}/api/stt/token`,
+          {},
+          { headers: { Authorization: `Bearer ${tokenResp}` } }
+        );
 
-        setIsUserSpeaking(true);
-        if (inactivityTimerRef.current)
-          clearTimeout(inactivityTimerRef.current);
-        isWaitingForInactivityResponseRef.current = false;
-
-        // User is speaking: always cancel live countdown immediately.
-        // Use interval ref (live value) to avoid stale state captured by onresult closure.
-        if (countdownIntervalRef.current) {
-          cancelCountdown();
+        const token = res.data.token;
+        if (!token) {
+          throw new Error("No token returned from backend");
         }
 
-        updateUserTranscript(currentText);
+        console.log("[STT] Connecting to Deepgram WebSocket (PCM16 config)...");
+        const wsUrl = "wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&channels=1&smart_format=true&model=nova-2&language=en-US&interim_results=true&utterance_end_ms=1000&vad_events=true";
+        const ws = new WebSocket(wsUrl, ["token", token]);
+        socketRef.current = ws;
 
-        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-        const snapshotText = currentText;
-        silenceTimerRef.current = setTimeout(() => {
-          // Start countdown only if silence persisted and text remained unchanged.
-          const stableSilence =
-            Date.now() - lastSpeechEventTimeRef.current >= PAUSE_DETECT;
-          const textUnchanged = lastRecognizedTextRef.current === snapshotText;
-          if (!stableSilence || !textUnchanged) return;
+        ws.onopen = async () => {
+          console.log("[STT] Deepgram WebSocket opened successfully.");
+          setCallStatus("active");
+          setConnectionStatus("Connected");
+          sttFinalBufferRef.current = "";
+          lastRecognizedTextRef.current = "";
+          lastSpeechEventTimeRef.current = 0;
+          if (transcriptRef.current.length === 0) handleAiChat();
 
-          // User has paused: start the countdown for auto-send
-          const messageId = currentUserMessageIdRef.current;
-          if (messageId) {
-            startCountdown(messageId, snapshotText);
+          // Access mic stream and start custom PCM recorder
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                channelCount: 1,
+              },
+            });
+
+            const recorder = await createPCMRecorder(
+              stream,
+              (pcm16Buffer) => {
+                if (ws.readyState === WebSocket.OPEN && !isMutedRef.current) {
+                  ws.send(pcm16Buffer);
+                }
+              },
+              null // Volume monitoring not actively visualized in interview (handled in mic test)
+            );
+            mediaRecorderRef.current = recorder;
+            console.log("[STT] PCM Recorder started capturing and streaming.");
+          } catch (err) {
+            console.error("[STT] Mic access or PCM Recorder error:", err);
+            toast.error("Microphone access denied or failed.");
+            setConnectionStatus("Mic Blocked");
           }
-        }, PAUSE_DETECT);
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+
+          // Handle Speech started/ended events from VAD
+          if (data.type === "SpeechStarted") {
+            console.log("%c[STT:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
+            // Dynamic Barge-In: immediately stop agent speaking if user starts talking
+            if (isAgentSpeakingRef.current) {
+              console.log("[STT:Barge-In] User speech start detected. Stopping agent TTS.");
+              stopSpeaking();
+              isAgentSpeakingRef.current = false;
+              setIsAgentSpeaking(false);
+            }
+            return;
+          } else if (data.type === "UtteranceEnd") {
+            console.log("%c[STT:VAD] Speech ended detected by Deepgram VAD", "color: #f59e0b; font-weight: bold;");
+            return;
+          }
+
+          const alternative = data.channel?.alternatives?.[0];
+          const transcriptChunk = alternative?.transcript || "";
+          const isFinal = data.is_final;
+          const confidence = alternative?.confidence || 0;
+
+          if (hasCallEndedRef.current || isAiThinkingRef.current) return;
+
+          if (transcriptChunk.trim()) {
+            console.log(
+              `[STT:DG] Transcript chunk: "${transcriptChunk}" | Confidence: ${confidence.toFixed(4)} | IsFinal: ${isFinal}`
+            );
+
+            // Double check barge-in in case SpeechStarted was missed
+            if (isAgentSpeakingRef.current) {
+              console.log("[STT:Barge-In] User transcript received. Stopping agent TTS.");
+              stopSpeaking();
+              isAgentSpeakingRef.current = false;
+              setIsAgentSpeaking(false);
+            }
+
+            let interimTranscript = "";
+            if (isFinal) {
+              sttFinalBufferRef.current = (sttFinalBufferRef.current + " " + transcriptChunk).trim();
+            } else {
+              interimTranscript = transcriptChunk;
+            }
+
+            const currentText = (sttFinalBufferRef.current + " " + interimTranscript).trim();
+            if (currentText) {
+              const hasSpeechUpdate = currentText !== lastRecognizedTextRef.current;
+              if (!hasSpeechUpdate && !interimTranscript.trim()) return;
+
+              lastRecognizedTextRef.current = currentText;
+              lastSpeechEventTimeRef.current = Date.now();
+
+              setIsUserSpeaking(true);
+              if (inactivityTimerRef.current)
+                clearTimeout(inactivityTimerRef.current);
+              isWaitingForInactivityResponseRef.current = false;
+
+              if (countdownIntervalRef.current) {
+                cancelCountdown();
+              }
+
+              updateUserTranscript(currentText);
+
+              if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+              const snapshotText = currentText;
+              silenceTimerRef.current = setTimeout(() => {
+                const stableSilence =
+                  Date.now() - lastSpeechEventTimeRef.current >= PAUSE_DETECT;
+                const textUnchanged = lastRecognizedTextRef.current === snapshotText;
+                if (!stableSilence || !textUnchanged) return;
+
+                const messageId = currentUserMessageIdRef.current;
+                if (messageId) {
+                  startCountdown(messageId, snapshotText);
+                }
+              }, PAUSE_DETECT);
+            }
+          }
+        };
+
+        ws.onerror = (err) => {
+          console.error("[STT:WS] Deepgram WebSocket error:", err);
+        };
+
+        ws.onclose = () => {
+          console.log("[STT:WS] Deepgram WebSocket closed.");
+          if (
+            !hasCallEndedRef.current &&
+            !activeCodingTaskRef.current &&
+            !isAgentSpeakingRef.current &&
+            socketRef.current === ws
+          ) {
+            socketRef.current = null;
+            if (mediaRecorderRef.current) {
+              try { mediaRecorderRef.current.stop(); } catch (e) {}
+              mediaRecorderRef.current = null;
+            }
+            console.log("[STT:WS] WebSocket closed unexpectedly. Reconnecting in 1000ms...");
+            setTimeout(startSTT, 1000);
+          }
+        };
+
+      } catch (err) {
+        console.error("[STT] Deepgram STT connection error:", err);
+        toast.error("Failed to connect to Deepgram STT.");
+        setConnectionStatus("Error");
       }
     };
 
-    recognition.onerror = (e) => {
-      if (e.error === "not-allowed") {
-        setConnectionStatus("Mic Blocked");
-        toast.error("Microphone access denied.");
-      }
-    };
-
-    recognition.onend = () => {
-      if (
-        !hasCallEndedRef.current &&
-        !activeCodingTaskRef.current &&
-        !isAgentSpeakingRef.current
-      ) {
-        try {
-          recognition.start();
-        } catch (e) {}
-      }
-    };
-
-    recognitionRef.current = recognition;
-    try {
-      recognition.start();
-    } catch (e) {}
+    connectDeepgram();
   }, [
+    getToken,
+    backend_URL,
     handleAiChat,
-    handleUserSpeech,
     updateUserTranscript,
     setCallStatus,
     cancelCountdown,
     startCountdown,
+    stopSpeaking,
   ]);
 
   const handleEndCall = useCallback(() => {
@@ -943,12 +1015,7 @@ export const useCustomInterview = () => {
     setConnectionStatus("Call Ended");
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     cancelCountdown(); // Clean up countdown timers
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
+    stopSTT();
     stopSpeaking();
 
     (async () => {
@@ -995,12 +1062,7 @@ export const useCustomInterview = () => {
 
   const handleSaveAndExit = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
+    stopSTT();
     stopSpeaking();
 
     const loadingToast = toast.loading("Saving interview progress...");
@@ -1238,10 +1300,7 @@ export const useCustomInterview = () => {
     return () => {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       cancelCountdown();
-      if (recognitionRef.current)
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
+      stopSTT();
       stopSpeaking();
     };
   }, []);
@@ -1250,6 +1309,7 @@ export const useCustomInterview = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
     setIsMicEnabled(!newMuted);
+    isMutedRef.current = newMuted;
   };
 
   const toggleVideo = () => setIsVideoOn(!isVideoOn);
@@ -1261,6 +1321,7 @@ export const useCustomInterview = () => {
     setActiveCodingTask(codingPopupTask);
     setCodingPopupTask(null);
     setIsMuted(true);
+    isMutedRef.current = true;
     stopSpeaking();
     isAgentSpeakingRef.current = false;
     setIsAgentSpeaking(false);

@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useContext } from "react";
 import "./MicTest.css";
-
-const SpeechRecognitionAPI =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
+import axios from "axios";
+import { useAuth } from "@clerk/clerk-react";
+import { AppContext } from "../context/AppContext";
+import { toast } from "react-hot-toast";
+import { createPCMRecorder } from "../utils/pcmRecorder";
 
 function MicTest() {
+  const { backend_URL } = useContext(AppContext);
+  const { getToken } = useAuth();
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -13,38 +17,24 @@ function MicTest() {
   const [volume, setVolume] = useState(0);
   const [error, setError] = useState("");
 
-  const recognitionRef = useRef(null);
+  const socketRef = useRef(null);
+  const pcmRecorderRef = useRef(null);
   const isListeningRef = useRef(false);
   const stopRequestedRef = useRef(false);
-  const restartTimerRef = useRef(null);
   const streamRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const rafRef = useRef(null);
 
   const speechRecognitionSupported = useMemo(
-    () => Boolean(SpeechRecognitionAPI),
+    () => Boolean(window.AudioContext || window.webkitAudioContext),
     [],
   );
 
-  const stopVolumeMonitor = useCallback(() => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    analyserRef.current = null;
-    setVolume(0);
-  }, []);
-
   const stopMediaStream = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      console.log("[STT:MicTest] Disabling microphone track and stopping stream.");
+      streamRef.current.getTracks().forEach((track) => {
+        track.enabled = false;
+        track.stop();
+      });
       streamRef.current = null;
     }
   }, []);
@@ -77,58 +67,41 @@ function MicTest() {
     }
   }, [selectedDeviceId]);
 
-  const startVolumeMonitor = useCallback((stream) => {
-    const AudioContextAPI = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextAPI) return;
-
-    const audioContext = new AudioContextAPI();
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(analyser);
-
-    audioContextRef.current = audioContext;
-    analyserRef.current = analyser;
-
-    const data = new Uint8Array(analyser.frequencyBinCount);
-
-    const update = () => {
-      if (!analyserRef.current) return;
-      analyserRef.current.getByteFrequencyData(data);
-      const avg = data.reduce((sum, value) => sum + value, 0) / data.length;
-      setVolume(Math.min(100, Math.round((avg / 255) * 140)));
-      rafRef.current = requestAnimationFrame(update);
-    };
-
-    update();
-  }, []);
-
   const stopListening = useCallback(() => {
+    console.log("[STT:MicTest] Stop listening requested. Cleaning up resources...");
     stopRequestedRef.current = true;
     setIsListening(false);
     isListeningRef.current = false;
     setInterimTranscript("");
+    setVolume(0);
 
-    if (restartTimerRef.current) {
-      clearTimeout(restartTimerRef.current);
-      restartTimerRef.current = null;
+    if (pcmRecorderRef.current) {
+      try {
+        pcmRecorderRef.current.stop();
+      } catch (e) {
+        console.error("[STT:MicTest] Error stopping PCM recorder:", e);
+      }
+      pcmRecorderRef.current = null;
     }
 
-    if (recognitionRef.current) {
-      recognitionRef.current.onresult = null;
-      recognitionRef.current.onerror = null;
-      recognitionRef.current.onend = null;
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+    if (socketRef.current) {
+      try {
+        socketRef.current.onclose = null;
+        socketRef.current.onerror = null;
+        socketRef.current.close();
+        console.log("[STT:WS] Deepgram WebSocket connection closed cleanly.");
+      } catch (e) {
+        console.error("[STT:MicTest] Error closing WebSocket:", e);
+      }
+      socketRef.current = null;
     }
 
-    stopVolumeMonitor();
     stopMediaStream();
-  }, [stopMediaStream, stopVolumeMonitor]);
+  }, [stopMediaStream]);
 
   const startListening = useCallback(async () => {
     setError("");
+    console.log("[STT:MicTest] Start listening requested. Requesting mic access...");
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setError("Your browser does not support microphone access.");
@@ -138,13 +111,12 @@ function MicTest() {
     try {
       stopListening();
       stopRequestedRef.current = false;
-      stopMediaStream();
-      stopVolumeMonitor();
 
       const baseAudioConstraints = {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
+        channelCount: 1,
       };
 
       let stream;
@@ -158,109 +130,116 @@ function MicTest() {
             : baseAudioConstraints,
         });
       } catch {
-        // Some Android devices reject exact device constraints.
         stream = await navigator.mediaDevices.getUserMedia({
           audio: baseAudioConstraints,
         });
       }
 
       streamRef.current = stream;
-      startVolumeMonitor(stream);
       await refreshDevices();
 
-      if (!speechRecognitionSupported) {
-        isListeningRef.current = true;
-        setIsListening(true);
-        return;
+      // Fetch temporary token securely from backend
+      console.log("[STT:MicTest] Fetching Deepgram token from backend...");
+      const tokenResp = await getToken();
+      const res = await axios.post(
+        `${backend_URL}/api/stt/token`,
+        {},
+        { headers: { Authorization: `Bearer ${tokenResp}` } }
+      );
+
+      const token = res.data.token;
+      if (!token) {
+        throw new Error("Failed to get temporary token from backend");
       }
+      console.log("[STT:MicTest] Deepgram token retrieved successfully.");
 
-      const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
+      console.log("[STT:MicTest] Initializing WebSocket connection to Deepgram (PCM16 config)...");
+      const wsUrl = "wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&channels=1&smart_format=true&model=nova-2&language=en-US&interim_results=true&utterance_end_ms=1000&vad_events=true";
+      const ws = new WebSocket(wsUrl, ["token", token]);
+      socketRef.current = ws;
 
-      recognition.onstart = () => {
+      ws.onopen = async () => {
+        console.log("%c[STT:WS] Deepgram WebSocket connection opened successfully!", "color: green; font-weight: bold;");
         isListeningRef.current = true;
         setIsListening(true);
+
+        try {
+          // Initialize our custom downsampling PCM recorder
+          const recorder = await createPCMRecorder(
+            stream,
+            (pcm16Buffer) => {
+              if (ws.readyState === WebSocket.OPEN) {
+                // Sent raw binary bytes over WebSocket
+                ws.send(pcm16Buffer);
+              }
+            },
+            (vol) => {
+              setVolume(vol);
+            }
+          );
+          pcmRecorderRef.current = recorder;
+          console.log("[STT:MicTest] PCM Recorder successfully started capturing and streaming.");
+        } catch (err) {
+          console.error("[STT:MicTest] Failed to initialize PCM Recorder:", err);
+          setError("Failed to start PCM Recorder: " + err.message);
+          stopListening();
+        }
       };
 
-      recognition.onresult = (event) => {
-        let finalPart = "";
-        let interimPart = "";
+      ws.onmessage = (message) => {
+        const received = JSON.parse(message.data);
+        
+        // Detailed Logging for speech start/end events from VAD
+        if (received.type === "SpeechStarted") {
+          console.log("%c[STT:VAD] Speech STARTED detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
+          return;
+        } else if (received.type === "UtteranceEnd") {
+          console.log("%c[STT:VAD] Speech ENDED (Utterance concluded) detected by Deepgram VAD", "color: #f59e0b; font-weight: bold;");
+          return;
+        }
 
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalPart += `${result[0].transcript} `;
+        // Standard Transcription channel logging
+        const alternative = received.channel?.alternatives?.[0];
+        const transcriptChunk = alternative?.transcript || "";
+        const isFinal = received.is_final;
+
+        if (transcriptChunk.trim()) {
+          console.log(
+            `[STT:DG] Transcript received: "${transcriptChunk}" | Confidence: ${(alternative?.confidence || 0).toFixed(4)} | IsFinal: ${isFinal}`
+          );
+          if (isFinal) {
+            setFinalTranscript((prev) => `${prev} ${transcriptChunk}`.trim());
+            setInterimTranscript("");
           } else {
-            interimPart += result[0].transcript;
+            setInterimTranscript(transcriptChunk);
           }
         }
-
-        if (finalPart) {
-          setFinalTranscript((prev) => `${prev}${finalPart}`.trim());
-        }
-
-        setInterimTranscript(interimPart);
       };
 
-      recognition.onerror = (event) => {
-        if (["aborted", "no-speech"].includes(event.error)) {
-          return;
-        }
-
-        if (event.error === "not-allowed") {
-          setError("Microphone permission denied. Please allow mic access.");
-          stopListening();
-          return;
-        }
-
-        if (event.error === "audio-capture") {
-          setError("No active microphone input detected on this device.");
-          return;
-        }
-
-        setError(`Speech recognition error: ${event.error}`);
+      ws.onerror = (err) => {
+        console.error("[STT:WS] Deepgram WebSocket error:", err);
       };
 
-      recognition.onend = () => {
-        if (
-          !stopRequestedRef.current &&
-          isListeningRef.current &&
-          recognitionRef.current
-        ) {
-          restartTimerRef.current = setTimeout(() => {
-            try {
-              if (
-                recognitionRef.current &&
-                isListeningRef.current &&
-                !stopRequestedRef.current
-              ) {
-                recognitionRef.current.start();
-              }
-            } catch {
-              // Ignore restart failures from rapid state changes.
-            }
-          }, 100);
+      ws.onclose = (event) => {
+        console.log(`[STT:WS] Deepgram WebSocket closed. code: ${event.code}, reason: ${event.reason}`);
+        if (!stopRequestedRef.current && isListeningRef.current) {
+          console.log("[STT:WS] Connection closed unexpectedly. Re-connecting in 1000ms...");
+          setTimeout(startListening, 1000);
         }
       };
 
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch {
-      setError(
-        "Unable to access this microphone. Please allow permission or choose another device.",
-      );
+    } catch (err) {
+      console.error("[STT:MicTest] Deepgram initialization error:", err);
+      setError("Unable to access microphone or connect to transcription service. Please check permissions.");
       stopListening();
     }
   }, [
     refreshDevices,
     selectedDeviceId,
-    speechRecognitionSupported,
-    startVolumeMonitor,
     stopListening,
     stopMediaStream,
-    stopVolumeMonitor,
+    getToken,
+    backend_URL,
   ]);
 
   const clearTranscript = useCallback(() => {
