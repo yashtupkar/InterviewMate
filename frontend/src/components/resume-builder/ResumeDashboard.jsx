@@ -102,6 +102,62 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
+const DuplicateResumeModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  value,
+  onChange,
+  isSubmitting,
+}) => {
+  return (
+    <UniversalPopup
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="max-w-md"
+      className="!bg-zinc-900 !border-zinc-800 !rounded-[2rem] shadow-2xl relative"
+      showClose={false}
+    >
+      <div className="flex flex-col items-start">
+        <h2 className="text-2xl font-black text-white mb-4 tracking-tight leading-tight">
+          Duplicate Resume
+        </h2>
+
+        <p className="text-zinc-400 text-sm font-medium mb-6 leading-relaxed pr-4">
+          Give your duplicate resume a name.
+        </p>
+
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Resume title"
+          className="w-full bg-zinc-800 border border-zinc-700 focus:border-lime-400/60 rounded-xl px-4 py-3 text-white text-sm outline-none transition-all mb-8"
+          onKeyDown={(e) => e.key === "Enter" && !isSubmitting && onConfirm()}
+          autoFocus
+        />
+
+        <div className="flex items-center gap-3 w-full">
+          <button
+            className="flex-1 bg-[#bef264] hover:bg-[#d9ff96] text-black py-4 rounded-xl font-black text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+            onClick={onConfirm}
+            disabled={isSubmitting || !value.trim()}
+          >
+            {isSubmitting ? "Duplicating…" : "Duplicate"}
+          </button>
+          <button
+            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-4 rounded-xl font-black text-sm transition-all"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </UniversalPopup>
+  );
+};
+
 const TEMPLATE_CATEGORIES = {
   all: { title: "All Styles", description: "Explore all of our professional, ATS-optimized resume layouts." },
   classic: { title: "Classic", description: "Timeless, clean, and highly reliable traditional layouts." },

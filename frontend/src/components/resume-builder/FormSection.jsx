@@ -164,9 +164,12 @@ const FormSection = () => {
                   : "bg-zinc-800/50 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/60 overflow-hidden z-0"
               }`}
             >
-              <button
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleSection(section.id)}
-                className="w-full flex items-center gap-4 p-4 text-left transition-all"
+                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && toggleSection(section.id)}
+                className="w-full flex items-center gap-4 p-4 text-left transition-all cursor-pointer"
               >
                 <div
                   className={`p-2.5 rounded-xl transition-all duration-300 ${
@@ -234,7 +237,7 @@ const FormSection = () => {
                 >
                   <IoChevronDown className="w-4 h-4" />
                 </div>
-              </button>
+              </div>
 
               {/* Collapsible Content */}
               <div
