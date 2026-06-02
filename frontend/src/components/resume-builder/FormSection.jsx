@@ -215,9 +215,9 @@ const FormSection = () => {
                           onClick={(e) =>
                             startEditing(e, section.id, section.title)
                           }
-                          className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-lime-500 transition-colors bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-zinc-800/50 hover:border-lime-500/30"
+                          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-lime-400 hover:text-lime-300 bg-lime-400/5 hover:bg-lime-400/10 px-2.5 py-1 rounded-lg border border-lime-400/25 hover:border-lime-400/40 transition-all active:scale-95 group shadow-[0_2px_8px_rgba(190,242,100,0.05)]"
                         >
-                          <Pencil className="w-3 h-3" />
+                          <Pencil className="w-3 h-3 group-hover:rotate-12 transition-transform duration-200" />
                           Edit Heading
                         </button>
                       )}
@@ -243,7 +243,7 @@ const FormSection = () => {
                 <div
                   className={isOpen ? "overflow-visible" : "overflow-hidden"}
                 >
-                  <div className="p-5 pt-0 border-t border-zinc-800/50 mt-2 bg-zinc-900/50">
+                  <div className="p-4 pt-0 border-t border-zinc-800/50 mt-2 bg-zinc-900/50">
                     <div className="pt-4">
                       <Content
                         onDone={
@@ -262,7 +262,7 @@ const FormSection = () => {
       <div className="mt-6">
         <button
           onClick={() => addCustomSection("New Section")}
-          className="w-full py-4 bg-zinc-900 border border-zinc-800 border-dashed rounded-2xl font-bold text-zinc-400 flex items-center justify-center gap-2 hover:bg-zinc-800 hover:text-white hover:border-lime-500/50 transition-all active:scale-[0.98] group"
+          className="w-full py-3 bg-zinc-900 border border-zinc-800 border-dashed rounded-xl font-bold text-zinc-400 flex items-center justify-center gap-2 hover:bg-zinc-800 hover:text-white hover:border-lime-500/50 transition-all active:scale-[0.98] group"
         >
           <div className="p-1.5 bg-zinc-800 rounded-lg group-hover:bg-lime-400 group-hover:text-zinc-950 transition-all">
             <Plus className="w-4 h-4" />

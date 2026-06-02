@@ -1,45 +1,61 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
     clerkId: {
-        type: String,
-        required: true,
-        unique: true
+      type: String,
+      required: true,
+      unique: true,
     },
     email: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     firstName: String,
     lastName: String,
     avatar: String,
-    role: {
-        type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
+    lastLogin: {
+      type: Date,
     },
+    browser: {
+      type: String,
+      default: "Unknown",
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
+    adminSecretCode: String,
+    adminOtp: String,
+    adminOtpExpires: Date,
     subscription: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Subscription'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subscription",
     },
     referralCode: {
-        type: String,
-        unique: true,
-        sparse: true
+      type: String,
+      unique: true,
+      sparse: true,
     },
     referredBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     status: {
-        type: String,
-        enum: ['active', 'deleted'],
-        default: 'active'
+      type: String,
+      enum: ["active", "deleted", "suspended"],
+      default: "active",
     },
     deletedAt: {
-        type: Date
-    }
-}, { timestamps: true });
+      type: Date,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { timestamps: true },
+);
 
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);

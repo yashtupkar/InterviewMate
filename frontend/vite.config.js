@@ -6,4 +6,7 @@ import autoprefixer from 'autoprefixer'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ['@vladmandic/face-api']
+  }
 })

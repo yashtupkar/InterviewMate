@@ -275,3 +275,259 @@ sequenceDiagram
     *   **Presets:** Test creating a preset with a duplicate name (should handle HTTP 409 correctly). Test the slider scrolling UI for presets on smaller screens.
     *   **Code Submissions:** Test submitting a blank screen, a screen with only comments (`// this is a comment`), the exact default template, and a legitimate code answer. Verify the AI agent's vocal response correctly matches the prompt instructions for each scenario.
     *   **Session Flow:** Click the "End Interview" button and ensure the new confirmation modal correctly halts the ending process if "Cancel" is clicked.
+
+ Date : 16/4/26
+## 1. High-Level Summary (TL;DR)
+*   **Impact:** High - Significantly enhances the interview experience with seamless video avatars and improved speech-to-text (STT) pacing.
+*   **Key Changes:**
+    *   ✨ **Looped Video Avatars:** Introduced `AgentLoopedVideoAvatar` to handle smooth crossfading between agent animation states (idle, speaking).
+    *   ⏱️ **STT Auto-Send Countdown:** Added a 5-second countdown before auto-sending user speech, allowing users to pause and think without prematurely submitting their answer.
+    *   🚀 **Intelligent Preloading:** Implemented dynamic video preloading in the session to ensure zero-delay playback when the agent's state changes.
+    *   🎨 **Agent Data Overhaul:** Updated agent configurations to support multiple random video clips per state and dedicated profile thumbnails.
+    *   ♻️ **UI Refactoring:** Cleaned up `InterviewerSection` and enhanced `TranscriptView` with live status banners for the countdown and speaker turns.
+
+## 2. Visual Overview (Code & Logic Map)
+
+```mermaid
+graph TD
+    subgraph "CustomInterviewSession.jsx"
+        A["agentVisualState"] -->|"speaking / idle"| B["InterviewerSection"]
+        P["collectAnimationSources()"] -.->|"Preloads Videos in Background"| A
+    end
+
+    subgraph "Avatar Rendering (AgentLoopedVideoAvatar.jsx)"
+        B --> C["<AgentLoopedVideoAvatar />"]
+        C --> D["useVideoStateMachine()"]
+        D -->|"Active Layer"| E["Front Video"]
+        D -->|"Prepares & Crossfades"| F["Back Video"]
+    end
+
+    subgraph "Speech & Countdown Logic (useCustomInterview.js)"
+        G["SpeechRecognition"] -->|"500ms pause"| H["startCountdown()"]
+        H -->|"User resumes speaking"| I["cancelCountdown()"]
+        H -->|"5s elapses"| J["Auto-Send (handleUserSpeech)"]
+        H -.->|"Updates UI"| K["TranscriptView Banner"]
+    end
+
+    classDef component fill:#bbdefb,color:#0d47a1,stroke:#0d47a1,stroke-width:2px;
+    classDef hook fill:#c8e6c9,color:#1a5e20,stroke:#1a5e20,stroke-width:2px;
+    classDef logic fill:#fff3e0,color:#e65100,stroke:#e65100,stroke-width:2px;
+
+    class B,C,E,F,K component;
+    class D hook;
+    class A,P,G,H,I,J logic;
+```
+
+## 3. Detailed Change Analysis
+
+### 🎥 Video Avatar System
+*   **Component Name:** `AgentLoopedVideoAvatar`, `InterviewerSection`
+*   **What Changed:** Replaced inline video crossfading in `InterviewerSection` with a dedicated `AgentLoopedVideoAvatar` component. It uses a custom hook (`useVideoStateMachine`) to manage double-buffered `<video>` elements, allowing seamless transitions and randomized clip selection for the same state. Added intelligent video caching via hidden `<video>` elements in `CustomInterviewSession` based on the agent's current state.
+
+### ⏱️ Speech-to-Text Countdown
+*   **Component Name:** `useCustomInterview`, `TranscriptView`
+*   **What Changed:** Changed the STT submission logic to prevent cutting off users. After a 500ms pause (`PAUSE_DETECT`), a 5-second countdown begins. If the user resumes speaking, the countdown cancels. If it reaches 0, the answer is auto-submitted. `TranscriptView` was updated to display dynamic banners (e.g., Amber countdown, Sky Blue agent speaking, Emerald listening).
+
+### ⚙️ Agent Configurations
+*   **Component Name:** `agents.js`, `CreateInterview`, `PastInterviews`
+*   **What Changed:** Updated agent profiles to support arrays of animation paths (enabling random clip rotation). Temporarily disabled several agents that lack animations. Updated the UI to use the new `profileImage` attribute for thumbnails instead of the main fallback image.
+
+| Property | Old Type | New Type | Description |
+|---|---|---|---|
+| `animations.idle` | `String` | `Array<String>` | Supports multiple idle clips, chosen randomly. |
+| `animations.speaking` | `String` | `Array<String>` | Supports multiple speaking clips, chosen randomly. |
+| `profileImage` | *None* | `String` | Added dedicated thumbnail paths for UI selection grids. |
+| `image` | `String` | `String` | Updated fallback image paths to new assets. |
+
+### 🏠 Homepage Features
+*   **Component Name:** `Features.jsx`
+*   **What Changed:** Updated `videoSrc` paths for the homepage feature highlights (`interview.mp4` and `feedback.mp4`).
+
+## 4. Impact & Risk Assessment
+*   **⚠️ Breaking Changes:** Several agents (Elliot, Rachel, Drew, Clyde, Mimi, Fin, Nicole) have been commented out in `agents.js` as they do not yet support the new animation structure.
+*   **🐛 Testing Suggestions:**
+    *   **Avatar Transitions:** Verify that the agent smoothly crossfades between idle and speaking states without flickering or black frames.
+    *   **STT Pacing & Countdown:** Speak into the microphone, pause for 1 second to trigger the amber countdown banner, then speak again to verify it cancels. Let the countdown finish to ensure the message auto-sends.
+    *   **Performance:** Monitor the network tab to ensure video preloading (`collectAnimationSources`) does not cause excessive bandwidth usage or memory leaks over long sessions.
+    *   **UI Fallbacks:** Disconnect the internet momentarily to ensure the agent falls back to the static `image` gracefully if a video fails to load.
+
+    Date : 19/4/2025
+    ## 1. High-Level Summary (TL;DR)
+*   **Impact:** Medium
+*   **Key Changes:**
+    *   **SEO-Friendly Routing:** Refactored Question Bank URLs (e.g., from `/questions/:id` to `/interview-question/:skills/:questionId`) for better SEO and context.
+    *   **New Coding Interface:** Introduced `QuestionCodePage` to render interactive coding challenges based on fetched question data.
+    *   **Enhanced Error Handling:** Centralized API error parsing and toast notification logic in `CreateInterview` and `GroupDiscussionSetup`.
+    *   **Related Questions:** Added functionality to fetch and display related questions dynamically on the `QuestionDetail` page.
+    *   **Robust Local Storage:** Replaced inline `localStorage` checks with a safer `getStoredBoolean` utility in `InterviewContext`.
+
+## 2. Visual Overview (Code & Logic Map)
+
+```mermaid
+graph TD
+    %% Define Nodes with strict double quotes for labels
+    App["App.jsx (Router)"]
+    Dashboard["QuestionBankDashboard"]
+    List["QuestionBankList"]
+    Detail["QuestionDetail"]
+    CodePage["QuestionCodePage"]
+    
+    %% Relationships
+    App -->|"/interview-questions"| Dashboard
+    App -->|"/interview-questions/:domain"| List
+    App -->|"/interview-question/:skills/:questionId"| Detail
+    App -->|"/interview-question/:skills/:questionId/code"| CodePage
+    
+    subgraph "QuestionDetail Logic"
+        Detail -->|"fetchRelatedQuestions()"| API_Questions["API: /api/questions?skill=..."]
+    end
+    
+    subgraph "QuestionCodePage Logic"
+        CodePage -->|"fetchQuestion()"| API_GetQ["API: /api/questions/:questionId"]
+        API_GetQ -->|"buildTaskFromQuestion()"| CodingSpace["CodingSpace"]
+    end
+```
+
+## 3. Detailed Change Analysis
+
+### 🗺️ Routing & Navigation
+*   **What Changed:** Redesigned the Question Bank URL structure to be more descriptive and parameter-driven. Updated `Sidebar.jsx` and `layout.jsx` to keep the active state synchronized with the new URL structures.
+
+| Old Route | New Route | Component | Reason |
+| :--- | :--- | :--- | :--- |
+| `/questions` | `/interview-questions` | `QuestionBankDashboard` | Improved SEO & clarity |
+| `/questions/list` | `/interview-questions/:domain` | `QuestionBankList` | Domain-based filtering |
+| `/questions/:id` | `/interview-question/:skills/:questionId` | `QuestionDetail` | Inject skills context |
+| `/code` | `/code-space`, `/interview-question/.../code` | `QuestionCodePage` | Dedicated coding space |
+
+### 📚 Question Bank Enhancements
+*   **What Changed:** 
+    *   **`QuestionDetail.jsx`:** Replaced the `id` param with `skills` and `questionId`. Implemented a new `useEffect` hook to fetch related questions dynamically based on the current question's primary skill, domain, or company. Added `slugifySkill` utility for URL construction.
+    *   **`QuestionBankList.jsx`:** Replaced query parameter domain filtering with a route parameter (`useParams().domain`). Includes automatic redirection logic to clean up legacy `domain` query parameters.
+
+### 🐛 Error Handling & State Management
+*   **What Changed:** 
+    *   **`CreateInterview.jsx` & `GroupDiscussionSetup.jsx`:** Introduced `getDetailedErrorMessage`, `showErrorToast`, and `clearFieldError` helpers. This provides detailed, backend-provided error feedback to the user instead of generic messages.
+    *   **`GroupDiscussionSetup.jsx`:** Added explicit validation to prevent starting a session if the microphone (`micReady`) is unavailable.
+    *   **`InterviewContext.jsx`:** Created `getStoredBoolean` helper to safely parse boolean flags from `localStorage`, preventing application crashes on invalid JSON payloads.
+
+### 💻 New Component: QuestionCodePage
+*   **What Changed:** Added `QuestionCodePage.jsx` which bridges the question data from the backend to the `CodingSpace` component. It includes a `buildTaskFromQuestion` adapter function that normalizes the API payload (extracting `starterCode`, `testCases`, and `constraints`) into a `task` object readable by the IDE component.
+
+## 4. Impact & Risk Assessment
+*   **⚠️ Breaking Changes:** 
+    *   **Bookmarks:** Users with bookmarked `/questions/:id` URLs will encounter 404s unless a server-side or router-level redirect is implemented.
+*   **🔍 Testing Suggestions:**
+    *   Verify navigation flow from the Dashboard -> List -> Detail -> Code Page to ensure parameters (`skills`, `domain`, `questionId`) propagate correctly.
+    *   Test edge cases in `CreateInterview` and `GroupDiscussionSetup` by denying microphone/camera permissions to ensure the new error handlers trigger properly.
+    *   Load a question with missing `starterCode` or `testCases` in `QuestionCodePage` to ensure the `buildTaskFromQuestion` fallbacks work without crashing.
+
+
+    ## 1. High-Level Summary (TL;DR)
+*   **Impact:** High - Introduces a major new feature to the platform.
+*   **Key Changes:**
+    *   ✨ **Full-Stack Blog Module:** Adds a MongoDB schema, robust backend CRUD APIs, and frontend views (`BlogList`, `BlogDetail`) for a complete blogging experience.
+    *   🛠 **Admin Content Management:** Introduces a dedicated `BlogManagement` interface for administrators to create, edit, draft, and publish articles.
+    *   🖼 **Cloudinary Integration:** Supports uploading and hosting blog featured images via `multer` and the Cloudinary API.
+    *   🔍 **SEO Enhancements:** Adds a dynamically generated `/sitemap.xml`, a static `robots.txt`, and dynamic OpenGraph tags using `react-helmet-async`.
+    *   📝 **Markdown Rendering:** Renders blog content securely on the frontend using `react-markdown` and `remark-gfm`.
+
+## 2. Visual Overview (Code & Logic Map)
+
+```mermaid
+graph TD
+    %% Node definitions
+    Nav["Navigation / App Routes"]
+    BlogList["BlogList Component"]
+    BlogDetail["BlogDetail Component"]
+    BlogAdmin["BlogManagement Component"]
+    
+    GetBlogs["GET /api/blogs"]
+    GetBlogBySlug["GET /api/blogs/:slug"]
+    AdminAPI["Admin CRUD (/api/blogs/admin)"]
+    UploadAPI["uploadBlogImage()"]
+    Sitemap["getSitemapXml()"]
+    
+    Cloudinary["Cloudinary Storage"]
+    MongoBlog["MongoDB: Blog Model"]
+    
+    %% Relationships
+    Nav --> BlogList
+    Nav --> BlogDetail
+    Nav --> BlogAdmin
+    
+    BlogList -.-> GetBlogs
+    BlogDetail -.-> GetBlogBySlug
+    BlogAdmin -.-> AdminAPI
+    BlogAdmin -.-> UploadAPI
+    
+    GetBlogs --> MongoBlog
+    GetBlogBySlug --> MongoBlog
+    AdminAPI --> MongoBlog
+    UploadAPI --> Cloudinary
+    Sitemap --> MongoBlog
+    
+    %% Styling
+    style Nav fill:#bbdefb,color:#0d47a1
+    style BlogList fill:#bbdefb,color:#0d47a1
+    style BlogDetail fill:#bbdefb,color:#0d47a1
+    style BlogAdmin fill:#bbdefb,color:#0d47a1
+    
+    style GetBlogs fill:#c8e6c9,color:#1a5e20
+    style GetBlogBySlug fill:#c8e6c9,color:#1a5e20
+    style AdminAPI fill:#c8e6c9,color:#1a5e20
+    style UploadAPI fill:#c8e6c9,color:#1a5e20
+    style Sitemap fill:#c8e6c9,color:#1a5e20
+    
+    style Cloudinary fill:#fff3e0,color:#e65100
+    style MongoBlog fill:#f3e5f5,color:#7b1fa2
+```
+
+## 3. Detailed Change Analysis
+
+### 🗄 Backend API & Database
+*   **What Changed:** Added a complete API layer for the blog feature. Created the `Blog` Mongoose model containing fields for SEO, Markdown content, status (draft/published), and tags. Implemented `blogController.js` handling operations like unique slug generation (`ensureUniqueSlug`), HTML sanitization (`sanitizeMarkdown`), read-time calculation (`calculateReadTime`), and XML sitemap generation (`getSitemapXml`).
+*   **API Endpoints:**
+
+| API Endpoint | Method | Auth Required | Description |
+|---|---|---|---|
+| `/api/blogs` | GET | No | Fetch paginated list of published blogs. |
+| `/api/blogs/:slug` | GET | No | Fetch a single published blog by slug. |
+| `/api/blogs/admin/all` | GET | Yes (Admin) | Fetch all blogs (drafts & published). |
+| `/api/blogs/admin` | POST | Yes (Admin) | Create a new blog post. |
+| `/api/blogs/admin/:id` | PUT/DEL | Yes (Admin) | Update or soft-delete a blog. |
+| `/api/blogs/admin/upload-image` | POST | Yes (Admin) | Upload an image to Cloudinary via `multer`. |
+| `/sitemap.xml` | GET | No | Generates an XML sitemap of all published blogs. |
+
+### 🌐 External Integrations & Configuration
+*   **What Changed:** Added Cloudinary integration for handling featured images. The `cloudinaryService.js` exposes `uploadImageBuffer` which converts a `multer` memory buffer to a base64 Data URI and uploads it to the `interviewmate/blogs` folder. Added necessary `.env` variables.
+*   **Environment Configuration:**
+
+| Key | Old Value | New Value | Description |
+|---|---|---|---|
+| `CLOUDINARY_CLOUD_NAME` | *N/A* | *(New)* | Cloudinary account name for image hosting. |
+| `CLOUDINARY_API_KEY` | *N/A* | *(New)* | Cloudinary API Key. |
+| `CLOUDINARY_API_SECRET` | *N/A* | *(New)* | Cloudinary API Secret. |
+
+*   **Dependencies:**
+
+| Package | Old Ver | New Ver | Purpose |
+|---|---|---|---|
+| `cloudinary` | *N/A* | `^2.9.0` | Backend image upload handler. |
+| `remark-gfm` | *N/A* | `^4.0.1` | Frontend markdown rendering (GitHub Flavored). |
+
+### 🖥 Frontend Application
+*   **What Changed:** 
+    *   Created `BlogList.jsx` for displaying a paginated grid of articles.
+    *   Created `BlogDetail.jsx` for rendering the full article using `react-markdown`. 
+    *   Created `BlogManagement.jsx` to provide an interface for admins to manage content. 
+    *   Updated `App.jsx` to register the new routes (`/blog`, `/blog/:slug`, `/admin/blogs`) and `layout.jsx` to add the navigation links.
+    *   **SEO Updates:** Added `robots.txt` and dynamically updated `meta` and `canonicalUrl` tags using `react-helmet-async` on the blog pages to improve search engine visibility.
+
+## 4. Impact & Risk Assessment
+*   **Breaking Changes:** None. This is a purely additive feature.
+*   **Testing Suggestions:**
+    *   **Image Uploads:** Verify Cloudinary image uploads from the Admin panel to ensure the correct environment variables are loaded and the image buffer is processed correctly.
+    *   **Slug Generation:** Test the `ensureUniqueSlug` logic by creating multiple blogs with the exact same title to ensure suffixes (`-1`, `-2`) are appended.
+    *   **SEO Validation:** Validate the generated `/sitemap.xml` endpoint to ensure it correctly maps to valid URLs and excludes drafts.
+    *   **Markdown Rendering:** Test rendering complex markdown (tables, code blocks) in `BlogDetail` to ensure `remark-gfm` parses it correctly without breaking the UI layout.

@@ -3,9 +3,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Linkedin,
-  Github,
-  Link as LinkIcon,
 } from "lucide-react";
 import {
   formatResumeDate,
@@ -20,52 +17,57 @@ import {
  */
 const ModernTemplate = ({ data }) => {
   const {
-    personalInfo,
-    sectionTitles,
-    profiles,
-    experience,
-    education,
-    skills,
-    projects,
-    achievements,
-    certifications,
-    customSections,
-    customizations: c,
+    personalInfo = {},
+    sectionTitles = {},
+    profiles = [],
+    experience = [],
+    education = [],
+    skills = [],
+    projects = [],
+    achievements = [],
+    certifications = [],
+    customSections = [],
+    customizations: c = {},
   } = data;
 
   const titles = sectionTitles || {};
 
   // Default values if customizations are missing
   const theme = {
-    accent: c?.colors?.accent || "#bef264",
-    text: c?.colors?.text || "#18181b",
-    background: c?.colors?.background || "#ffffff",
-    border: c?.colors?.border?.color || "#e4e4e7",
-    fontBody: c?.fonts?.body || "Inter",
-    fontHeading: c?.fonts?.headings || "Inter",
-    fontSize: c?.layout?.spacing?.fontSize || "10.5pt",
-    lineHeight: c?.layout?.spacing?.lineHeight || 1.15,
-    margin: c?.layout?.spacing?.margin || {
+    accent: c.colors?.accent || "#000000",
+    text: c.colors?.text || "#18181b",
+    background: c.colors?.background || "#ffffff",
+    border: c.colors?.border?.color || "#e4e4e7",
+    fontBody: c.fonts?.body || "Source Serif Pro",
+    fontHeading: c.fonts?.headings || "Source Serif Pro",
+    fontSize: c.layout?.spacing?.fontSize || "10.5pt",
+    lineHeight: c.layout?.spacing?.lineHeight || 1.15,
+    margin: c.layout?.spacing?.margin || {
       left: "22mm",
       right: "22mm",
       top: "12mm",
       bottom: "12mm",
     },
-    columnLayout: c?.layout?.columns || "two",
-    headingCase: c?.sectionHeadings?.capitalization || "uppercase",
-    subtitleStyle: c?.entryLayout?.subtitleStyle || "bold",
-    subtitlePlacement: c?.entryLayout?.subtitlePlacement || "next-line",
-    listStyle: c?.entryLayout?.listStyle || "bullet",
-    language: c?.language || "English (UK)",
-    dateFormat: c?.dateFormat || "DD/MM/YYYY",
-    spaceBetweenEntries: c?.layout?.spacing?.spaceBetweenEntries || 10,
-    applyTo: c?.colors?.applyTo || {
+    columnLayout: c.layout?.columns || "two",
+    headingCase: c.sectionHeadings?.capitalization || "uppercase",
+    subtitleStyle: c.entryLayout?.subtitleStyle || "bold",
+    subtitlePlacement: c.entryLayout?.subtitlePlacement || "next-line",
+    listStyle: c.entryLayout?.listStyle || "bullet",
+    language: c.language || "English (UK)",
+    dateFormat: c.dateFormat || "DD/MM/YYYY",
+    spaceBetweenEntries: c.layout?.spacing?.spaceBetweenEntries || 10,
+    applyTo: c.colors?.applyTo || {
       name: true,
       jobTitle: true,
       headings: true,
       headingsLine: true,
+      headerIcons: false,
+      dotsBarsBubbles: false,
+      dates: false,
+      entrySubtitle: false,
+      linkIcons: false,
     },
-    profileImage: c?.profileImage || {
+    profileImage: c.profileImage || {
       style: "rounded",
       borderRadius: 8,
       size: 80,
@@ -76,12 +78,20 @@ const ModernTemplate = ({ data }) => {
     return (theme.applyTo || {})[key] ? theme.accent : fallback;
   };
 
+  const getSubtitleStyle = () => {
+    return {
+      fontWeight: theme.subtitleStyle === "bold" ? "bold" : "normal",
+      fontStyle: theme.subtitleStyle === "italic" ? "italic" : "normal",
+      color: getColor("entrySubtitle", "#52525b"),
+      fontFamily: fonts.body,
+    };
+  };
+
   const fonts = {
     body: getFontFamily(theme.fontBody),
     heading: getFontFamily(theme.fontHeading),
   };
 
-  // Simple date format helper
   const formatDate = (dateStr) =>
     formatResumeDate(dateStr, theme.dateFormat, theme.language);
 
@@ -94,7 +104,7 @@ const ModernTemplate = ({ data }) => {
         paddingBottom: "0.25rem",
         marginBottom: "1rem",
         textTransform: theme.headingCase,
-        fontSize: "1.1em",
+        fontSize: "1.15em",
         fontWeight: "bold",
         letterSpacing: "0.05em",
       }}
@@ -114,6 +124,315 @@ const ModernTemplate = ({ data }) => {
     minHeight: "297mm",
     display: "flex",
     flexDirection: "column",
+    boxSizing: "border-box",
+  };
+
+  // Section Renderers
+  const renderSummary = () => {
+    const activeProfiles = profiles.filter((p) => p.visible !== false && p.content);
+    if (activeProfiles.length === 0) return null;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {activeProfiles.map((profile, i) => (
+          <section key={i} style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+            <SectionHeader title={profile.title || titles.profiles || "Summary"} />
+            <p style={{ whiteSpace: "pre-wrap", fontSize: "0.95em", fontFamily: fonts.body }}>
+              {profile.content}
+            </p>
+          </section>
+        ))}
+      </div>
+    );
+  };
+
+  const renderExperience = () => {
+    const activeExperience = experience.filter((exp) => exp.visible !== false);
+    if (activeExperience.length === 0) return null;
+    return (
+      <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+        <SectionHeader title={titles.experience || "Experience"} />
+        <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
+          {activeExperience.map((exp, i) => (
+            <div key={i} style={{ paddingLeft: "0.75rem", borderLeft: `2px solid ${theme.border}` }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "start",
+                  marginBottom: "2px",
+                  flexDirection: theme.subtitlePlacement === "next-line" ? "column" : "row",
+                }}
+              >
+                <h3 style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: "1em", fontFamily: fonts.heading }}>
+                  {exp.title}
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    width: theme.subtitlePlacement === "next-line" ? "100%" : "auto",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}
+                >
+                  <p style={getSubtitleStyle()}>
+                    {exp.company} {exp.location && `• ${exp.location}`}
+                  </p>
+                  <span
+                    style={{
+                      fontSize: "0.8em",
+                      fontWeight: "bold",
+                      color: getColor("dates", "#71717a"),
+                      textTransform: "uppercase",
+                      backgroundColor: "#fafafa",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      border: "1px solid #f4f4f5",
+                    }}
+                  >
+                    {formatDate(exp.startDate)} - {exp.current ? "Present" : formatDate(exp.endDate)}
+                  </span>
+                </div>
+              </div>
+              {exp.description && (
+                <p style={{ fontSize: "0.9em", marginTop: "4px", whiteSpace: "pre-wrap", fontFamily: fonts.body }}>
+                  {formatDescriptionList(exp.description, theme.listStyle)}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderProjects = () => {
+    const activeProjects = projects.filter((proj) => proj.visible !== false);
+    if (activeProjects.length === 0) return null;
+    return (
+      <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+        <SectionHeader title={titles.projects || "Projects"} />
+        <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
+          {activeProjects.map((proj, i) => (
+            <div key={i} style={{ paddingLeft: "0.75rem", borderLeft: `2px solid ${theme.border}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "2px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {proj.link ? (
+                    <a
+                      href={proj.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: "1em", fontFamily: fonts.heading, color: theme.text, textDecoration: "none" }}
+                    >
+                      {proj.title} ↗
+                    </a>
+                  ) : (
+                    <h3 style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: "1em", fontFamily: fonts.heading }}>
+                      {proj.title}
+                    </h3>
+                  )}
+                  {proj.githubUrl && (
+                    <a
+                      href={proj.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: "0.8em", fontWeight: "bold", color: theme.accent, textDecoration: "none" }}
+                    >
+                      [Code]
+                    </a>
+                  )}
+                </div>
+                <span
+                  style={{
+                    fontSize: "0.85em",
+                    fontWeight: "bold",
+                    color: getColor("dates", "#71717a"),
+                    textTransform: "uppercase",
+                    backgroundColor: "#fafafa",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    border: "1px solid #f4f4f5",
+                  }}
+                >
+                  {proj.startDate && `${formatDate(proj.startDate)} - ${proj.current ? "Present" : formatDate(proj.endDate)}`}
+                </span>
+              </div>
+              {proj.description && (
+                <p style={{ fontSize: "0.9em", marginTop: "2px", whiteSpace: "pre-wrap", color: "#52525b", fontFamily: fonts.body }}>
+                  {formatDescriptionList(proj.description, theme.listStyle)}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderSkills = () => {
+    const activeSkills = skills.filter((s) => s.visible !== false);
+    if (activeSkills.length === 0) return null;
+    return (
+      <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+        <SectionHeader title={titles.skills || "Skills"} />
+        <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries * 0.75}px` }}>
+          {activeSkills.map((skill, index) => (
+            <div key={index}>
+              <h3 style={{ fontSize: "0.75em", fontWeight: 900, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "2px", fontFamily: fonts.heading }}>
+                {skill.category}
+              </h3>
+              <p style={{ fontSize: "0.9em", fontWeight: "bold", fontFamily: fonts.body }}>
+                {skill.subSkills}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderEducation = () => {
+    const activeEdu = education.filter((edu) => edu.visible !== false);
+    if (activeEdu.length === 0) return null;
+    return (
+      <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+        <SectionHeader title={titles.education || "Education"} />
+        <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
+          {activeEdu.map((edu, i) => (
+            <div key={i}>
+              <p style={{ fontSize: "0.95em", color: "#18181b", fontWeight: "bold", fontFamily: fonts.body }}>
+                {edu.degree} {edu.field && `in ${edu.field}`}
+              </p>
+              <p style={{ ...getSubtitleStyle(), fontSize: "0.9em" }}>
+                {edu.institution} {edu.location && `• ${edu.location}`}
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "0.8em",
+                  fontWeight: "bold",
+                  color: getColor("dates", "#71717a"),
+                  textTransform: "uppercase",
+                  marginTop: "2px",
+                  fontFamily: fonts.body,
+                }}
+              >
+                <span>
+                  {formatDate(edu.startDate)} - {formatDate(edu.endDate)}
+                </span>
+                {edu.gpa && (
+                  <span style={{ color: getColor("dotsBarsBubbles", "#71717a") }}>
+                    GPA: {edu.gpa}
+                  </span>
+                )}
+              </div>
+              {edu.description && (
+                <p style={{ fontSize: "0.85em", marginTop: "4px", color: "#52525b", whiteSpace: "pre-wrap", fontFamily: fonts.body }}>
+                  {formatDescriptionList(edu.description, theme.listStyle)}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderAchievements = () => {
+    const activeAchievements = achievements.filter((ach) => ach.visible !== false);
+    if (activeAchievements.length === 0) return null;
+    return (
+      <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+        <SectionHeader title={titles.achievements || "Achievements"} />
+        <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries * 0.75}px` }}>
+          {activeAchievements.map((ach, i) => (
+            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontWeight: "bold", fontSize: "0.95em", fontFamily: fonts.heading }}>
+                  {ach.title}
+                </h3>
+                <p style={{ fontSize: "0.85em", color: "#52525b", fontFamily: fonts.body }}>
+                  {ach.description}
+                </p>
+              </div>
+              <span style={{ fontSize: "0.8em", fontWeight: "bold", color: getColor("dates", "#a1a1aa"), whiteSpace: "nowrap", marginLeft: "10px" }}>
+                {ach.date}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderCertifications = () => {
+    const activeCerts = certifications.filter((cert) => cert.visible !== false);
+    if (activeCerts.length === 0) return null;
+    return (
+      <section style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+        <SectionHeader title={titles.certifications || "Certifications"} />
+        <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries * 0.75}px` }}>
+          {activeCerts.map((cert, i) => (
+            <div key={i} style={{ border: `1px solid ${theme.border}`, padding: "0.5rem", borderRadius: "8px", backgroundColor: "#fafafa" }}>
+              <h3 style={{ fontWeight: "bold", fontSize: "0.9em", textTransform: "uppercase", fontFamily: fonts.heading }}>
+                {cert.name}
+              </h3>
+              <p style={{ ...getSubtitleStyle(), fontSize: "0.85em" }}>
+                {cert.issuer}
+              </p>
+              <p style={{ fontSize: "0.75em", fontWeight: "bold", color: getColor("dates", "#a1a1aa"), textTransform: "uppercase", marginTop: "2px", fontFamily: fonts.body }}>
+                {cert.date}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
+  const renderCustomSections = () => {
+    const visibleCustomSections = customSections.filter((sec) => sec.entries?.some((e) => e.visible !== false));
+    if (visibleCustomSections.length === 0) return null;
+    return (
+      <>
+        {visibleCustomSections.map((sec) => (
+          <section key={sec.id} style={{ marginBottom: `${theme.spaceBetweenEntries}px` }}>
+            <SectionHeader title={sec.title} />
+            <div style={{ display: "flex", flexDirection: "column", gap: `${theme.spaceBetweenEntries}px` }}>
+              {sec.entries.filter((e) => e.visible !== false).map((entry, i) => (
+                <div key={i} style={{ paddingLeft: "0.75rem", borderLeft: `2px solid ${theme.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
+                    <h3 style={{ fontWeight: "bold", textTransform: "uppercase", fontSize: "0.95em", fontFamily: fonts.heading }}>
+                      {entry.link ? (
+                        <a href={entry.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                          {entry.title} ↗
+                        </a>
+                      ) : (
+                        entry.title
+                      )}
+                    </h3>
+                    <span style={{ fontSize: "0.8em", fontWeight: "bold", color: getColor("dates", "#71717a") }}>
+                      {entry.startDate && `${formatDate(entry.startDate)} - ${entry.endDate ? formatDate(entry.endDate) : "Present"}`}
+                    </span>
+                  </div>
+                  {entry.subtitle && (
+                    <p style={{ ...getSubtitleStyle(), fontSize: "0.85em", marginBottom: "4px" }}>
+                      {entry.subtitle} {entry.location && `• ${entry.location}`}
+                    </p>
+                  )}
+                  {entry.content && (
+                    <p style={{ fontSize: "0.9em", whiteSpace: "pre-wrap", color: "#52525b", fontFamily: fonts.body }}>
+                      {formatDescriptionList(entry.content, theme.listStyle)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </>
+    );
   };
 
   return (
@@ -164,7 +483,7 @@ const ModernTemplate = ({ data }) => {
               display: "flex",
               flexWrap: "wrap",
               gap: "1rem",
-              fontSize: "0.75em",
+              fontSize: "0.85em",
               fontWeight: 500,
               color: "#52525b",
             }}
@@ -178,7 +497,7 @@ const ModernTemplate = ({ data }) => {
                   color: getColor("headerIcons", "#52525b"),
                 }}
               >
-                <Mail size={12} />{" "}
+                <Mail size={12} aria-hidden="true" />
                 <span style={{ color: "#52525b" }}>{personalInfo.email}</span>
               </div>
             )}
@@ -191,7 +510,7 @@ const ModernTemplate = ({ data }) => {
                   color: getColor("headerIcons", "#52525b"),
                 }}
               >
-                <Phone size={12} />{" "}
+                <Phone size={12} aria-hidden="true" />
                 <span style={{ color: "#52525b" }}>{personalInfo.phone}</span>
               </div>
             )}
@@ -204,10 +523,8 @@ const ModernTemplate = ({ data }) => {
                   color: getColor("headerIcons", "#52525b"),
                 }}
               >
-                <MapPin size={12} />{" "}
-                <span style={{ color: "#52525b" }}>
-                  {personalInfo.location}
-                </span>
+                <MapPin size={12} aria-hidden="true" />
+                <span style={{ color: "#52525b" }}>{personalInfo.location}</span>
               </div>
             )}
             {(personalInfo.links || []).map(
@@ -232,7 +549,7 @@ const ModernTemplate = ({ data }) => {
                         display: "flex",
                       }}
                     >
-                      {getLinkIcon(link.label, link.url)}
+                      {getLinkIcon(link.label, link.url, 12)}
                     </span>
                     <span style={{ color: "#52525b" }}>
                       {link.label || "Link"}
@@ -269,639 +586,40 @@ const ModernTemplate = ({ data }) => {
       </header>
 
       {/* Content Area */}
-    <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: theme.columnLayout === "one" ? "1fr" : "2fr 1fr",
-          gap: "1.5rem",
-        }}
-      >
-        {/* Main Content (Left or Full) */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
-        >
-          {/* Profiles/Summaries */}
-          {profiles?.some((p) => p.visible !== false && p.content) && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "1.25rem",
-              }}
-            >
-              {profiles.map(
-                (profile, i) =>
-                  profile.visible !== false &&
-                  profile.content && (
-                    <section key={i}>
-                      <SectionHeader
-                        title={profile.title || titles.profiles || "Summary"}
-                      />
-                      <p
-                        style={{
-                          whiteSpace: "pre-wrap",
-                          fontSize: "0.875em",
-                          fontFamily: fonts.body,
-                        }}
-                      >
-                        {profile.content}
-                      </p>
-                    </section>
-                  ),
-              )}
-            </div>
-          )}
-
-          {/* Custom Sections (Render in main column) */}
-          {customSections?.map(
-            (section) =>
-              section.entries?.some((e) => e.visible !== false) && (
-                <section key={section.id}>
-                  <SectionHeader title={section.title} />
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: `${theme.spaceBetweenEntries}px`,
-                    }}
-                  >
-                    {section.entries.map(
-                      (entry, i) =>
-                        entry.visible !== false && (
-                          <div
-                            key={i}
-                            style={{
-                              paddingLeft: "0.75rem",
-                              borderLeft: `2px solid ${theme.border}`,
-                            }}
-                          >
-                            <h3
-                              style={{
-                                fontWeight: "bold",
-                                textTransform: "uppercase",
-                                fontSize: "0.875em",
-                                fontFamily: fonts.heading,
-                                marginBottom: "2px",
-                              }}
-                            >
-                              {entry.link ? (
-                                <a
-                                  href={entry.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    color: "inherit",
-                                    textDecoration: "none",
-                                  }}
-                                >
-                                  {entry.title}
-                                </a>
-                              ) : (
-                                entry.title
-                              )}
-                            </h3>
-                            {entry.subtitle && (
-                              <p
-                                style={{
-                                  fontSize: "0.9em",
-                                  fontStyle: "italic",
-                                  color: "#71717a",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                {entry.subtitle}
-                              </p>
-                            )}
-                            {entry.content && (
-                              <p
-                                style={{
-                                  fontSize: "0.85em",
-                                  whiteSpace: "pre-wrap",
-                                  color: "#52525b",
-                                  fontFamily: fonts.body,
-                                }}
-                              >
-                                {formatDescriptionList(
-                                  entry.content,
-                                  theme.listStyle,
-                                )}
-                              </p>
-                            )}
-                          </div>
-                        ),
-                    )}
-                  </div>
-                </section>
-              ),
-          )}
-
-          {/* Experience */}
-          {experience?.some((exp) => exp.visible !== false) && (
-            <section>
-              <SectionHeader title={titles.experience || "Experience"} />
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: `${theme.spaceBetweenEntries}px`,
-                }}
-              >
-                {experience.map(
-                  (exp, i) =>
-                    exp.visible !== false && (
-                      <div
-                        key={i}
-                        style={{
-                          paddingLeft: "0.75rem",
-                          borderLeft: `2px solid ${theme.border}`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "start",
-                            marginBottom: "2px",
-                            flexDirection:
-                              theme.subtitlePlacement === "next-line"
-                                ? "column"
-                                : "row",
-                          }}
-                        >
-                          <h3
-                            style={{
-                              fontWeight: "bold",
-                              textTransform: "uppercase",
-                              fontSize: "0.875em",
-                              fontFamily: fonts.heading,
-                            }}
-                          >
-                            {exp.title}
-                          </h3>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              width:
-                                theme.subtitlePlacement === "next-line"
-                                  ? "100%"
-                                  : "auto",
-                              alignItems: "center",
-                              gap: "10px",
-                            }}
-                          >
-                            <p
-                              style={{
-                                fontSize: "0.8em",
-                                fontWeight:
-                                  theme.subtitleStyle === "bold"
-                                    ? "bold"
-                                    : "normal",
-                                fontStyle:
-                                  theme.subtitleStyle === "italic"
-                                    ? "italic"
-                                    : "normal",
-                                color: getColor("entrySubtitle", "#52525b"),
-                                fontFamily: fonts.body,
-                              }}
-                            >
-                              {exp.company}{" "}
-                              {exp.location && `• ${exp.location}`}
-                            </p>
-                            <span
-                              style={{
-                                fontSize: "0.7em",
-                                fontWeight: "bold",
-                                color: getColor("dates"),
-                                textTransform: "uppercase",
-                                backgroundColor: "#fafafa",
-                                padding: "2px 6px",
-                                borderRadius: "4px",
-                                fontFamily: fonts.body,
-                              }}
-                            >
-                              {formatDate(exp.startDate)} -{" "}
-                              {exp.current
-                                ? "Present"
-                                : formatDate(exp.endDate)}
-                            </span>
-                          </div>
-                        </div>
-                        {exp.description && (
-                          <p
-                            style={{
-                              fontSize: "0.85em",
-                              marginTop: "4px",
-                              whiteSpace: "pre-wrap",
-                              fontFamily: fonts.body,
-                            }}
-                          >
-                            {formatDescriptionList(
-                              exp.description,
-                              theme.listStyle,
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    ),
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Projects */}
-          {projects?.some((proj) => proj.visible !== false) && (
-            <section>
-              <SectionHeader title={titles.projects || "Projects"} />
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: `${theme.spaceBetweenEntries}px`,
-                }}
-              >
-                {projects.map(
-                  (proj, i) =>
-                    proj.visible !== false && (
-                      <div
-                        key={i}
-                        style={{
-                          paddingLeft: "0.75rem",
-                          borderLeft: `2px solid ${theme.border}`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "start",
-                            marginBottom: "2px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                            }}
-                          >
-                            {proj.link ? (
-                              <a
-                                href={proj.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  fontWeight: "bold",
-                                  textTransform: "uppercase",
-                                  fontSize: "0.875em",
-                                  fontFamily: fonts.heading,
-                                  color: theme.text,
-                                  textDecoration: "none",
-                                }}
-                              >
-                                {proj.title}
-                              </a>
-                            ) : (
-                              <h3
-                                style={{
-                                  fontWeight: "bold",
-                                  textTransform: "uppercase",
-                                  fontSize: "0.875em",
-                                  fontFamily: fonts.heading,
-                                }}
-                              >
-                                {proj.title}
-                              </h3>
-                            )}
-                            {proj.link && (
-                              <a
-                                href={proj.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  fontSize: "0.7em",
-                                  fontWeight: "bold",
-                                  color: theme.accent,
-                                  textDecoration: "none",
-                                }}
-                              >
-                                [LINK]
-                              </a>
-                            )}
-                            {proj.githubUrl && (
-                              <a
-                                href={proj.githubUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  fontSize: "0.7em",
-                                  fontWeight: "bold",
-                                  color: theme.accent,
-                                  textDecoration: "none",
-                                }}
-                              >
-                                [CODE]
-                              </a>
-                            )}
-                          </div>
-                          <span
-                            style={{
-                              fontSize: "0.7em",
-                              fontWeight: "bold",
-                              color: getColor("dates"),
-                              textTransform: "uppercase",
-                              backgroundColor: "#fafafa",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              fontFamily: fonts.body,
-                            }}
-                          >
-                            {proj.startDate &&
-                              `${formatDate(proj.startDate)} - ${proj.current ? "Present" : formatDate(proj.endDate)}`}
-                          </span>
-                        </div>
-                        {proj.description && (
-                          <p
-                            style={{
-                              fontSize: "0.85em",
-                              marginTop: "2px",
-                              whiteSpace: "pre-wrap",
-                              color: "#52525b",
-                              fontFamily: fonts.body,
-                            }}
-                          >
-                            {formatDescriptionList(
-                              proj.description,
-                              theme.listStyle,
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    ),
-                )}
-              </div>
-            </section>
-          )}
-
-          {theme.columnLayout === "one" && (
-            <SidebarContent
-              titles={titles}
-              skills={skills}
-              education={education}
-              certifications={certifications}
-              theme={theme}
-              fonts={fonts}
-              formatDate={formatDate}
-            />
-          )}
+      {theme.columnLayout === "one" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+          {renderSummary()}
+          {renderExperience()}
+          {renderProjects()}
+          {renderSkills()}
+          {renderEducation()}
+          {renderAchievements()}
+          {renderCertifications()}
+          {renderCustomSections()}
         </div>
-
-        {/* Sidebar (Right) - Only if two columns */}
-        {theme.columnLayout !== "one" && (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
-          >
-            <SidebarContent
-              titles={titles}
-              skills={skills}
-              education={education}
-              certifications={certifications}
-              theme={theme}
-              fonts={fonts}
-              formatDate={formatDate}
-            />
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "2fr 1fr",
+            gap: "1.5rem",
+          }}
+        >
+          {/* Main Column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            {renderSummary()}
+            {renderExperience()}
+            {renderProjects()}
+            {renderCustomSections()}
           </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const SidebarContent = ({
-  titles,
-  skills,
-  education,
-  certifications,
-  theme,
-  fonts,
-  formatDate,
-}) => {
-  const SectionHeader = ({ title }) => (
-    <h2
-      style={{
-        color: theme.applyTo.headings ? theme.accent : theme.text,
-        fontFamily: fonts.heading,
-        borderBottom: `2px solid ${theme.applyTo.headingsLine ? theme.accent : theme.border}`,
-        paddingBottom: "0.25rem",
-        marginBottom: "1rem",
-        textTransform: theme.headingCase,
-        fontSize: "1em",
-        fontWeight: "bold",
-        letterSpacing: "0.05em",
-      }}
-    >
-      {title}
-    </h2>
-  );
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* Skills */}
-      {skills?.some((skill) => skill.visible !== false) && (
-        <section>
-          <SectionHeader title={titles.skills || "Skills"} />
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: `${theme.spaceBetweenEntries * 0.75}px`,
-            }}
-          >
-            {skills.map(
-              (skill, index) =>
-                skill.visible !== false && (
-                  <div key={index}>
-                    <h3
-                      style={{
-                        fontSize: "0.6em",
-                        fontWeight: 900,
-                        color: "#a1a1aa",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.2em",
-                        marginBottom: "2px",
-                        fontFamily: fonts.heading,
-                      }}
-                    >
-                      {skill.category}
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: "0.8em",
-                        fontWeight: "bold",
-                        fontFamily: fonts.body,
-                      }}
-                    >
-                      {skill.subSkills}
-                    </p>
-                  </div>
-                ),
-            )}
+          {/* Sidebar Column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+            {renderSkills()}
+            {renderEducation()}
+            {renderAchievements()}
+            {renderCertifications()}
           </div>
-        </section>
-      )}
-
-      {/* Education */}
-      {education?.some((edu) => edu.visible !== false) && (
-        <section>
-          <SectionHeader title={titles.education || "Education"} />
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: `${theme.spaceBetweenEntries}px`,
-            }}
-          >
-            {education.map(
-              (edu, i) =>
-                edu.visible !== false && (
-                  <div key={i}>
-                    <p
-                      style={{
-                        fontSize: "0.8em",
-                        color: "#52525b",
-                        fontFamily: fonts.body,
-                      }}
-                    >
-                      {edu.degree} {edu.field && `in ${edu.field}`}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "0.8em",
-                        fontWeight:
-                          theme.subtitleStyle === "bold" ? "bold" : "normal",
-                        fontStyle:
-                          theme.subtitleStyle === "italic"
-                            ? "italic"
-                            : "normal",
-                        color: theme.applyTo.entrySubtitle
-                          ? theme.accent
-                          : "#52525b",
-                        fontFamily: fonts.body,
-                      }}
-                    >
-                      {edu.institution}
-                    </p>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "0.7em",
-                        fontWeight: "bold",
-                        color: theme.applyTo.dates ? theme.accent : "#52525b",
-                        textTransform: "uppercase",
-                        marginTop: "2px",
-                        fontFamily: fonts.body,
-                      }}
-                    >
-                      <span>
-                        {formatDate(edu.startDate)} - {formatDate(edu.endDate)}
-                      </span>
-                      {edu.gpa && (
-                        <span
-                          style={{
-                            color: theme.applyTo.dotsBarsBubbles
-                              ? theme.accent
-                              : "#52525b",
-                          }}
-                        >
-                          GPA: {edu.gpa}
-                        </span>
-                      )}
-                    </div>
-                    {edu.description && (
-                      <p
-                        style={{
-                          fontSize: "0.75em",
-                          marginTop: "0.25rem",
-                          color: "#71717a",
-                          whiteSpace: "pre-wrap",
-                          fontFamily: fonts.body,
-                        }}
-                      >
-                        {formatDescriptionList(
-                          edu.description,
-                          theme.listStyle,
-                        )}
-                      </p>
-                    )}
-                  </div>
-                ),
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Certifications */}
-      {certifications?.some((cert) => cert.visible !== false) && (
-        <section>
-          <SectionHeader title={titles.certifications || "Certifications"} />
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: `${theme.spaceBetweenEntries * 0.5}px`,
-            }}
-          >
-            {certifications.map(
-              (cert, i) =>
-                cert.visible !== false && (
-                  <div
-                    key={i}
-                    style={{
-                      border: `1px solid ${theme.border}`,
-                      padding: "0.5rem",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        fontWeight: "bold",
-                        fontSize: "0.8em",
-                        textTransform: "uppercase",
-                        fontFamily: fonts.heading,
-                      }}
-                    >
-                      {cert.name}
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: "0.7em",
-                        fontWeight: "bold",
-                        color: theme.applyTo.entrySubtitle
-                          ? theme.accent
-                          : "#52525b",
-                        fontFamily: fonts.body,
-                      }}
-                    >
-                      {cert.issuer}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: "0.6em",
-                        fontWeight: "bold",
-                        color: "#a1a1aa",
-                        textTransform: "uppercase",
-                        marginTop: "2px",
-                        fontFamily: fonts.body,
-                      }}
-                    >
-                      {cert.date}
-                    </p>
-                  </div>
-                ),
-            )}
-          </div>
-        </section>
+        </div>
       )}
     </div>
   );

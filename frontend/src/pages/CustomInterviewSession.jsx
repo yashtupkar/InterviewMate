@@ -1,5 +1,6 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { useCustomInterview } from "../hooks/useCustomInterview";
+import { interviewAgents } from "../constants/agents";
 import CodingSpace from "../components/CodingSpace";
 import { FiBarChart2 } from "react-icons/fi";
 import ReloadSessionPrompt from "../components/interview/ReloadSessionPrompt";
@@ -14,9 +15,43 @@ import TranscriptView from "../components/interview/TranscriptView";
 import CustomInterviewConfirmEndModal from "../components/interview/CustomInterviewConfirmEndModal";
 import CustomInterviewEndedModal from "../components/interview/CustomInterviewEndedModal";
 
+const getPreloadPriority = (agentVisualState) => {
+  if (agentVisualState === "speaking") {
+    return ["speaking", "idle", "listening", "thinking"];
+  }
+
+  if (agentVisualState === "listening") {
+    return ["listening", "idle", "speaking", "thinking"];
+  }
+
+  if (agentVisualState === "thinking") {
+    return ["thinking", "idle", "speaking", "listening"];
+  }
+
+  return ["idle", "thinking", "listening", "speaking"];
+};
+
+const collectAnimationSources = (animations, priorityStates) => {
+  const sources = [];
+  const seen = new Set();
+
+  priorityStates.forEach((stateKey) => {
+    const value = animations?.[stateKey];
+    if (!value) return;
+
+    const values = Array.isArray(value) ? value : [value];
+    values.forEach((src) => {
+      if (!src || seen.has(src)) return;
+      seen.add(src);
+      sources.push(src);
+    });
+  });
+
+  return sources;
+};
+
 const CustomInterviewSession = () => {
   const { state, refs, actions } = useCustomInterview();
-  const transcriptEndRef = useRef(null);
 
   const {
     timeLeft,
@@ -40,9 +75,15 @@ const CustomInterviewSession = () => {
     callStatus,
     user,
     showEndConfirm,
+    countdownActive,
+    countdownRemaining,
+    countdownProgress,
+    countdownMessageId,
   } = state;
 
   const { localVideoRef, agentVolumeCircleRef } = refs;
+  const preloadedAgentVideosRef = useRef([]);
+  const sessionRootRef = useRef(null);
   const {
     toggleMute,
     toggleVideo,
@@ -58,33 +99,84 @@ const CustomInterviewSession = () => {
     confirmEndSession,
   } = actions;
 
-  useEffect(() => {
-    if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }
-  }, [transcript]);
+  const isLoopedVideoAvatarEnabled =
+    (
+      import.meta.env.VITE_ENABLE_LOOPED_VIDEO_AVATAR || "true"
+    ).toLowerCase() === "true";
 
-  const agentImages = {
-    Rohan: "/assets/interviewers/male1.png",
-    Sophia: "/assets/interviewers/female1.png",
-    Marcus: "/assets/interviewers/male2.png",
-    Emma: "/assets/interviewers/female2.png",
-    Elliot: "/assets/interviewers/male3.png",
-    Rachel: "/assets/interviewers/female1.png",
-    Drew: "/assets/interviewers/male1.png",
-    Clyde: "/assets/interviewers/male2.png",
-    Mimi: "/assets/interviewers/female2.png",
-    Fin: "/assets/interviewers/male3.png",
-    Nicole: "/assets/interviewers/female1.png",
-  };
+  const agentMedia = useMemo(
+    () =>
+      interviewAgents.reduce((acc, agent) => {
+        acc[agent.name] = {
+          image: agent.image,
+          profileImage: agent.profileImage,
+          animations: agent.animations || null,
+        };
+        return acc;
+      }, {}),
+    [],
+  );
 
   const getAgentImage = (name) =>
-    agentImages[name] || "/assets/interviewers/male1.png";
+    agentMedia[name]?.image || "/assets/interviewers/male1.png";
+
+  const getAgentProfileImage = (name) =>
+    agentMedia[name]?.profileImage || "/assets/interviewers/male1.png";
+
+  const getAgentVideo = (name, state) =>
+    agentMedia[name]?.animations?.[state] || "";
+
+  const currentAgentAnimations = useMemo(
+    () => agentMedia[agentName]?.animations ?? null,
+    [agentMedia, agentName],
+  );
+
+  const agentVisualState = isAgentSpeaking
+    ? "speaking"
+    : isAiThinking
+      ? "thinking"
+      : isUserSpeaking
+        ? "listening"
+        : "idle";
+
+  const isUserTurn =
+    !hasCallEnded &&
+    callStatus === "active" &&
+    !isAgentSpeaking &&
+    !isAiThinking;
+
   const userAvatar =
     user?.imageUrl || user?.profileImageUrl || user?.avatarUrl || "";
+
+  useEffect(() => {
+    if (callStatus !== "active" || !sessionRootRef.current) return undefined;
+
+    const el = sessionRootRef.current;
+    const requestFullscreen = async () => {
+      if (document.fullscreenElement) return;
+      if (el.requestFullscreen) return el.requestFullscreen();
+      if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen();
+      if (el.mozRequestFullScreen) return el.mozRequestFullScreen();
+      if (el.msRequestFullscreen) return el.msRequestFullscreen();
+    };
+
+    requestFullscreen().catch(() => {});
+    return undefined;
+  }, [callStatus]);
+
+  useEffect(() => {
+    if (!hasCallEnded || !document.fullscreenElement) return undefined;
+
+    const exitFullscreen = async () => {
+      if (document.exitFullscreen) return document.exitFullscreen();
+      if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+      if (document.mozCancelFullScreen) return document.mozCancelFullScreen();
+      if (document.msExitFullscreen) return document.msExitFullscreen();
+    };
+
+    exitFullscreen().catch(() => {});
+    return undefined;
+  }, [hasCallEnded]);
 
   const isCodingActionDisabled = isAgentSpeaking;
   const reloadGuard = useInterviewReloadProtection({
@@ -96,15 +188,50 @@ const CustomInterviewSession = () => {
     resultPath: "/dashboard/reports",
   });
 
-  return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans overflow-hidden relative">
-      {/* ── Mesh Background Effects ───────────────── */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] animate-pulse-slow" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse-slow delay-700" />
-      </div>
+  useEffect(() => {
+    if (!isLoopedVideoAvatarEnabled) return undefined;
 
-      {/* ── Full-Screen CodingSpace (after Attempt clicked) ───────────────── */}
+    const animations = currentAgentAnimations;
+    if (!animations) return undefined;
+
+    const allSrcs = collectAnimationSources(
+      animations,
+      getPreloadPriority(agentVisualState),
+    ).slice(0, 4);
+
+    const createdVideos = allSrcs.map((src, index) => {
+      const video = document.createElement("video");
+      video.src = src;
+      video.preload = index < 2 ? "auto" : "metadata";
+      video.muted = true;
+      video.playsInline = true;
+      if ("fetchPriority" in video) {
+        video.fetchPriority = index === 0 ? "high" : "auto";
+      }
+      video.load();
+      return video;
+    });
+
+    preloadedAgentVideosRef.current = createdVideos;
+
+    return () => {
+      preloadedAgentVideosRef.current.forEach((video) => {
+        video.removeAttribute("src");
+        video.load();
+      });
+      preloadedAgentVideosRef.current = [];
+    };
+  }, [agentVisualState, currentAgentAnimations, isLoopedVideoAvatarEnabled]);
+
+  return (
+    <div ref={sessionRootRef} className="min-h-screen bg-[#09090b] text-zinc-100 font-sans overflow-hidden relative">
+        {/* ── Mesh Background Effects ───────────────── */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] animate-pulse-slow" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse-slow delay-700" />
+        </div>
+
+        {/* ── Full-Screen CodingSpace (after Attempt clicked) ───────────────── */}
       {activeCodingTask && (
         <div className="fixed inset-0 z-[120] flex flex-col animate-in fade-in zoom-in-95 duration-300">
           <CodingSpace
@@ -156,6 +283,7 @@ const CustomInterviewSession = () => {
                 hasCallEnded={hasCallEnded}
                 isAgentSpeaking={isAgentSpeaking}
                 isAiThinking={isAiThinking}
+                isUserSpeaking={isUserSpeaking}
                 isUserFocus={isUserFocus}
                 isVideoOn={isVideoOn}
                 callStatus={callStatus}
@@ -164,6 +292,10 @@ const CustomInterviewSession = () => {
                 userAvatar={userAvatar}
                 agentName={agentName}
                 getAgentImage={getAgentImage}
+                getAgentVideo={getAgentVideo}
+                agentVisualState={agentVisualState}
+                agentAnimations={currentAgentAnimations}
+                enableLoopedVideoAvatar={isLoopedVideoAvatarEnabled}
                 localVideoRef={localVideoRef}
                 agentVolumeCircleRef={agentVolumeCircleRef}
                 toggleVideoFocus={toggleVideoFocus}
@@ -188,16 +320,22 @@ const CustomInterviewSession = () => {
               <TranscriptView
                 transcript={transcript}
                 user={user}
+                isUserSpeaking={isUserSpeaking}
+                isAgentSpeaking={isAgentSpeaking}
+                isUserTurn={isUserTurn}
                 agentName={agentName}
-                getAgentImage={getAgentImage}
+                getAgentImage={getAgentProfileImage}
                 connectionStatus={connectionStatus}
-                transcriptEndRef={transcriptEndRef}
                 codingPopupTask={codingPopupTask}
                 showCodingPopup={!activeCodingTask}
                 isCodingActionDisabled={isCodingActionDisabled}
                 handleAttemptChallenge={handleAttemptChallenge}
                 handleSkipChallenge={handleSkipChallenge}
                 className="w-full"
+                countdownActive={countdownActive}
+                countdownRemaining={countdownRemaining}
+                countdownProgress={countdownProgress}
+                countdownMessageId={countdownMessageId}
               />
             </div>
 
@@ -236,15 +374,21 @@ const CustomInterviewSession = () => {
             <TranscriptView
               transcript={transcript}
               user={user}
+              isUserSpeaking={isUserSpeaking}
+              isAgentSpeaking={isAgentSpeaking}
+              isUserTurn={isUserTurn}
               agentName={agentName}
-              getAgentImage={getAgentImage}
+              getAgentImage={getAgentProfileImage}
               connectionStatus={connectionStatus}
-              transcriptEndRef={transcriptEndRef}
               codingPopupTask={codingPopupTask}
               showCodingPopup={!activeCodingTask}
               isCodingActionDisabled={isCodingActionDisabled}
               handleAttemptChallenge={handleAttemptChallenge}
               handleSkipChallenge={handleSkipChallenge}
+              countdownActive={countdownActive}
+              countdownRemaining={countdownRemaining}
+              countdownProgress={countdownProgress}
+              countdownMessageId={countdownMessageId}
             />
           </aside>
         </main>

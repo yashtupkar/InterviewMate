@@ -155,6 +155,7 @@ const ProjectsForm = () => {
                 onChange={(val) =>
                   setEditEntry({ ...editEntry, startDate: val })
                 }
+                maxYear={new Date().getFullYear()}
               />
             </div>
             {!editEntry.current && (
@@ -169,6 +170,7 @@ const ProjectsForm = () => {
                   }
                   align="right"
                   showPresent={true}
+                  maxYear={new Date().getFullYear()}
                 />
               </div>
             )}
@@ -218,7 +220,7 @@ const ProjectsForm = () => {
 
           <button
             onClick={handleDone}
-            className="w-full py-4 bg-gradient-to-r from-lime-600 to-lime-400 text-zinc-950 font-bold rounded-2xl shadow-lg hover:shadow-lime-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 group mt-4"
+            className="w-full py-2.5 bg-gradient-to-r from-lime-600 to-lime-400 text-zinc-950 font-bold rounded-xl shadow-lg hover:shadow-lime-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 group mt-4"
           >
             <Check className="w-5 h-5" />
             DONE
@@ -285,7 +287,7 @@ const ProjectsForm = () => {
 
       <button
         onClick={handleAdd}
-        className="w-full py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-[0.98] shadow-sm"
+        className="w-full py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-[0.98] shadow-sm"
       >
         <Plus className="w-5 h-5" />
         Add Project

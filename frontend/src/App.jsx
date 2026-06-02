@@ -41,9 +41,25 @@ import Contact from "./pages/Contact";
 import QuestionBankDashboard from "./pages/QuestionBank/QuestionBankDashboard";
 import QuestionBankList from "./pages/QuestionBank/QuestionBankList";
 import QuestionDetail from "./pages/QuestionBank/QuestionDetail";
+import QuestionCodePage from "./pages/QuestionBank/QuestionCodePage";
 import AdminRoute from "./components/AdminRoute";
 import SeedQuestions from "./pages/adminScreens/SeedQuestions";
+import BlogList from "./pages/Blog/BlogList";
+import BlogDetail from "./pages/Blog/BlogDetail";
+import BlogManagement from "./pages/adminScreens/BlogManagement";
 import CheckoutPage from "./pages/CheckoutPage";
+import AdminLayout from "./components/layouts/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLogin from "./pages/admin/AdminLogin";
+import UserManagement from "./pages/admin/UserManagement";
+import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
+import FeedbackManagement from "./pages/admin/FeedbackManagement";
+import ContactManagement from "./pages/admin/ContactManagement";
+import WaitlistManagement from "./pages/admin/WaitlistManagement";
+import QuestionManagement from "./pages/admin/QuestionManagement";
+import InterviewAnalysis from "./pages/admin/InterviewAnalysis";
+import ToolAnalysis from "./pages/admin/ToolAnalysis";
+import ProctoringTestPage from "./pages/ProctoringTestPage";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -71,6 +87,23 @@ function App() {
         try {
           const token = await getToken();
           const referralCode = localStorage.getItem("referralCode");
+          
+          let browser = "Unknown";
+          const ua = navigator.userAgent;
+          if (navigator.brave && await navigator.brave.isBrave()) {
+            browser = "Brave";
+          } else if (ua.match(/edg/i)) {
+            browser = "Edge";
+          } else if (ua.match(/opr\//i)) {
+            browser = "Opera";
+          } else if (ua.match(/chrome|chromium|crios/i)) {
+            browser = "Chrome";
+          } else if (ua.match(/firefox|fxios/i)) {
+            browser = "Firefox";
+          } else if (ua.match(/safari/i)) {
+            browser = "Safari";
+          }
+          
           console.log("Syncing user with referral code:", referralCode);
           const response = await fetch(`${backendURL}/api/users/sync`, {
             method: "POST",
@@ -78,7 +111,7 @@ function App() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ referralCode }),
+            body: JSON.stringify({ referralCode, browser }),
           });
           const data = await response.json();
           if (referralCode && data.success) {
@@ -230,10 +263,28 @@ function App() {
         />
 
         <Route
+          path="/interview-questions"
+          element={
+            <Layout>
+              <QuestionBankDashboard />
+            </Layout>
+          }
+        />
+
+        <Route
           path="/questions"
           element={
             <Layout>
               <QuestionBankDashboard />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/interview-questions/:domain"
+          element={
+            <Layout>
+              <QuestionBankList />
             </Layout>
           }
         />
@@ -248,10 +299,36 @@ function App() {
         />
 
         <Route
-          path="/questions/:id"
+          path="/interview-question/:skills/:questionId"
           element={
             <Layout>
               <QuestionDetail />
+            </Layout>
+          }
+        />
+
+        {/* Admin Login - Standalone */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+
+        <Route
+          path="/interview-question/:skills/:questionId/code"
+          element={<QuestionCodePage />}
+        />
+
+        <Route
+          path="/blog"
+          element={
+            <Layout>
+              <BlogList />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/blog/:slug"
+          element={
+            <Layout>
+              <BlogDetail />
             </Layout>
           }
         />
@@ -267,11 +344,91 @@ function App() {
 
         {/* Admin Routes */}
         <Route element={<AdminRoute />}>
+           <Route 
+             path="/admin" 
+             element={
+               <AdminLayout>
+                 <AdminDashboard />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/users" 
+             element={
+               <AdminLayout>
+                 <UserManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/subscriptions" 
+             element={
+               <AdminLayout>
+                 <SubscriptionManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/feedback" 
+             element={
+               <AdminLayout>
+                 <FeedbackManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/contacts" 
+             element={
+               <AdminLayout>
+                 <ContactManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/waitlist" 
+             element={
+               <AdminLayout>
+                 <WaitlistManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/questions" 
+             element={
+               <AdminLayout>
+                 <QuestionManagement />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/interviews" 
+             element={
+               <AdminLayout>
+                 <InterviewAnalysis />
+               </AdminLayout>
+             } 
+           />
+           <Route 
+             path="/admin/analytics" 
+             element={
+               <AdminLayout>
+                 <ToolAnalysis />
+               </AdminLayout>
+             } 
+           />
           <Route
             path="/admin/seed-questions"
             element={
               <Layout>
                 <SeedQuestions />
+              </Layout>
+            }
+          />
+          <Route
+            path="/admin/blogs"
+            element={
+              <Layout>
+                <BlogManagement />
               </Layout>
             }
           />
@@ -363,7 +520,13 @@ function App() {
 
           {/* Testing routes */}
           <Route path="/voices" element={<VoiceTest />} />
-          <Route path="/code" element={<CodingSpace />} />
+          <Route path="/code-space" element={<QuestionCodePage />} />
+          <Route path="/proctoring-test" element={<ProctoringTestPage />} />
+          <Route
+            path="/interview-question/:skills/:questionId/code-space"
+            element={<QuestionCodePage />}
+          />
+          <Route path="/code" element={<QuestionCodePage />} />
         </Route>
 
         {/* Auth Routes */}

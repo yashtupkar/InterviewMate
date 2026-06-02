@@ -12,8 +12,7 @@ const Background = () => {
         aria-hidden="true"
       />
       
-      {/* Maintain a dark overlay if needed for readability, but user showed preference for less overlays */}
-      <div className="absolute inset-0 bg-black/10" />
+
     </div>
   );
 };

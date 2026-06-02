@@ -44,27 +44,7 @@ const testimonials = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie4",
     rating: 5,
   },
-  {
-    name: "Aryan Sharma",
-    role: "Google SDE Intern",
-    content: "The real-time feedback on my posture and confidence during the mock interview was a game-changer. I felt much more prepared for my actual interviews.",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aryan",
-    rating: 5,
-  },
-  {
-    name: "Sneha Patel",
-    role: "Product Manager at Atlassian",
-    content: "InterviewMate helped me practice those tricky behavioral questions that usually trip me up. The AI-suggested improvements were spot on and very helpful.",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sneha",
-    rating: 5,
-  },
-  {
-    name: "Rohan Gupta",
-    role: "Data Scientist at Amazon",
-    content: "The variety of interview roles offered is impressive. I could practice for specific data science roles and get feedback tailored to that field.",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rohan",
-    rating: 5,
-  }
+
 ];
 
 const Testimonials = () => {
@@ -76,7 +56,7 @@ const Testimonials = () => {
           <div className="text-[#bef264] font-bold tracking-wider uppercase text-xs mb-3">
             Testimonials
           </div>
-        <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+        <h2 className="text-4xl md:text-5xl  text-white mb-6">
 What people are saying about us          </h2>
           <p className="text-zinc-400 text-base max-w-xl mx-auto mb-8">
             Hear from our incredible customers who are building at lightning speed.

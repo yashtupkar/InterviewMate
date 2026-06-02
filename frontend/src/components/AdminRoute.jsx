@@ -7,43 +7,31 @@ import { FiLoader } from "react-icons/fi";
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 const AdminRoute = () => {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(null);
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const checkAdmin = async () => {
-      if (isSignedIn) {
-        try {
-          const token = await getToken();
-          const res = await axios.get(`${backendURL}/api/users/profile`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setIsAdmin(res.data.user.role === 'admin');
-        } catch (err) {
-          console.error("Admin check failed:", err);
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
-      }
-    };
-    
-    if (isLoaded) {
-      if (isSignedIn) checkAdmin();
-      else setIsAdmin(false);
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      // In a real production app, you might want to call a /verify endpoint here
+      // For now, we trust the token presence and let the API reject it if invalid
+      setIsAuthenticated(true);
+    } else {
+      setIsAuthenticated(false);
     }
-  }, [isLoaded, isSignedIn, getToken]);
+    setIsVerifying(false);
+  }, []);
 
-  if (!isLoaded || isAdmin === null) {
+  if (isVerifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <FiLoader className="w-8 h-8 text-[#bef264] animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
+        <FiLoader className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
-  if (!isSignedIn || !isAdmin) {
-    return <Navigate to="/" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/admin/login" replace />;
   }
 
   return <Outlet />;

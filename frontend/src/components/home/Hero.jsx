@@ -40,7 +40,7 @@ const Hero = ({ backendStatus }) => {
         </div>
 
         {/* Heading */}
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-tight max-w-4xl text-white mb-3">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl  tracking-tight leading-tight max-w-4xl text-white mb-3">
           Become{" "}
           <span className="italic text-[#bef264]">Unstoppable</span>{" "}
           <br className="hidden sm:block" />
@@ -65,7 +65,7 @@ const Hero = ({ backendStatus }) => {
 
           <SignedOut>
             <Link to="/signup" className="w-full sm:w-auto">
-              <button className="w-fit flex items-center mx-auto gap-2 sm:w-auto px-5 py-3 rounded-xl bg-[#bef264] text-black font-semibold text-sm sm:text-base hover:brightness-110 transition-all transform hover:scale-105 shadow-[0_0_25px_rgba(190,242,100,0.3)]">
+              <button className="w-fit flex border-b-4  border-lime-800/60 items-center mx-auto gap-2 sm:w-auto px-5 py-3 rounded-xl bg-[#bef264] text-black font-semibold text-sm sm:text-base hover:brightness-110 transition-all transform hover:scale-105 shadow-[0_0_25px_rgba(190,242,100,0.3)]">
                 Start Practicing Free <MdOutlineDoubleArrow/>
               </button>
             </Link>
@@ -73,7 +73,7 @@ const Hero = ({ backendStatus }) => {
 
           <SignedIn>
             <Link to="/dashboard" className="w-full sm:w-auto">
-              <button className="w-fit flex items-center gap-2 mx-auto sm:w-auto px-5 py-3 rounded-xl bg-[#bef264] text-black font-semibold text-sm sm:text-base hover:brightness-110 transition-all transform hover:scale-105 shadow-[0_0_25px_rgba(190,242,100,0.3)]">
+              <button className="w-fit flex  border-b-4  border-lime-800/60 items-center gap-2 mx-auto sm:w-auto px-5 py-3 rounded-xl bg-[#bef264] text-black font-semibold text-sm sm:text-base hover:brightness-110 transition-all transform hover:scale-105 shadow-[0_0_25px_rgba(190,242,100,0.3)]">
                 Start Preparing Now <MdOutlineDoubleArrow />
               </button>
             </Link>

@@ -16,7 +16,7 @@ const CTA = () => {
       <div className="max-w-4xl mx-auto relative z-10 flex flex-col items-center text-center">
       <Logo size={42}/>
 
-        <h2 className="text-3xl md:text-5xl mt-4 font-bold text-white mb-6 leading-tight tracking-tight px-4">
+        <h2 className="text-3xl md:text-5xl mt-4  text-white mb-6 leading-tight tracking-tight px-4">
           Ready to Transform <br />
           <span className="text-primary italic">Your Career Path?</span>
         </h2>

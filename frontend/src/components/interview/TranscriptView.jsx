@@ -5,21 +5,35 @@ import CodingTaskAlert from "./CodingTaskAlert";
 const TranscriptView = ({
   transcript,
   user,
+  isUserSpeaking = false,
+  isAgentSpeaking = false,
+  isUserTurn = false,
   agentName,
   getAgentImage,
   connectionStatus,
-  transcriptEndRef,
   codingPopupTask,
   showCodingPopup,
   isCodingActionDisabled,
   handleAttemptChallenge,
   handleSkipChallenge,
   className = "",
+  countdownActive = false,
+  countdownRemaining = 0,
+  countdownProgress = 100,
 }) => {
   const [typedAgentText, setTypedAgentText] = useState({});
   const completedAgentMessageIdsRef = useRef(new Set());
   const typingTimerRef = useRef(null);
   const isInitializedRef = useRef(false);
+  const localTranscriptEndRef = useRef(null);
+
+  useEffect(() => {
+    if (!localTranscriptEndRef.current) return;
+    localTranscriptEndRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [transcript, typedAgentText, countdownActive, countdownRemaining]);
 
   useEffect(() => {
     return () => {
@@ -138,7 +152,7 @@ const TranscriptView = ({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent hover:scrollbar-thumb-zinc-700 transition-colors">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 pb-12 space-y-4 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent hover:scrollbar-thumb-zinc-700 transition-colors">
         {transcript.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6">
             <div className="w-12 h-12 rounded-full bg-zinc-800 flex items-center justify-center mb-3 text-zinc-500">
@@ -215,12 +229,65 @@ const TranscriptView = ({
             </div>
           ))
         )}
-        <div ref={transcriptEndRef} />
+        <div ref={localTranscriptEndRef} className="h-10" />
       </div>
 
-      <div className="p-3 border-t border-white/5 bg-zinc-900/50 flex items-center gap-2 text-[9px] text-zinc-500">
-        <FiInfo size={12} className="text-primary/60" />
-        <p className="font-medium leading-tight">AI-generated transcript.</p>
+      <div className="min-h-[62px] p-3.5 border-t border-white/5 bg-zinc-900/60 text-[9px] text-zinc-400">
+        {countdownActive ? (
+          <div className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-2.5 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FiRadio size={12} className="text-amber-300 animate-pulse" />
+                <p className="font-medium leading-tight text-amber-100">
+                  Paused: speak now to continue, or auto-send will trigger.
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-amber-50">
+                {Math.ceil(countdownRemaining / 1000)}s
+              </span>
+            </div>
+            <div className="mt-2 h-1.5 bg-amber-200/20 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-100 ${
+                  countdownProgress > 33
+                    ? "bg-gradient-to-r from-primary to-[#a3e14d]"
+                    : countdownProgress > 10
+                      ? "bg-yellow-500/70"
+                      : "bg-red-500/80 animate-pulse"
+                }`}
+                style={{ width: `${countdownProgress}%` }}
+              />
+            </div>
+          </div>
+        ) : isAgentSpeaking ? (
+          <div className="rounded-xl border border-sky-400/30 bg-sky-500/10 px-2.5 py-2 flex items-center gap-2">
+            <FiUsers size={12} className="text-sky-300" />
+            <p className="font-medium leading-tight text-sky-100">
+              Agent is speaking. Listen carefully, your turn starts next.
+            </p>
+          </div>
+        ) : isUserSpeaking ? (
+          <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-2 flex items-center gap-2">
+            <FiRadio size={12} className="text-emerald-300 animate-pulse" />
+            <p className="font-medium leading-tight text-emerald-100">
+              Listening: keep speaking naturally.
+            </p>
+          </div>
+        ) : isUserTurn ? (
+          <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-2 flex items-center gap-2">
+            <FiInfo size={12} className="text-cyan-300" />
+            <p className="font-medium leading-tight text-cyan-100">
+              Your turn: start speaking now.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-white/10 bg-zinc-800/45 px-2.5 py-2 flex items-center gap-2">
+            <FiInfo size={12} className="text-primary/60" />
+            <p className="font-medium leading-tight text-zinc-300">
+              AI-generated transcript.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

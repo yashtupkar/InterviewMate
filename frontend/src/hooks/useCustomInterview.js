@@ -53,6 +53,10 @@ export const useCustomInterview = () => {
   const [availableVoices, setAvailableVoices] = useState([]);
   const [isUserFocus, setIsUserFocus] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [countdownActive, setCountdownActive] = useState(false);
+  const [countdownRemaining, setCountdownRemaining] = useState(0);
+  const [countdownProgress, setCountdownProgress] = useState(100);
+  const [countdownMessageId, setCountdownMessageId] = useState(null);
 
   const userName = user?.firstName || "Candidate";
   const searchParams = new URLSearchParams(location.search);
@@ -96,6 +100,13 @@ export const useCustomInterview = () => {
   const wrapUpInformedRef = useRef(false);
   const lastAiFinishTimeRef = useRef(0);
   const isWaitingForInactivityResponseRef = useRef(false);
+  const sttFinalBufferRef = useRef("");
+  const lastRecognizedTextRef = useRef("");
+  const lastSpeechEventTimeRef = useRef(0);
+  const countdownIntervalRef = useRef(null);
+  const countdownStartTimeRef = useRef(0);
+  const pendingMessageRef = useRef(""); // Store message text for countdown auto-send
+  const countdownMessageIdRef = useRef(null); // Track message ID for countdown
 
   const MOCK_INTERVIEW_DATA = {
     interviewType: "Technical",
@@ -111,6 +122,8 @@ export const useCustomInterview = () => {
   const displayInterviewData = isPreview ? MOCK_INTERVIEW_DATA : interviewData;
 
   const SILENCE_THRESHOLD = 2000;
+  const COUNTDOWN_DURATION = 5000; // 5 seconds for user to continue speaking or auto-send
+  const PAUSE_DETECT = 500; // Start countdown after 0.5s of silence to give user time to think
   const SUPPORTED_CODING_LANGUAGES = [
     "javascript",
     "html",
@@ -586,6 +599,11 @@ export const useCustomInterview = () => {
         hasCallEndedRef.current
       )
         return;
+
+      // Reset STT carryover buffer so the next answer starts fresh.
+      sttFinalBufferRef.current = "";
+      lastRecognizedTextRef.current = "";
+      lastSpeechEventTimeRef.current = 0;
       transcriptRef.current.push({ role: "user", content: text });
       currentUserMessageIdRef.current = null;
       handleAiChat();
@@ -607,7 +625,7 @@ export const useCustomInterview = () => {
       ) {
         handleInactivityWarning();
       }
-    }, 10000);
+    }, 30000);
   }, [isUserSpeaking, isAgentSpeaking, isAiThinking]);
 
   const handleInactivityWarning = () => {
@@ -747,6 +765,61 @@ export const useCustomInterview = () => {
     ],
   );
 
+  // Countdown management: starts after brief pause, auto-sends after duration
+  const startCountdown = useCallback(
+    (messageId, messageText) => {
+      if (countdownIntervalRef.current)
+        clearInterval(countdownIntervalRef.current);
+
+      // Store message in refs to avoid stale closure
+      pendingMessageRef.current = messageText;
+      countdownMessageIdRef.current = messageId;
+
+      countdownStartTimeRef.current = Date.now();
+      setCountdownActive(true);
+      setCountdownMessageId(messageId);
+      setCountdownRemaining(COUNTDOWN_DURATION);
+      setCountdownProgress(100);
+
+      countdownIntervalRef.current = setInterval(() => {
+        const elapsed = Date.now() - countdownStartTimeRef.current;
+        const remaining = Math.max(0, COUNTDOWN_DURATION - elapsed);
+        const progress = (remaining / COUNTDOWN_DURATION) * 100;
+
+        setCountdownRemaining(remaining);
+        setCountdownProgress(progress);
+
+        if (remaining <= 0) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+          setCountdownActive(false);
+          setCountdownMessageId(null);
+          setIsUserSpeaking(false);
+
+          // Auto-send the message using stored text
+          const msgText = pendingMessageRef.current.trim();
+          if (msgText) {
+            handleUserSpeech(msgText);
+          }
+        }
+      }, 50); // Update every 50ms for smooth progress
+    },
+    [COUNTDOWN_DURATION, handleUserSpeech],
+  );
+
+  const cancelCountdown = useCallback(() => {
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setCountdownActive(false);
+    setCountdownMessageId(null);
+    setCountdownRemaining(0);
+    setCountdownProgress(100);
+    pendingMessageRef.current = "";
+    countdownMessageIdRef.current = null;
+  }, []);
+
   const startSTT = useCallback(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
@@ -760,11 +833,13 @@ export const useCustomInterview = () => {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
-    let finalBuffer = "";
 
     recognition.onstart = () => {
       setCallStatus("active");
       setConnectionStatus("Connected");
+      sttFinalBufferRef.current = "";
+      lastRecognizedTextRef.current = "";
+      lastSpeechEventTimeRef.current = 0;
       if (transcriptRef.current.length === 0) handleAiChat();
     };
 
@@ -782,27 +857,49 @@ export const useCustomInterview = () => {
       let interimTranscript = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const transcriptChunk = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalBuffer += transcriptChunk;
+        if (e.results[i].isFinal) sttFinalBufferRef.current += transcriptChunk;
         else interimTranscript += transcriptChunk;
       }
 
-      const currentText = (finalBuffer + interimTranscript).trim();
+      const currentText = (
+        sttFinalBufferRef.current + interimTranscript
+      ).trim();
       if (currentText) {
+        // Ignore duplicate/no-change recognition events to prevent countdown flicker.
+        const hasSpeechUpdate = currentText !== lastRecognizedTextRef.current;
+        if (!hasSpeechUpdate && !interimTranscript.trim()) return;
+
+        lastRecognizedTextRef.current = currentText;
+        lastSpeechEventTimeRef.current = Date.now();
+
         setIsUserSpeaking(true);
         if (inactivityTimerRef.current)
           clearTimeout(inactivityTimerRef.current);
         isWaitingForInactivityResponseRef.current = false;
+
+        // User is speaking: always cancel live countdown immediately.
+        // Use interval ref (live value) to avoid stale state captured by onresult closure.
+        if (countdownIntervalRef.current) {
+          cancelCountdown();
+        }
+
         updateUserTranscript(currentText);
 
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        const snapshotText = currentText;
         silenceTimerRef.current = setTimeout(() => {
-          const finalStr = finalBuffer.trim() || interimTranscript.trim();
-          if (finalStr) {
-            handleUserSpeech(finalStr);
-            finalBuffer = "";
+          // Start countdown only if silence persisted and text remained unchanged.
+          const stableSilence =
+            Date.now() - lastSpeechEventTimeRef.current >= PAUSE_DETECT;
+          const textUnchanged = lastRecognizedTextRef.current === snapshotText;
+          if (!stableSilence || !textUnchanged) return;
+
+          // User has paused: start the countdown for auto-send
+          const messageId = currentUserMessageIdRef.current;
+          if (messageId) {
+            startCountdown(messageId, snapshotText);
           }
-          setIsUserSpeaking(false);
-        }, SILENCE_THRESHOLD);
+        }, PAUSE_DETECT);
       }
     };
 
@@ -829,7 +926,14 @@ export const useCustomInterview = () => {
     try {
       recognition.start();
     } catch (e) {}
-  }, [handleAiChat, handleUserSpeech, updateUserTranscript, setCallStatus]);
+  }, [
+    handleAiChat,
+    handleUserSpeech,
+    updateUserTranscript,
+    setCallStatus,
+    cancelCountdown,
+    startCountdown,
+  ]);
 
   const handleEndCall = useCallback(() => {
     setShowEndConfirm(false);
@@ -838,6 +942,7 @@ export const useCustomInterview = () => {
     setCallStatus("ended");
     setConnectionStatus("Call Ended");
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    cancelCountdown(); // Clean up countdown timers
     if (recognitionRef.current) {
       try {
         recognitionRef.current.onend = null;
@@ -1131,6 +1236,8 @@ export const useCustomInterview = () => {
     }
     setTimeout(startSTT, 1000);
     return () => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      cancelCountdown();
       if (recognitionRef.current)
         try {
           recognitionRef.current.stop();
@@ -1240,6 +1347,10 @@ export const useCustomInterview = () => {
       transcript: contextTranscript,
       callStatus,
       user,
+      countdownActive,
+      countdownRemaining,
+      countdownProgress,
+      countdownMessageId,
     },
     refs: { localVideoRef, agentVolumeCircleRef },
     actions: {

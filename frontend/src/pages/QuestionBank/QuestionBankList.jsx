@@ -4,16 +4,27 @@ import {
   useSearchParams,
   useLocation,
   useNavigate,
+  useParams,
 } from "react-router-dom";
-import { useAuth } from "@clerk/clerk-react";
 import axios from "axios";
 import { MdOutlineComputer } from "react-icons/md";
 import { BsCheckCircle } from "react-icons/bs";
 import { FiUsers, FiClock, FiZap, FiCpu, FiStar, FiLock } from "react-icons/fi";
 import GoogleAdsBlock from "../../components/common/GoogleAdsBlock";
-import QuestionBankAuthPopup from "../../components/common/QuestionBankAuthPopup";
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
+
+const getPrimarySkillSlug = (question) => {
+  const skill = question?.skills?.[0];
+  if (!skill) return "general";
+  return String(skill)
+    .toLowerCase()
+    .trim()
+    .replace(/\+/g, " plus ")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+};
 
 const QuestionSkeleton = () => (
   <div className="p-4 bg-zinc-900 mb-2 border border-zinc-800 rounded-xl animate-pulse flex justify-between items-center">
@@ -32,10 +43,12 @@ const QuestionSkeleton = () => (
 );
 
 const QuestionBankList = () => {
+  const { domain: routeDomain } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isSignedIn } = useAuth();
+  const isBehavioralPath = routeDomain === "behavioral";
+  const skillFromPath = routeDomain && routeDomain !== "all" && !isBehavioralPath ? routeDomain : "";
 
   const [questions, setQuestions] = useState([]);
   const [filters, setFilters] = useState({
@@ -46,13 +59,13 @@ const QuestionBankList = () => {
   const [behavioralCats, setBehavioralCats] = useState([]);
 
   const [activeFilters, setActiveFilters] = useState({
-    skill: searchParams.get("skill") || "",
+    skill: searchParams.get("skill") || skillFromPath,
     company: searchParams.get("company") || "",
     type: searchParams.get("type") || "",
     difficulty: searchParams.get("difficulty") || "",
     search: searchParams.get("search") || "",
     category: searchParams.get("category") || "",
-    domain: searchParams.get("domain") || "",
+    domain: searchParams.get("domain") || (isBehavioralPath ? "behavioral" : ""),
   });
 
   const [loading, setLoading] = useState(true);
@@ -60,9 +73,6 @@ const QuestionBankList = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalQuestions, setTotalQuestions] = useState(0);
-
-  // Auth gate popup state — triggers on pagination for guests
-  const [showAuthGate, setShowAuthGate] = useState(false);
 
   // 🔥 Dynamic Headline
   const generateHeadline = () => {
@@ -95,17 +105,28 @@ const QuestionBankList = () => {
 
   // Sync URL
   useEffect(() => {
+    const queryDomain = searchParams.get("domain");
+    if (queryDomain && queryDomain !== routeDomain) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("domain");
+      navigate(
+        `/interview-questions/${encodeURIComponent(queryDomain)}${nextParams.toString() ? `?${nextParams.toString()}` : ""}`,
+        { replace: true },
+      );
+      return;
+    }
+
     setActiveFilters({
-      skill: searchParams.get("skill") || "",
+      skill: searchParams.get("skill") || skillFromPath,
       company: searchParams.get("company") || "",
       type: searchParams.get("type") || "",
       difficulty: searchParams.get("difficulty") || "",
       search: searchParams.get("search") || "",
       category: searchParams.get("category") || "",
-      domain: searchParams.get("domain") || "",
+      domain: searchParams.get("domain") || (isBehavioralPath ? "behavioral" : ""),
     });
     setPage(1);
-  }, [searchParams]);
+  }, [searchParams, skillFromPath, isBehavioralPath, routeDomain, navigate]);
 
   // Load filters
   useEffect(() => {
@@ -151,17 +172,35 @@ const QuestionBankList = () => {
 
   const handleFilterChange = (key, value) => {
     const params = new URLSearchParams(searchParams);
+
+    if (key === "skill") {
+      params.delete("skill");
+      setSearchParams(params);
+      navigate(`/interview-questions/${encodeURIComponent(value || "all")}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (key === "domain") {
+      const nextPath = value ? `/interview-questions/${encodeURIComponent(value)}` : "/interview-questions/all";
+      if (value) {
+        params.set("domain", value);
+      } else {
+        params.delete("domain");
+        params.delete("category");
+      }
+      setSearchParams(params);
+      navigate(nextPath + (params.toString() ? `?${params.toString()}` : ""));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     value ? params.set(key, value) : params.delete(key);
     setSearchParams(params);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Pagination with auth gate for guests
   const handleNextPage = () => {
-    if (!isSignedIn) {
-      setShowAuthGate(true);
-      return;
-    }
     setPage((p) => p + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -187,18 +226,10 @@ const QuestionBankList = () => {
 
   return (
     <div className="min-h-screen  text-white px-4 md:px-8 pb-24 pt-24">
-      {/* Auth Gate Popup — Quora/Medium/LinkedIn-style */}
-      <QuestionBankAuthPopup
-        isOpen={showAuthGate}
-        onClose={() => setShowAuthGate(false)}
-        redirectUrl={location.pathname + location.search}
-        subtitle={`Unlock ${totalQuestions}+ questions across ${filters.companies?.length || 0}+ companies`}
-      />
-
       {/* HEADER */}
       <div className="max-w-7xl mx-auto mb-8">
         <Link
-          to="/questions"
+          to="/interview-questions"
           className="text-sm text-zinc-300 hover:text-white mb-4 inline-flex items-center gap-1"
         >
           ← Back
@@ -228,21 +259,6 @@ const QuestionBankList = () => {
             />
 
             <div className="bg-zinc-900 p-4 rounded-xl space-y-3 border border-zinc-800">
-              {activeFilters.domain !== "behavioral" && (
-                <select
-                  value={activeFilters.domain}
-                  onChange={(e) => handleFilterChange("domain", e.target.value)}
-                  className="w-full p-2 bg-zinc-800 rounded capitalize"
-                >
-                  <option value="">All Domains</option>
-                  {filters.domains?.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              )}
-
               {activeFilters.domain === "behavioral" && (
                 <div className="flex items-center justify-between px-1">
                   <span className="text-xs font-bold text-white uppercase tracking-widest">
@@ -312,19 +328,6 @@ const QuestionBankList = () => {
                       <option key={s}>{s}</option>
                     ))}
                   </select>
-
-                  <select
-                    value={activeFilters.company}
-                    onChange={(e) =>
-                      handleFilterChange("company", e.target.value)
-                    }
-                    className="w-full p-2 bg-zinc-800 rounded capitalize"
-                  >
-                    <option value="">Company</option>
-                    {filters.companies.map((c) => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
                 </>
               )}
 
@@ -344,7 +347,10 @@ const QuestionBankList = () => {
               )}
 
               <button
-                onClick={() => setSearchParams({})}
+                onClick={() => {
+                  setSearchParams({});
+                  navigate("/interview-questions/all");
+                }}
                 className="text-xs text-zinc-400 hover:text-white"
               >
                 Reset Filters
@@ -373,7 +379,7 @@ const QuestionBankList = () => {
             questions.map((q) => (
               <Link
                 key={q._id}
-                to={`/questions/${q._id}`}
+                to={`/interview-question/${encodeURIComponent(getPrimarySkillSlug(q))}/${q._id}`}
                 state={{ from: location.pathname + location.search }}
               >
                 <div className="p-4 bg-zinc-900 mb-2 border border-zinc-800 rounded-xl hover:bg-zinc-800 transition flex justify-between items-center">

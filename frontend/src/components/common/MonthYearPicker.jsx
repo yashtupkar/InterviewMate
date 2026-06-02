@@ -1,20 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Calendar } from "lucide-react";
-
-const months = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const MonthYearPicker = ({
   value,
@@ -22,27 +9,12 @@ const MonthYearPicker = ({
   placeholder = "MM/YYYY",
   align = "left",
   showPresent = false,
+  maxYear,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
-  // Parse current value
-  const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
   const isPresent = value === "Present";
-
-  useEffect(() => {
-    if (value && value !== "Present") {
-      const [m, y] = value.split("/");
-      if (m && y) {
-        setSelectedMonth(m);
-        setSelectedYear(y);
-      }
-    } else {
-      setSelectedMonth("");
-      setSelectedYear("");
-    }
-  }, [value]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -57,25 +29,24 @@ const MonthYearPicker = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const years = [];
-  const currentYear = new Date().getFullYear();
-  for (let y = currentYear + 5; y >= currentYear - 40; y--) {
-    years.push(y.toString());
-  }
-
-  const handleSelectMonth = (m) => {
-    const monthNum = (months.indexOf(m) + 1).toString().padStart(2, "0");
-    const newValue = `${monthNum}/${selectedYear || currentYear}`;
-    onChange(newValue);
-    setSelectedMonth(monthNum);
-    if (!selectedYear) setSelectedYear(currentYear.toString());
+  const parseValue = (val) => {
+    if (!val || val === "Present") return null;
+    const [m, y] = val.split("/");
+    if (m && y) {
+      return new Date(parseInt(y), parseInt(m) - 1, 1);
+    }
+    return null;
   };
 
-  const handleSelectYear = (y) => {
-    const newValue = `${selectedMonth || "01"}/${y}`;
-    onChange(newValue);
-    setSelectedYear(y);
-    if (!selectedMonth) setSelectedMonth("01");
+  const handleDateChange = (date) => {
+    if (!date) {
+      onChange("");
+      return;
+    }
+    const m = (date.getMonth() + 1).toString().padStart(2, "0");
+    const y = date.getFullYear().toString();
+    onChange(`${m}/${y}`);
+    setIsOpen(false); // Close dropdown on selection
   };
 
   const togglePresent = () => {
@@ -83,13 +54,14 @@ const MonthYearPicker = ({
       onChange("");
     } else {
       onChange("Present");
+      setIsOpen(false); // Close dropdown when selecting Present
     }
   };
 
   const displayValue = value || "";
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative w-full" ref={containerRef}>
       <div
         onClick={() => setIsOpen(!isOpen)}
         className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus-within:border-lime-500/50 transition-all cursor-pointer flex items-center justify-between group"
@@ -102,21 +74,21 @@ const MonthYearPicker = ({
 
       {isOpen && (
         <div
-          className={`absolute z-[9999] mt-2 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col w-[280px] md:w-[320px] animate-in fade-in zoom-in-95 duration-200 ring-1 ring-white/10 ${
+          className={`absolute z-[9999] mt-2 bg-white border border-zinc-300 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200 w-max ${
             align === "right"
               ? "right-0 origin-top-right"
               : "left-0 origin-top-left"
           }`}
         >
           {showPresent && (
-            <div className="p-3 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+            <div className="p-3 border-b border-zinc-200 flex items-center justify-between bg-zinc-100">
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
                 Present (Current)
               </span>
               <button
                 onClick={togglePresent}
                 className={`w-10 h-5 rounded-full transition-all relative ${
-                  isPresent ? "bg-lime-400" : "bg-zinc-700"
+                  isPresent ? "bg-[#216ba5]" : "bg-zinc-300"
                 }`}
               >
                 <div
@@ -128,58 +100,15 @@ const MonthYearPicker = ({
             </div>
           )}
 
-          <div className="flex flex-col md:flex-row flex-1">
-            {/* Months Grid */}
-            <div className="flex-1 p-2 border-b md:border-b-0 md:border-r border-zinc-800">
-              <div className="grid grid-cols-3 gap-1">
-                {months.map((m, idx) => {
-                  const monthNum = (idx + 1).toString().padStart(2, "0");
-                  const isSelected = selectedMonth === monthNum && !isPresent;
-                  return (
-                    <button
-                      key={m}
-                      disabled={isPresent}
-                      onClick={() => handleSelectMonth(m)}
-                      className={`px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${
-                        isSelected
-                          ? "bg-lime-400 text-zinc-950 shadow-[0_0_10px_rgba(163,230,53,0.3)]"
-                          : isPresent
-                            ? "text-zinc-700 cursor-not-allowed"
-                            : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Years Grid */}
-            <div className="flex-1 p-2 max-h-[200px] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-2 gap-1">
-                {years.map((y) => {
-                  const isSelected = selectedYear === y && !isPresent;
-                  return (
-                    <button
-                      key={y}
-                      disabled={isPresent}
-                      onClick={() => handleSelectYear(y)}
-                      className={`px-2 py-2 rounded-lg text-[10px] font-bold transition-all ${
-                        isSelected
-                          ? "bg-lime-400 text-zinc-950 shadow-[0_0_10px_rgba(163,230,53,0.3)]"
-                          : isPresent
-                            ? "text-zinc-700 cursor-not-allowed"
-                            : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                      }`}
-                    >
-                      {y}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          {!isPresent && (
+            <DatePicker
+              selected={parseValue(value)}
+              onChange={handleDateChange}
+              showMonthYearPicker
+              inline
+              maxDate={maxYear ? new Date(maxYear, 11, 31) : undefined}
+            />
+          )}
         </div>
       )}
     </div>

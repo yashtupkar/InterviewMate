@@ -193,7 +193,7 @@ const CustomForm = ({ sectionId, sectionTitle }) => {
 
           <button
             onClick={handleDone}
-            className="w-full py-4 bg-gradient-to-r from-lime-600 to-lime-400 text-zinc-950 font-bold rounded-2xl shadow-lg hover:shadow-lime-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 group mt-4"
+            className="w-full py-2.5 bg-gradient-to-r from-lime-600 to-lime-400 text-zinc-950 font-bold rounded-xl shadow-lg hover:shadow-lime-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 group mt-4"
           >
             <Check className="w-5 h-5" />
             DONE
@@ -280,14 +280,14 @@ const CustomForm = ({ sectionId, sectionTitle }) => {
       <div className="flex gap-3">
         <button
           onClick={handleAdd}
-          className="flex-1 py-4 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-[0.98] shadow-sm"
+          className="flex-1 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl font-bold text-white flex items-center justify-center gap-2 hover:bg-zinc-800 transition-all active:scale-[0.98] shadow-sm"
         >
           <Plus className="w-5 h-5" />
           Add Item
         </button>
         <button
           onClick={() => removeCustomSection(sectionId)}
-          className="px-6 py-4 bg-red-500/10 border border-red-500/20 rounded-xl font-bold text-red-500 flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all active:scale-[0.98] shadow-sm"
+          className="px-6 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl font-bold text-red-500 flex items-center justify-center gap-2 hover:bg-red-500/20 transition-all active:scale-[0.98] shadow-sm"
           title="Delete Section"
         >
           <Trash2 className="w-5 h-5" />

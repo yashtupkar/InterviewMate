@@ -53,7 +53,7 @@ const WaitlistSection = () => {
                         <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">Early Access • Launching 2026</span>
                     </div>
 
-                    <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+                    <h2 className="text-3xl md:text-5xl  text-white mb-4 tracking-tight leading-tight">
                         Get Early Access of <br />PlaceMate<span className=" text-[#bef264]">AI</span>
                     </h2>
 

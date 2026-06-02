@@ -1,6 +1,8 @@
 require("dotenv").config();
+const http = require("http");
 const express = require("express");
 const cors = require("cors");
+const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 const userRoutes = require("./routes/user");
 const ApiError = require("./utils/ApiError");
@@ -19,6 +21,11 @@ const questionRoutes = require("./routes/questionRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 const ttsRoutes = require("./routes/ttsRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const blogRoutes = require("./routes/blogRoutes");
+const proctoringRoutes = require("./routes/proctoringRoutes");
+const ProctoringReport = require("./models/ProctoringReport");
+const { getSitemapXml } = require("./controllers/blogController");
 
 // Connect to Database
 connectDB();
@@ -51,6 +58,12 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/tts", ttsRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/blogs", blogRoutes);
+app.use("/api/proctoring", proctoringRoutes);
+
+// SEO
+app.get("/sitemap.xml", getSitemapXml);
 
 // Health Check
 app.get("/api/health", (req, res) => {
@@ -79,7 +92,59 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
 
-app.listen(PORT, () => {
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST"],
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("Proctoring socket connected:", socket.id);
+
+  socket.on("proctoring:event", async (payload) => {
+    if (!payload?.sessionId) {
+      return;
+    }
+
+    try {
+      const update = {
+        $push: {
+          events: {
+            eventType: payload.eventType,
+            message: payload.message,
+            details: payload.details || {},
+            score: payload.score || 0,
+            timestamp: payload.timestamp ? new Date(payload.timestamp) : new Date(),
+          },
+        },
+        $inc: {
+          totalViolations: payload.score > 0 ? 1 : 0,
+          suspicionScore: payload.score || 0,
+        },
+      };
+
+      if (payload.eventType?.startsWith("screen") || payload.eventType === "fullscreen-exit") {
+        update.$push.screenLogs = update.$push.events;
+      }
+
+      await ProctoringReport.findOneAndUpdate(
+        { sessionId: payload.sessionId },
+        update,
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+      );
+    } catch (error) {
+      console.error("Failed to save proctoring event", error);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Proctoring socket disconnected:", socket.id);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
