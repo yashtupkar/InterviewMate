@@ -234,6 +234,88 @@ const initialResumeState = {
   },
 };
 
+const emptyResumeState = {
+  title: "Untitled Resume",
+  template: "modern",
+  personalInfo: {
+    firstName: "",
+    lastName: "",
+    fullName: "",
+    email: "",
+    phone: "",
+    location: "",
+    jobTitle: "",
+    objective: "",
+    photoUrl: "",
+    links: [],
+  },
+  profiles: [{ title: "Summary", content: "", visible: true }],
+  sectionTitles: {
+    objective: "Summary",
+    profiles: "Profile",
+    experience: "Experience",
+    education: "Education",
+    skills: "Skills",
+    projects: "Projects",
+    achievements: "Achievements",
+    certifications: "Certifications",
+  },
+  experience: [],
+  education: [],
+  skills: [],
+  projects: [],
+  achievements: [],
+  certifications: [],
+  customSections: [],
+  customizations: {
+    language: "English (UK)",
+    dateFormat: "DD/MM/YYYY",
+    pageFormat: "A4",
+    layout: {
+      columns: "two",
+      spacing: {
+        fontSize: "10.5pt",
+        lineHeight: 1.15,
+        margin: { left: "22mm", right: "22mm", top: "12mm", bottom: "12mm" },
+        spaceBetweenEntries: 10,
+      },
+    },
+    colors: {
+      mode: "basic",
+      subMode: "accent",
+      accent: "#000000",
+      text: "#18181b",
+      background: "#ffffff",
+      border: { style: "single", color: "#e4e4e7" },
+      applyTo: {
+        name: true,
+        jobTitle: true,
+        headings: true,
+        headingsLine: true,
+        headerIcons: false,
+        dotsBarsBubbles: false,
+        dates: false,
+        entrySubtitle: false,
+        linkIcons: false,
+      },
+    },
+    fonts: { body: "Source Serif Pro", headings: "Source Serif Pro" },
+    sectionHeadings: {
+      capitalization: "uppercase",
+    },
+    entryLayout: {
+      subtitleStyle: "bold",
+      subtitlePlacement: "next-line",
+      listStyle: "bullet",
+    },
+    profileImage: {
+      style: "rounded",
+      borderRadius: 8,
+      size: 80,
+    },
+  },
+};
+
 const API_BASE =
   import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -340,12 +422,12 @@ export const ResumeProvider = ({ children }) => {
   const createNewResume = (template = "modern") => {
     const themeColor = TEMPLATE_THEMES[template] || TEMPLATE_THEMES.modern;
     setResumeData({
-      ...initialResumeState,
+      ...emptyResumeState,
       template,
       customizations: {
-        ...initialResumeState.customizations,
+        ...emptyResumeState.customizations,
         colors: {
-          ...initialResumeState.customizations.colors,
+          ...emptyResumeState.customizations.colors,
           accent: themeColor,
         },
       },
@@ -380,7 +462,7 @@ export const ResumeProvider = ({ children }) => {
 
   const deleteResume = async (id) => {
     try {
-      const response = await axios.delete(`${API_BASE}/${id}`);
+      const response = await axios.delete(`${API_BASE}/api/resume/${id}`);
       if (response.data.success) {
         setResumes((prev) => prev.filter((r) => r._id !== id));
       }
