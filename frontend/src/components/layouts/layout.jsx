@@ -82,14 +82,14 @@ const Layout = ({ children }) => {
   const toolsMenuItems = [
     {
       label: "Resume Builder",
-      to: "/resume-builder",
+      to: "/tools/resume",
       icon: <FiFileText size={15} />,
       desc: "Build ATS-friendly resumes",
       isProtected: true,
     },
     {
       label: "ATS Scorer",
-      to: "/ats-scorer",
+      to: "/tools/ats",
       icon: <FiCheckSquare size={15} />,
       desc: "Check resume compatibility",
       isProtected: true,
@@ -387,7 +387,7 @@ const Layout = ({ children }) => {
             </Link>
             {user ? (
               <Link
-                to="/resume-builder"
+                to="/tools/resume"
                 className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
               >
                 <FiFileText size={16} className="text-[#bef264]/60" />
@@ -404,7 +404,7 @@ const Layout = ({ children }) => {
             )}
             {user ? (
               <Link
-                to="/ats-scorer"
+                to="/tools/ats"
                 className="text-white text-sm hover:text-[#bef264] transition-all font-semibold flex items-center gap-2.5"
               >
                 <FiCheckSquare size={16} className="text-[#bef264]/60" />

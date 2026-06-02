@@ -459,14 +459,39 @@ const customInterviewController = {
         }
       }
 
-      const response = await openai.chat.completions.create({
-        model: "google/gemini-2.0-flash-lite-001", // Highly optimized for low-latency
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...enhancedMessages,
-        ],
-        temperature: 0.7,
-      });
+      const chatModels = [
+        "google/gemini-3.1-flash-lite",
+        "google/gemini-3.1-flash-lite-preview",
+        "google/gemini-2.5-flash-lite",
+        "google/gemini-2.5-flash",
+        "meta-llama/llama-3.3-70b-instruct",
+      ];
+
+      let response = null;
+      let lastError = null;
+
+      for (const model of chatModels) {
+        try {
+          response = await openai.chat.completions.create({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...enhancedMessages,
+            ],
+            temperature: 0.7,
+          });
+          if (response?.choices?.[0]?.message?.content) {
+            break;
+          }
+        } catch (err) {
+          console.warn(`[customInterviewController] Model ${model} failed: ${err.message || err}`);
+          lastError = err;
+        }
+      }
+
+      if (!response || !response.choices?.[0]?.message?.content) {
+        throw lastError || new Error("All chat models failed to return a response.");
+      }
 
       const aiMessage = response.choices[0].message.content;
       res.status(200).json({ text: aiMessage });

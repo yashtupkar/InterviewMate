@@ -13,9 +13,9 @@ const Footer = () => {
             links: [
                 { name: "AI Interviews", path: "/interview" },
                 { name: "Group Discussions", path: "/gd" },
-                { name: "Resume Builder", path: "/resume-builder" },
+                { name: "Resume Builder", path: "/tools/resume" },
                 { name: "Interview Question Bank", path: "/interview-questions" },
-                { name: "ATS Scanner", path: "/ats-scorer" }
+                { name: "ATS Scanner", path: "/tools/ats" }
             ]
         },
         {

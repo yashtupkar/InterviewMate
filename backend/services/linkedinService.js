@@ -4,6 +4,10 @@
  */
 
 const MODELS = [
+  "google/gemini-3.1-flash-lite",
+  "google/gemini-3.1-flash-lite-preview",
+  "google/gemini-2.5-flash-lite",
+  "google/gemini-2.5-flash",
   "google/gemini-2.0-flash-lite-preview-02-05", // Fast and powerful
   "google/gemini-2.0-flash",
   "meta-llama/llama-3.3-70b-instruct",

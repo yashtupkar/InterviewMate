@@ -65,7 +65,11 @@ const useInterviewReloadProtection = ({
 
   useEffect(() => {
     if (!sessionId || isGuardDisabled || !isSessionLocked) return;
-    if (location.pathname.includes("/session")) {
+    if (
+      location.pathname.includes("/session") ||
+      location.pathname.includes("/interviews") ||
+      location.pathname.includes("/group-discussions")
+    ) {
       navigate(resultPath, { replace: true });
     }
   }, [sessionId, isGuardDisabled, isSessionLocked, location.pathname, navigate, resultPath]);

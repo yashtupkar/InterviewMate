@@ -502,7 +502,7 @@
 //                 <>
 //                   {/* Featured Activity */}
 //                   <div
-//                     onClick={() => navigate("/dashboard/setup")}
+//                     onClick={() => navigate("/interview/setup")}
 //                     className="md:col-span-2 glass-panel p-8 rounded-[2rem] group cursor-pointer border border-[#bef264]/10 hover:border-[#bef264]/40 transition-all duration-500 relative overflow-hidden shadow-[0_0_40px_rgba(190,242,100,0.05)]"
 //                   >
 //                     <div className="absolute top-0 right-0 w-80 h-80 bg-[#bef264]/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-[#bef264]/20 transition-colors duration-700"></div>
@@ -1509,7 +1509,7 @@ const DashboardOverview = () => {
       image:
         "https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Start Interview",
-      path: "/dashboard/setup",
+      path: "/interview/setup",
       color: "#bef264",
     },
     {
@@ -1539,7 +1539,7 @@ const DashboardOverview = () => {
       image:
         "https://images.pexels.com/photos/5989927/pexels-photo-5989927.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Scan Resume",
-      path: "/ats-scorer",
+      path: "/tools/ats",
       color: "#3b82f6",
     },
     {
@@ -1554,7 +1554,7 @@ const DashboardOverview = () => {
       image:
         "https://images.pexels.com/photos/5989925/pexels-photo-5989925.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Build Resume",
-      path: "/resume-builder",
+      path: "/tools/resume",
       color: "#8b5cf6",
     },
     {
@@ -1584,7 +1584,7 @@ const DashboardOverview = () => {
       image:
         "https://images.pexels.com/photos/5428836/pexels-photo-5428836.jpeg?auto=compress&cs=tinysrgb&w=400",
       cta: "Practice with Peers",
-      path: "/dashboard/setup?mode=peer",
+      path: "/interview/setup?mode=peer",
       color: "#22c55e",
     },
   ];
@@ -2355,7 +2355,7 @@ const DashboardOverview = () => {
                       <FiActivity className="mx-auto text-3xl mb-2 opacity-50" />
                       <p>No recent sessions</p>
                       <button
-                        onClick={() => navigate("/dashboard/setup")}
+                        onClick={() => navigate("/interview/setup")}
                         className="mt-3 text-[#bef264] text-sm font-semibold hover:underline"
                       >
                         Start your first session

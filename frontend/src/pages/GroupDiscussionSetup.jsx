@@ -211,7 +211,7 @@ const GroupDiscussionSetup = () => {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       toast.success("Discussion session started successfully. Launching...");
-      navigate(`/gd/session/${res.data.sessionId}`, {
+      navigate(`/group-discussions/${res.data.sessionId}`, {
         state: {
           topic: res.data.topic,
           description: res.data.description,

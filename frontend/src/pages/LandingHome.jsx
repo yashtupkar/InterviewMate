@@ -719,7 +719,7 @@ const LandingHome = ({ backendStatus }) => {
                 </SignedOut>
                 <SignedIn>
                   <Link
-                    to="/dashboard/setup"
+                    to="/interview/setup"
                     className="group relative px-10 py-5 bg-[#bef264] text-black font-black text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-[#d9ff96] whitespace-nowrap transition-all duration-300 shadow-[0_20px_40px_rgba(190,242,100,0.2)] flex items-center gap-3"
                   >
                     Start Practice Now

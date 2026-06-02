@@ -17,7 +17,7 @@ const InterviewHeader = ({
     <header className="px-4 md:px-6 py-3 flex items-center justify-between bg-zinc-950/80 border-b border-white/5 backdrop-blur-xl sticky top-0 z-40">
       <div className="flex items-center gap-3 md:gap-4">
         <button
-          onClick={() => navigate("/dashboard/setup")}
+          onClick={() => navigate("/interview/setup")}
           className="p-2 bg-zinc-900/70 hover:bg-zinc-800 cursor-pointer rounded-xl transition-colors text-zinc-400 hover:text-white"
         >
           <FiArrowRight className="rotate-180" size={18} />

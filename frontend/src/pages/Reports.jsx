@@ -43,7 +43,7 @@ const Reports = () => {
             <button
               onClick={() =>
                 navigate(
-                  activeTab === "interviews" ? "/dashboard/setup" : "/gd/setup",
+                  activeTab === "interviews" ? "/interview/setup" : "/gd/setup",
                 )
               }
               className="flex items-center justify-center gap-1 px-4 md:px-6 py-1.5 md:py-2.5 bg-[#bef264] hover:bg-[#bef264]-hover text-black font-bold rounded-lg transition-all active:scale-95 whitespace-nowrap text-sm w-fit sm:w-auto"

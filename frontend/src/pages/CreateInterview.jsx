@@ -763,7 +763,7 @@ const CreateInterview = () => {
         "Interview initialized successfully. Launching your session...",
       );
 
-      navigate(`/session-custom/${newSessionId}`, {
+      navigate(`/interviews/${newSessionId}`, {
         state: {
           systemPrompt,
           isCustom: true,

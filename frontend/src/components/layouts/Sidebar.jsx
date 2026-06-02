@@ -87,8 +87,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
     {
       name: "Mock Interviews",
       icon: <HiSparkles />,
-      path: "/dashboard/setup",
-      active: location.pathname === "/dashboard/setup",
+      path: "/interview/setup",
+      active: location.pathname === "/interview/setup",
     },
     {
       name: "GD Simulator",
@@ -106,19 +106,19 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, toggleCollapse }) => {
       name: "Resume Tools",
       icon: <TbBriefcaseFilled />,
       active:
-        location.pathname === "/ats-scorer" ||
-        location.pathname === "/resume-builder",
+        location.pathname === "/tools/ats" ||
+        location.pathname === "/tools/resume",
       subItems: [
         {
           name: "ATS Scanner",
-          path: "/ats-scorer",
-          active: location.pathname === "/ats-scorer",
+          path: "/tools/ats",
+          active: location.pathname === "/tools/ats",
           badge: "New",
         },
         {
           name: "Resume Builder",
-          path: "/resume-builder",
-          active: location.pathname === "/resume-builder",
+          path: "/tools/resume",
+          active: location.pathname === "/tools/resume",
           badge: "New",
         },
       ],

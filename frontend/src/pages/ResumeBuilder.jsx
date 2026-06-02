@@ -90,11 +90,11 @@ const ResumeBuilder = () => {
   });
 
   const handleNewResume = (template) => {
-    navigate(`/resume-builder/new?template=${template || "modern"}`);
+    navigate(`/tools/resume/new?template=${template || "modern"}`);
   };
 
   const handleEditResume = (id) => {
-    navigate(`/resume-builder/${id}`);
+    navigate(`/tools/resume/${id}`);
   };
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.1, 1.5));
@@ -145,7 +145,7 @@ const ResumeBuilder = () => {
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-1 md:gap-2">
             <button
-              onClick={() => navigate("/resume-builder")}
+              onClick={() => navigate("/tools/resume")}
               className="w-10 h-10 flex items-center justify-center hover:bg-zinc-800 rounded-xl text-zinc-400 hover:text-white transition-all group overflow-hidden"
               title="Back to Dashboard"
             >
@@ -265,7 +265,7 @@ const ResumeBuilder = () => {
               if (saved) {
                 toast.success("Changes synced! ✨");
                 if (id === "new") {
-                  navigate(`/resume-builder/${saved._id}`, { replace: true });
+                  navigate(`/tools/resume/${saved._id}`, { replace: true });
                 }
               }
             }}
