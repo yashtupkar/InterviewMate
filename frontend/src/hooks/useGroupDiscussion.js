@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import { AppContext } from "../context/AppContext";
 import usePollyTTS from "./usePollyTTS";
 import { interviewAgents } from "../constants/agents";
-import { createPCMRecorder } from "../utils/pcmRecorder";
+import { useDeepgramSTT } from "./useDeepgramSTT";
 
 const AGENT_COLORS = interviewAgents.reduce((acc, agent) => {
   acc[agent.name] = `#${agent.bg}`;
@@ -26,6 +26,128 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
   const topic = meta.topic || "Group Discussion";
   const maxTime = meta.timeLimit || FALLBACK_MAX_GD_TIME;
+
+  // Reusable Deepgram STT Hook configuration
+  const {
+    startSTT: hookStartSTT,
+    stopSTT: hookStopSTT,
+    toggleMute: hookToggleMute,
+    clearTranscript: hookClearTranscript,
+    isListening: hookIsListening,
+    isMuted: hookIsMuted
+  } = useDeepgramSTT({
+    backendUrl: backend_URL,
+    getToken: () => getTokenRef.current(),
+    model: "nova-2",
+    language: "en-US",
+    onSpeechStarted: () => {
+      console.log("%c[STT:GD:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
+      if (agentSpeakingRef.current) {
+        console.log("[STT:GD:Barge-In] User speech start detected. Stopping agent TTS.");
+        stopSpeaking();
+        setSpeakingAgent(null);
+        agentSpeakingRef.current = false;
+        busyRef.current = false;
+      }
+    },
+    onTranscript: ({ transcript: transcriptChunk, isFinal, confidence }) => {
+      if (transcriptChunk.trim()) {
+        console.log(
+          `[STT:GD:DG] Transcript chunk: "${transcriptChunk}" | Confidence: ${confidence.toFixed(4)} | IsFinal: ${isFinal}`
+        );
+
+        if (agentSpeakingRef.current) {
+          console.log("[STT:GD:Barge-In] User transcript received. Stopping agent TTS.");
+          stopSpeaking();
+          setSpeakingAgent(null);
+          agentSpeakingRef.current = false;
+          busyRef.current = false;
+        }
+
+        if (!aiOpeningFiredRef.current && !userInitiatedRef.current) {
+          userInitiatedRef.current = true;
+          if (openTimerRef.current) clearTimeout(openTimerRef.current);
+        }
+
+        if (prefetchedTurnRef.current) prefetchedTurnRef.current = null;
+        if (proTimRef.current) clearTimeout(proTimRef.current);
+        if (silTimRef.current) clearTimeout(silTimRef.current);
+
+        lastUserSpeechRef.current = Date.now();
+        userSpeakingRef.current = true;
+        setIsUserSpeaking(true);
+
+        if (isFinal) {
+          finalBufferRef.current = (finalBufferRef.current + " " + transcriptChunk).trim();
+          interimTextRef.current = "";
+        } else {
+          interimTextRef.current = transcriptChunk;
+        }
+        setLiveText((finalBufferRef.current + " " + interimTextRef.current).trim());
+
+        if (finalizeTimerRef.current) clearTimeout(finalizeTimerRef.current);
+        finalizeTimerRef.current = setTimeout(() => {
+          const spoken = finalBufferRef.current.trim();
+          finalBufferRef.current = "";
+          interimTextRef.current = "";
+          setLiveText("");
+          userSpeakingRef.current = false;
+          setIsUserSpeaking(false);
+
+          if (spoken) {
+            const userEntry = { id: Date.now(), speaker: "You", role: "user", text: spoken, color: "#22c55e" };
+            const lower = spoken.toLowerCase();
+            const keywords = ["conclusion", "conclude", "concluding", "wrap up", "wrapping up", "final point", "thank you everyone", "that is all from my side", "my conclusion", "summarize", "summarizing", "end the discussion"];
+            const isUserConcluding = keywords.some((k) => lower.includes(k));
+
+            if (isUserConcluding && !concludedRef.current) {
+              concludedRef.current = true;
+              conclusionPendingRef.current = false;
+              if (proTimRef.current) clearTimeout(proTimRef.current);
+              if (silTimRef.current) clearTimeout(silTimRef.current);
+
+              toast.success("Conclusion detected. Finalizing discussion...");
+              setTranscript((prev) => {
+                const next = [...prev, userEntry];
+                transcriptRef.current = next;
+                return next;
+              });
+
+              setTimeout(async () => {
+                try {
+                  const token = await getTokenRef.current();
+                  await axios.post(`${backend_URL}/api/group-discussion/add-user-message`, { sessionId, text: spoken }, { headers: { Authorization: `Bearer ${token}` } });
+                } catch (err) { }
+                if (aliveRef.current) confirmEndSession();
+              }, 1200);
+              return;
+            }
+
+            setTranscript((prev) => {
+              const next = [...prev, userEntry];
+              transcriptRef.current = next;
+              return next;
+            });
+
+            if (!busyRef.current && !silTimRef.current) {
+              silTimRef.current = setTimeout(() => {
+                if (aliveRef.current) {
+                  runAgentTurnRef.current({
+                    endpoint: isConcludingPhase ? "conclude" : "next-turn",
+                    body: { userMessage: spoken, proactive: false },
+                  });
+                }
+                silTimRef.current = null;
+              }, 300);
+            }
+          }
+        }, 3000);
+      }
+    },
+    onSpeechEnded: () => {
+      console.log("%c[STT:GD:VAD] Speech ended detected by Deepgram VAD", "color: #f59e0b; font-weight: bold;");
+    }
+  });
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [transcript, setTranscript] = useState([]);
@@ -72,6 +194,9 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   const openTimerRef = useRef(null);
   const userInitiatedRef = useRef(false);
   const aiOpeningFiredRef = useRef(false);
+  const finalBufferRef = useRef("");
+  const interimTextRef = useRef("");
+  const finalizeTimerRef = useRef(null);
 
   const getTokenRef = useRef(getToken);
   useEffect(() => {
@@ -334,213 +459,15 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     busyRef.current = false;
     openedRef.current = false;
 
-    let ws = null;
-    let mediaRecorder = null;
-
     const stopSTT = () => {
-      if (mediaRecorder) {
-        try {
-          mediaRecorder.stop();
-        } catch (e) {
-          console.error("[STT:GD] Error stopping PCM Recorder:", e);
-        }
-        mediaRecorder = null;
-      }
-      if (ws) {
-        try {
-          ws.onclose = null;
-          ws.onerror = null;
-          ws.close();
-        } catch (e) {
-          console.error("[STT:GD] Error closing WebSocket:", e);
-        }
-        ws = null;
-      }
+      hookStopSTT();
     };
 
     const startSTT = async () => {
-      try {
-        const tokenResp = await getTokenRef.current();
-        const res = await axios.post(
-          `${backend_URL}/api/stt/token`,
-          {},
-          { headers: { Authorization: `Bearer ${tokenResp}` } }
-        );
-
-        const token = res.data.token;
-        if (!token || !aliveRef.current) return;
-
-        console.log("[STT:GD] Connecting to Deepgram WebSocket (PCM16 config)...");
-        const wsUrl = "wss://api.deepgram.com/v1/listen?encoding=linear16&sample_rate=16000&channels=1&smart_format=true&model=nova-2&language=en-US&interim_results=true&utterance_end_ms=1000&vad_events=true";
-        ws = new WebSocket(wsUrl, ["token", token]);
-        socketRef.current = ws;
-
-        let finalBuffer = "";
-        let interimText = "";
-        let finalizeTimer = null;
-
-        ws.onopen = async () => {
-          if (!aliveRef.current) return;
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                channelCount: 1,
-              },
-            });
-
-            const recorder = await createPCMRecorder(
-              stream,
-              (pcm16Buffer) => {
-                if (ws.readyState === WebSocket.OPEN && !mutedRef.current) {
-                  ws.send(pcm16Buffer);
-                }
-              },
-              null
-            );
-            mediaRecorder = recorder;
-            toast.success("🎙️ Mic ready — speak when you want to join!");
-          } catch (err) {
-            console.error("[STT:GD] Mic access or PCM Recorder error:", err);
-            toast.error("Couldn't start microphone. Check browser permissions.");
-          }
-        };
-
-        ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-
-          // Handle Speech started/ended events from VAD
-          if (data.type === "SpeechStarted") {
-            console.log("%c[STT:GD:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
-            // Dynamic Barge-In: immediately stop agent speaking if user starts talking
-            if (agentSpeakingRef.current) {
-              console.log("[STT:GD:Barge-In] User speech start detected. Stopping agent TTS.");
-              stopSpeaking();
-              setSpeakingAgent(null);
-              agentSpeakingRef.current = false;
-              busyRef.current = false;
-            }
-            return;
-          } else if (data.type === "UtteranceEnd") {
-            console.log("%c[STT:GD:VAD] Speech ended detected by Deepgram VAD", "color: #f59e0b; font-weight: bold;");
-            return;
-          }
-
-          const alternative = data.channel?.alternatives?.[0];
-          const transcriptChunk = alternative?.transcript || "";
-          const isFinal = data.is_final;
-          const confidence = alternative?.confidence || 0;
-
-          if (!aliveRef.current || mutedRef.current) return;
-
-          if (transcriptChunk.trim()) {
-            console.log(
-              `[STT:GD:DG] Transcript chunk: "${transcriptChunk}" | Confidence: ${confidence.toFixed(4)} | IsFinal: ${isFinal}`
-            );
-
-            // Double check barge-in in case SpeechStarted was missed
-            if (agentSpeakingRef.current) {
-              console.log("[STT:GD:Barge-In] User transcript received. Stopping agent TTS.");
-              stopSpeaking();
-              setSpeakingAgent(null);
-              agentSpeakingRef.current = false;
-              busyRef.current = false;
-            }
-
-            if (!aiOpeningFiredRef.current && !userInitiatedRef.current) {
-              userInitiatedRef.current = true;
-              if (openTimerRef.current) clearTimeout(openTimerRef.current);
-            }
-
-            if (prefetchedTurnRef.current) prefetchedTurnRef.current = null;
-            if (proTimRef.current) clearTimeout(proTimRef.current);
-            if (silTimRef.current) clearTimeout(silTimRef.current);
-
-            lastUserSpeechRef.current = Date.now();
-            userSpeakingRef.current = true;
-            setIsUserSpeaking(true);
-
-            if (isFinal) {
-              finalBuffer = (finalBuffer + " " + transcriptChunk).trim();
-              interimText = "";
-            } else {
-              interimText = transcriptChunk;
-            }
-            setLiveText((finalBuffer + " " + interimText).trim());
-
-            if (finalizeTimer) clearTimeout(finalizeTimer);
-            finalizeTimer = setTimeout(() => {
-              const spoken = finalBuffer.trim();
-              finalBuffer = "";
-              interimText = "";
-              setLiveText("");
-              userSpeakingRef.current = false;
-              setIsUserSpeaking(false);
-
-              if (spoken) {
-                const userEntry = { id: Date.now(), speaker: "You", role: "user", text: spoken, color: "#22c55e" };
-                const lower = spoken.toLowerCase();
-                const keywords = ["conclusion", "conclude", "concluding", "wrap up", "wrapping up", "final point", "thank you everyone", "that is all from my side", "my conclusion", "summarize", "summarizing", "end the discussion"];
-                const isUserConcluding = keywords.some((k) => lower.includes(k));
-
-                if (isUserConcluding && !concludedRef.current) {
-                  concludedRef.current = true;
-                  conclusionPendingRef.current = false;
-                  if (proTimRef.current) clearTimeout(proTimRef.current);
-                  if (silTimRef.current) clearTimeout(silTimRef.current);
-
-                  toast.success("Conclusion detected. Finalizing discussion...");
-                  setTranscript((prev) => {
-                    const next = [...prev, userEntry];
-                    transcriptRef.current = next;
-                    return next;
-                  });
-
-                  setTimeout(async () => {
-                    try {
-                      const token = await getTokenRef.current();
-                      await axios.post(`${backend_URL}/api/group-discussion/add-user-message`, { sessionId, text: spoken }, { headers: { Authorization: `Bearer ${token}` } });
-                    } catch (err) { }
-                    if (aliveRef.current) confirmEndSession();
-                  }, 1200);
-                  return;
-                }
-
-                setTranscript((prev) => {
-                  const next = [...prev, userEntry];
-                  transcriptRef.current = next;
-                  return next;
-                });
-
-                if (!busyRef.current && !silTimRef.current) {
-                  silTimRef.current = setTimeout(() => {
-                    if (aliveRef.current) {
-                      runAgentTurnRef.current({
-                        endpoint: isConcludingPhase ? "conclude" : "next-turn",
-                        body: { userMessage: spoken, proactive: false },
-                      });
-                    }
-                    silTimRef.current = null;
-                  }, 300);
-                }
-              }
-            }, 3000);
-          }
-        };
-
-        ws.onclose = () => {
-          console.log("[STT:GD:WS] Deepgram WS closed in GD.");
-          if (aliveRef.current && !mutedRef.current) {
-            console.log("[STT:GD:WS] Reconnecting in 1000ms...");
-            setTimeout(startSTT, 1000);
-          }
-        };
-
-      } catch (err) {
-        console.error("[STT:GD] Deepgram initialization error in GD:", err);
-      }
+      finalBufferRef.current = "";
+      interimTextRef.current = "";
+      setLiveText("");
+      hookStartSTT();
     };
 
     startSTT();
