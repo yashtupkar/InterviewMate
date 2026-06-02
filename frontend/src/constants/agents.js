@@ -127,15 +127,6 @@ export const interviewAgents = [
     },
   },
   // {
-  //   name: "Elliot",
-  //   provider: "vapi",
-  //   voiceId: "Elliot",
-  //   bg: "f59e0b",
-  //   image: "/assets/interviewers/male3.png",
-  //   label: "Male",
-  //   // No animations → falls back to static image
-  // },
-  // {
   //   name: "Rachel",
   //   provider: "11labs",
   //   voiceId: "21m00Tcm4TlvDq8ikWAM",

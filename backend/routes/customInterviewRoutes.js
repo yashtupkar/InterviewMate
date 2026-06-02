@@ -73,4 +73,9 @@ router.delete(
   customInterviewController.deletePreset,
 );
 
+// Migrated report and session routes
+router.get("/report/:sessionId", userAuth, customInterviewController.getInterviewReport);
+router.post("/report-from-transcript", userAuth, customInterviewController.generateReportFromTranscript);
+router.get("/user", userAuth, customInterviewController.getUserInterviews);
+
 module.exports = router;

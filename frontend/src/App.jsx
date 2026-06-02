@@ -7,7 +7,6 @@ import toast, { Toaster } from "react-hot-toast";
 // Components
 import Homepage from "./pages/Homepage";
 import InterviewLayout from "./layout/InterviewLayout";
-import InterviewSession from "./pages/InterviewSession";
 import CreateInterview from "./pages/CreateInterview";
 import Reports from "./pages/Reports";
 import InterviewResult from "./pages/InterviewResult";
@@ -465,9 +464,6 @@ function App() {
           </Route>
 
           {/* Standalone Session Routes (No Sidebar) */}
-          <Route path="/session" element={<InterviewSession />} />
-
-          <Route path="/session/:sessionId" element={<InterviewSession />} />
           <Route
             path="/session-custom/:sessionId"
             element={<CustomInterviewSession />}

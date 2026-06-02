@@ -1016,7 +1016,7 @@ export const useCustomInterview = () => {
     const token = await getToken();
     try {
       const response = await axios.post(
-        `${backend_URL}/api/vapi-interview/report-from-transcript`,
+        `${backend_URL}/api/custom-interview/report-from-transcript`,
         {
           sessionId,
           transcript: finalTranscript,

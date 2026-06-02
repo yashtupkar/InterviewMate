@@ -84,7 +84,7 @@ const PastInterviews = () => {
       try {
         const token = await getToken();
         const res = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/vapi-interview/user`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/user`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },

@@ -6,7 +6,6 @@ const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 const userRoutes = require("./routes/user");
 const ApiError = require("./utils/ApiError");
-const vapiInterviewRouter = require("./routes/vapiInterviewRoutes");
 const gdRouter = require("./routes/gdRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const linkedinRoutes = require("./routes/linkedinRoutes");
@@ -44,7 +43,6 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Routes
 app.use("/api/users", userRoutes);
-app.use("/api/vapi-interview", vapiInterviewRouter);
 app.use("/api/group-discussion", gdRouter);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/linkedin", linkedinRoutes);

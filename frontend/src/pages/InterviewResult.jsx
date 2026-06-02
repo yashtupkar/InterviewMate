@@ -166,7 +166,7 @@ const InterviewResult = () => {
       try {
         const token = await getToken();
         const response = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/vapi-interview/report/${sessionId}`,
+          `${import.meta.env.VITE_BACKEND_URL}/api/custom-interview/report/${sessionId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },

@@ -23,9 +23,6 @@ const interviewSessionSchema = new mongoose.Schema({
     ],
     default: "initialized",
   },
-  vapiCallId: {
-    type: String,
-  },
   transcript: {
     type: String,
     default: "",

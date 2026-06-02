@@ -9,6 +9,7 @@ const {
 } = require("../services/InterviewResponseAnalyzer");
 const CreditService = require("../services/creditService");
 const { SERVICE_CREDITS } = require("../config/pricingConfig");
+const { rewardReferrer } = require("./referralController");
 
 const ALLOWED_INTERVIEW_MODES = ["roleBased", "skillsBased"];
 const ALLOWED_SOURCE_TYPES = ["resume", "jobDescription", "both"];
@@ -522,6 +523,118 @@ const customInterviewController = {
   },
 };
 
+// Migrated endpoints from legacy vapiInterviewController
+
+const getInterviewReport = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user._id;
+
+    const session = await InterviewSession.findOne({ _id: sessionId, userId });
+
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+
+    res.status(200).json(session);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching report" });
+  }
+};
+
+const generateReportFromTranscript = async (req, res) => {
+  try {
+    const { sessionId, transcript } = req.body;
+    const userId = req.user?._id || req.body.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    if (!sessionId || !Array.isArray(transcript) || transcript.length === 0) {
+      return res.status(400).json({ message: "Transcript is required" });
+    }
+
+    const session = await InterviewSession.findOne({ _id: sessionId, userId });
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+
+    const formattedTranscript = transcript
+      .filter((message) => message && message.text)
+      .map((message) => {
+        const speaker =
+          message.speaker ||
+          (message.role === "assistant" || message.role === "agent"
+            ? "Interviewer"
+            : "Candidate");
+        return `${speaker}: ${message.text}`;
+      })
+      .join("\n");
+
+    if (!formattedTranscript.trim()) {
+      return res.status(400).json({ message: "Transcript is empty" });
+    }
+
+    session.status = "analysis_pending";
+    session.transcript = formattedTranscript;
+    await session.save();
+
+    // Trigger analysis in the background
+    (async () => {
+      try {
+        const reportData = await AnalyzeFullTranscript(formattedTranscript);
+        const overallScores = Object.values(reportData.overall);
+        const averageScore = Math.round(
+          overallScores.reduce((a, b) => a + b, 0) / overallScores.length,
+        );
+
+        session.report = {
+          overallScore: averageScore,
+          summary: reportData.summary || "",
+          strengths: reportData.strengths || [],
+          improvements: reportData.growthAreas || [],
+          detailedAnalysis: reportData,
+        };
+        session.actualDuration = (req.body.duration || 10) * 60; // Store as seconds
+        session.status = "completed";
+        await rewardReferrer(userId);
+
+        // Deduct credits based on duration
+        const durationMin = req.body.duration || 10;
+        await CreditService.deduct(userId, "mock_interview", durationMin);
+      } catch (reportError) {
+        console.error("Error generating report from transcript:", reportError);
+        session.status = "analysis_failed";
+      }
+      await session.save();
+    })();
+
+    res
+      .status(200)
+      .json({ status: "analysis_pending", message: "Analysis started" });
+  } catch (error) {
+    console.error("Error in generateReportFromTranscript:", error);
+    res.status(500).json({ message: "Error generating report" });
+  }
+};
+
+const getUserInterviews = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+    const sessions = await InterviewSession.find({ userId }).sort({
+      createdAt: -1,
+    });
+    res.status(200).json(sessions);
+  } catch (error) {
+    console.error("Error fetching user interviews:", error);
+    res.status(500).json({ message: "Error fetching user interviews" });
+  }
+};
+
 module.exports = {
   ...customInterviewController,
   startCustomSession,
@@ -530,4 +643,7 @@ module.exports = {
   createPreset,
   updatePreset,
   deletePreset,
+  getInterviewReport,
+  generateReportFromTranscript,
+  getUserInterviews,
 };

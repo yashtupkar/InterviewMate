@@ -33,7 +33,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-xl font-bold text-white mb-3">3. Data Sharing</h2>
               <p>
-                We do not sell your personal data. We share information only with service providers (like Clerk for auth, Vapi for AI) necessary to operate the platform.
+                We do not sell your personal data. We share information only with service providers (like Clerk for auth, and other AI services) necessary to operate the platform.
               </p>
             </section>
 
