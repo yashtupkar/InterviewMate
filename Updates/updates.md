@@ -500,7 +500,7 @@ graph TD
 | `/sitemap.xml` | GET | No | Generates an XML sitemap of all published blogs. |
 
 ### 🌐 External Integrations & Configuration
-*   **What Changed:** Added Cloudinary integration for handling featured images. The `cloudinaryService.js` exposes `uploadImageBuffer` which converts a `multer` memory buffer to a base64 Data URI and uploads it to the `interviewmate/blogs` folder. Added necessary `.env` variables.
+*   **What Changed:** Added Cloudinary integration for handling featured images. The `cloudinaryService.js` exposes `uploadImageBuffer` which converts a `multer` memory buffer to a base64 Data URI and uploads it to the `placemateai/blogs` folder. Added necessary `.env` variables.
 *   **Environment Configuration:**
 
 | Key | Old Value | New Value | Description |

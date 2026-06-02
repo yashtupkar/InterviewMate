@@ -1,6 +1,6 @@
-# Scaling InterviewMate to 10,000+ Users
+# Scaling PlaceMateAI to 10,000+ Users
 
-This document outlines the architectural bottlenecks in the current `InterviewMate` codebase when attempting to handle 10,000+ concurrent users, and provides a step-by-step implementation plan for scaling the application.
+This document outlines the architectural bottlenecks in the current `PlaceMateAI` codebase when attempting to handle 10,000+ concurrent users, and provides a step-by-step implementation plan for scaling the application.
 
 ## The Bottlenecks & Fixes
 

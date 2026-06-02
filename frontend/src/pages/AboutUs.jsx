@@ -18,7 +18,7 @@ const AboutUs = () => {
   const team = [
     { name: "Aryan Sharma", role: "Founder & CEO", image: founderImg, bio: "Visionary behind the platform, dedicated to honest candidate empowerment." },
     { name: "Tanya Verma", role: "Head of AI Engineering", image: aiHeadImg, bio: "Leading the development of ultra-low latency interview simulations." },
-    { name: "Rohan Gupta", role: "Full Stack Architect", image: leadDevImg, bio: "Architecting the seamless, high-performance ecosystem of InterviewMate." }
+    { name: "Rohan Gupta", role: "Full Stack Architect", image: leadDevImg, bio: "Architecting the seamless, high-performance ecosystem of PlaceMateAI." }
   ];
 
   const barHeights = [40, 60, 30, 80, 50, 90, 45, 75, 55, 65];
@@ -26,7 +26,7 @@ const AboutUs = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white selection:bg-primary/30 overflow-x-hidden font-sans pb-24 relative z-0">
       <Helmet>
-        <title>About Us | InterviewMate - Access to the Future of Preparation</title>
+        <title>About Us | PlaceMateAI - Access to the Future of Preparation</title>
         <meta name="description" content="Experience AI-driven features: intelligent automation, seamless integrations, and real-time insights." />
       </Helmet>
 

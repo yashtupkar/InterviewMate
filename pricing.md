@@ -1,6 +1,6 @@
-# 📊 InterviewMate: Profitability & Margin Analysis (Unified Credits)
+# 📊 PlaceMateAI: Profitability & Margin Analysis (Unified Credits)
 
-This document provides a deep dive into the financial physics of InterviewMate after transitioning to our **Unified Credit Model**, where **1 Credit = ₹1**. By eliminating the Vapi "middleware tax" and using our custom engine, we have achieved industry-leading margins.
+This document provides a deep dive into the financial physics of PlaceMateAI after transitioning to our **Unified Credit Model**, where **1 Credit = ₹1**. By eliminating the Vapi "middleware tax" and using our custom engine, we have achieved industry-leading margins.
 
 *Note: All conversions use the current exchange rate: ₹94.07 per $1.*
 
@@ -66,7 +66,7 @@ The user attempts their **next** interview or GD (needs 10 or 8 credits) and is 
 *   **Bonus Value**: Yearly plans give users substantially more savings and lock out competitors.
 
 ### **B. Competitive Advantage**
-*   **The Vapi-Free Moat**: Most competitors operate on 15% margins due to external voice APIs. InterviewMate operates on **95%+ margins**.
+*   **The Vapi-Free Moat**: Most competitors operate on 15% margins due to external voice APIs. PlaceMateAI operates on **95%+ margins**.
 *   **Unmatched Value**: You can provide a massive 200 credits for ₹199—a price point no competitor can touch without losing money.
 
 ### **C. Customer Acquisition Cost (CAC) Offset**

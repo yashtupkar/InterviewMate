@@ -3,7 +3,7 @@
  * Stores TTS audio locally for faster playback and offline support
  */
 
-const DB_NAME = "InterviewMateAudioCache";
+const DB_NAME = "PlaceMateAIAudioCache";
 const DB_VERSION = 1;
 const STORE_NAME = "audio_cache";
 const CACHE_EXPIRY_DAYS = 30; // Cache for 30 days

@@ -1,7 +1,7 @@
-# InterviewMate: Unified Credit Business Model (Revised for AWS TTS + JDoodle)
+# PlaceMateAI: Unified Credit Business Model (Revised for AWS TTS + JDoodle)
 
 ## 1. Executive Summary
-InterviewMate remains a credit-first AI prep SaaS where **1 Credit = ₹1**, but this revised model now explicitly includes new variable expenses from:
+PlaceMateAI remains a credit-first AI prep SaaS where **1 Credit = ₹1**, but this revised model now explicitly includes new variable expenses from:
 
 - AWS TTS (Polly) for voice responses
 - JDoodle for coding execution

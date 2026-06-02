@@ -210,7 +210,7 @@ const Voices = () => {
                 🤖 Active Agent Voices
               </h2>
               <p className="text-xs text-zinc-500 leading-relaxed">
-                These are the English voices assigned to the 6 InterviewMate agents on this browser.
+                These are the English voices assigned to the 6 PlaceMateAI agents on this browser.
               </p>
               <div className="space-y-3 pt-2">
                 {interviewAgents

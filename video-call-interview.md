@@ -80,18 +80,18 @@ Build a LiveKit-based peer interview system that launches quickly now and can la
 
 
 **Relevant files**
-- d:/interviewMate/backend/index.js - register peer interview routes and keep provider token endpoints isolated.
-- d:/interviewMate/backend/middleware/auth.js - reuse clerkAuth for matching, sessions, and safety actions.
-- d:/interviewMate/backend/models/User.js - expand with preferences, opt-in, block references, and safety metadata.
-- d:/interviewMate/backend/models/interviewSessionModel.js - reference for session status/report structure.
-- d:/interviewMate/backend/models/gdSessionModel.js - reference for transcript/report patterns for future GD rooms.
-- d:/interviewMate/backend/services/creditService.js - keep matching and live calls independent from billing unless you decide otherwise later.
-- d:/interviewMate/backend/config/pricingConfig.js - future pricing hooks if peer sessions become paid.
-- d:/interviewMate/backend/routes/subscriptionRoutes.js - rate-limit pattern reference.
-- d:/interviewMate/frontend/src/App.jsx - add peer interview routes and room flows.
-- d:/interviewMate/frontend/src/context/InterviewContext.jsx - reference for persisted session/device state.
-- d:/interviewMate/frontend/src/pages/DashboardOverview.jsx - add matching entry points and pending requests.
-- d:/interviewMate/frontend/src/pages/InterviewSession.jsx - reference for live call page layout and device controls.
+- PlaceMateAI/backend/index.js - register peer interview routes and keep provider token endpoints isolated.
+- PlaceMateAI/backend/middleware/auth.js - reuse clerkAuth for matching, sessions, and safety actions.
+- PlaceMateAI/backend/models/User.js - expand with preferences, opt-in, block references, and safety metadata.
+- PlaceMateAI/backend/models/interviewSessionModel.js - reference for session status/report structure.
+- PlaceMateAI/backend/models/gdSessionModel.js - reference for transcript/report patterns for future GD rooms.
+- PlaceMateAI/backend/services/creditService.js - keep matching and live calls independent from billing unless you decide otherwise later.
+- PlaceMateAI/backend/config/pricingConfig.js - future pricing hooks if peer sessions become paid.
+- PlaceMateAI/backend/routes/subscriptionRoutes.js - rate-limit pattern reference.
+- PlaceMateAI/frontend/src/App.jsx - add peer interview routes and room flows.
+- PlaceMateAI/frontend/src/context/InterviewContext.jsx - reference for persisted session/device state.
+- PlaceMateAI/frontend/src/pages/DashboardOverview.jsx - add matching entry points and pending requests.
+- PlaceMateAI/frontend/src/pages/InterviewSession.jsx - reference for live call page layout and device controls.
 
 **Verification**
 1. Test request, accept, reject, cancel, and expiry flows.

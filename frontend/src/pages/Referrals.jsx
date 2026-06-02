@@ -54,7 +54,7 @@ const Referrals = () => {
     ? `${window.location.origin}?ref=${stats.referralCode}`
     : "Generating link...";
 
-  const shareMessage = `🎯 Join me on InterviewMate - your ultimate interview preparation platform! Use my referral link and get 50 FREE credits:\n${referralLink}`;
+  const shareMessage = `🎯 Join me on PlaceMateAI - your ultimate interview preparation platform! Use my referral link and get 50 FREE credits:\n${referralLink}`;
 
   const copyToClipboard = (text, message = "Copied to clipboard!") => {
     navigator.clipboard.writeText(text);
@@ -65,7 +65,7 @@ const Referrals = () => {
     const urls = {
       whatsapp: `https://wa.me/?text=${encodeURIComponent(shareMessage)}`,
       linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(referralLink)}`,
-      email: `mailto:?subject=Join InterviewMate - Get 50 Free Credits&body=${encodeURIComponent(shareMessage)}`,
+      email: `mailto:?subject=Join PlaceMateAI - Get 50 Free Credits&body=${encodeURIComponent(shareMessage)}`,
       copy: null,
     };
 

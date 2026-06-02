@@ -90,15 +90,15 @@ const BlogList = () => {
     <div className="min-h-screen text-white pt-24 pb-20 px-4 md:px-8">
       <Helmet>
         <title>
-          InterviewMate Blog | Interview Tips, Career Guides, and ATS Insights
+          PlaceMateAI Blog | Interview Tips, Career Guides, and ATS Insights
         </title>
         <meta
           name="description"
-          content="Read InterviewMate blogs on interview preparation, resume optimization, ATS strategies, and job-winning communication techniques."
+          content="Read PlaceMateAI blogs on interview preparation, resume optimization, ATS strategies, and job-winning communication techniques."
         />
         <link rel="canonical" href={canonicalUrl} />
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="InterviewMate Blog" />
+        <meta property="og:title" content="PlaceMateAI Blog" />
         <meta
           property="og:description"
           content="Interview tips, career guides, and practical strategies to prepare better."

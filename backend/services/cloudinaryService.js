@@ -29,7 +29,7 @@ const ensureCloudinaryConfig = () => {
 const uploadImageBuffer = async ({
   buffer,
   mimetype,
-  folder = "interviewmate/blogs",
+  folder = "placemateai/blogs",
 }) => {
   ensureCloudinaryConfig();
 

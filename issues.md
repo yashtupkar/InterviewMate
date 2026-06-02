@@ -25,7 +25,7 @@
 
 ### C1. 🔓 API Keys Exposed in `.env` (Potentially Committed to Git)
 
-**File**: [.env](file:///d:/interviewMate/backend/.env)
+**File**: [.env](./backend/.env)
 
 **Problem**: The `.env` file contains live API keys for **Clerk, VAPI, OpenRouter, and Razorpay** — and the `.gitignore` only contains `node_modules`. If this repo has ever been pushed to GitHub (even private), these keys are compromised.
 
@@ -54,7 +54,7 @@
 
 ### C2. 🌐 CORS Wide Open — Any Origin Can Call Your API
 
-**File**: [index.js](file:///d:/interviewMate/backend/index.js#L30)
+**File**: [index.js](./backend/index.js#L30)
 
 **Problem**: `app.use(cors())` with no options allows **ANY website** to call your API. An attacker can build a phishing site that makes authenticated requests to your backend using your users' tokens.
 
@@ -76,7 +76,7 @@
 
 ### C3. 🚨 Code Execution Endpoint Has ZERO Authentication
 
-**File**: [codingRoutes.js](file:///d:/interviewMate/backend/routes/codingRoutes.js#L5)
+**File**: [codingRoutes.js](./backend/routes/codingRoutes.js#L5)
 
 **Problem**: `POST /api/coding/execute` has **no auth middleware** and **no rate limiting**. Anyone on the internet can execute arbitrary code on JDoodle using your API credentials. This is an immediate abuse vector — bots will drain your JDoodle quota in minutes.
 
@@ -102,7 +102,7 @@
 
 ### C4. 💰 Race Condition in Credit Deduction (Double-Spend)
 
-**Files**: [creditService.js](file:///d:/interviewMate/backend/services/creditService.js#L14-L46), [customInterviewController.js](file:///d:/interviewMate/backend/controllers/customInterviewController.js#L43-L51)
+**Files**: [creditService.js](./backend/services/creditService.js#L14-L46), [customInterviewController.js](./backend/controllers/customInterviewController.js#L43-L51)
 
 **Problem**: The credit deduction flow is:
 1. Read subscription credits from DB
@@ -146,7 +146,7 @@ deduct: async (userId, service, duration = 0) => {
 
 ### C5. 💥 `referralController` Uses Legacy `credits.interviews` Object Format
 
-**File**: [referralController.js](file:///d:/interviewMate/backend/controllers/referralController.js#L70-L75)
+**File**: [referralController.js](./backend/controllers/referralController.js#L70-L75)
 
 **Problem**: `processReferral` and `rewardReferrer` still use the OLD credits schema (`subscription.credits.interviews += 1`) but the current Subscription model uses a **flat Number** (`credits: Number`). This will silently fail or corrupt data whenever a referral is processed.
 
@@ -221,7 +221,7 @@ module.exports = { chatRateLimit, aiToolRateLimit };
 
 ### C7. 🔥 Background Async Analysis Has No Safety Net
 
-**Files**: [gdController.js](file:///d:/interviewMate/backend/controllers/gdController.js#L396-L421)
+**Files**: [gdController.js](./backend/controllers/gdController.js#L396-L421)
 
 **Problem**: The `generateGDReport` function fires off analysis in an untracked `(async () => { ... })()` block. Problems with this:
 1. **No retry** — if OpenRouter is temporarily down, the analysis fails permanently
@@ -236,7 +236,7 @@ module.exports = { chatRateLimit, aiToolRateLimit };
 
 ### C8. 🔑 Missing JDoodle API Credentials
 
-**File**: [codingController.js](file:///d:/interviewMate/backend/controllers/codingController.js#L25-L26)
+**File**: [codingController.js](./backend/controllers/codingController.js#L25-L26)
 
 **Problem**: `JDOODLE_CLIENT_ID` and `JDOODLE_CLIENT_SECRET` are referenced in the code but **not present in `.env`**. The code execution feature will always fail with a 401 from JDoodle API.
 
@@ -290,7 +290,7 @@ orderSchema.index({ user: 1, createdAt: -1 });
 
 ### C10. 📦 50MB Request Body Limit — DoS Vector
 
-**File**: [index.js](file:///d:/interviewMate/backend/index.js#L31-L32)
+**File**: [index.js](./backend/index.js#L31-L32)
 
 **Problem**: `express.json({ limit: '50mb' })` allows anyone to send a 50MB JSON payload to any endpoint, consuming server memory. 200 concurrent 50MB requests = 10GB RAM consumed = server crashes instantly.
 
@@ -307,7 +307,7 @@ For routes that genuinely need bigger payloads (bulk question upload), apply a r
 
 ### C11. 🔐 Custom Interview Chat Endpoint — No Session Ownership Validation
 
-**File**: [customInterviewController.js](file:///d:/interviewMate/backend/controllers/customInterviewController.js#L142-L165)
+**File**: [customInterviewController.js](./backend/controllers/customInterviewController.js#L142-L165)
 
 **Problem**: The `getChatResponse` endpoint accepts a `sessionId` and `messages` array but **never verifies that the sessionId belongs to the authenticated user**. It also doesn't validate that the session exists or check session status. The endpoint directly calls OpenRouter with whatever `systemPrompt` and `messages` the client sends — meaning a user could send arbitrary prompts using your API key.
 
@@ -355,7 +355,7 @@ getChatResponse: async (req, res) => {
 
 ### M1. 🔐 Subscription Routes Use Different Auth Than Rest of App
 
-**File**: [subscriptionRoutes.js](file:///d:/interviewMate/backend/routes/subscriptionRoutes.js#L52-L60)
+**File**: [subscriptionRoutes.js](./backend/routes/subscriptionRoutes.js#L52-L60)
 
 **Problem**: Subscription routes use `ClerkExpressRequireAuth()` (provides `req.auth.userId` as a Clerk ID string), while all other routes use your custom `clerkAuth` middleware (provides `req.user` as a full Mongoose User document with `_id`). This forces `subscriptionController` to call `ensureSubscription(req.auth.userId)` — an extra DB query on every subscription request.
 
@@ -365,7 +365,7 @@ getChatResponse: async (req, res) => {
 
 ### M2. 💸 LinkedIn Credits Deducted AFTER AI Call (Should Be Before)
 
-**File**: [linkedinController.js](file:///d:/interviewMate/backend/controllers/linkedinController.js#L9-L20)
+**File**: [linkedinController.js](./backend/controllers/linkedinController.js#L9-L20)
 
 **Problem**: The pattern is: AI call → deduct credits. If the AI call succeeds but the credit deduction fails (DB timeout), the user gets the service free. More importantly, if credits are already 0, the AI call still runs and burns your OpenRouter budget — the deduction just silently fails afterward.
 
@@ -417,7 +417,7 @@ module.exports = { sanitizeForPrompt };
 
 ### M4. 🌐 Hardcoded `HTTP-Referer: localhost` in AI Services
 
-**Files**: [InterviewResponseAnalyzer.js](file:///d:/interviewMate/backend/services/InterviewResponseAnalyzer.js#L19), [GDAnalyzer.js](file:///d:/interviewMate/backend/services/GDAnalyzer.js#L44)
+**Files**: [InterviewResponseAnalyzer.js](./backend/services/InterviewResponseAnalyzer.js#L19), [GDAnalyzer.js](./backend/services/GDAnalyzer.js#L44)
 
 **Problem**: `"HTTP-Referer": "https://localhost:5173"` is hardcoded. OpenRouter uses this header for analytics, rate-limit routing, and billing attribution. In production, this should be your actual domain.
 
@@ -431,7 +431,7 @@ module.exports = { sanitizeForPrompt };
 
 ### M5. 📈 GD Session Transcript Grows Unbounded in MongoDB Document
 
-**File**: [gdSessionModel.js](file:///d:/interviewMate/backend/models/gdSessionModel.js)
+**File**: [gdSessionModel.js](./backend/models/gdSessionModel.js)
 
 **Problem**: Each `next-turn` call appends another entry to the `transcript` array in the GDSession document. During a 10-minute GD with 4 agents, this could be 40-60+ entries. Every `next-turn` call also reads the full session (including the growing transcript) just to add one more entry. At scale:
 - Increasing document size per request
@@ -447,7 +447,7 @@ module.exports = { sanitizeForPrompt };
 
 ### M6. ⏱️ No Request Timeout on Express Server
 
-**File**: [index.js](file:///d:/interviewMate/backend/index.js#L77-L79)
+**File**: [index.js](./backend/index.js#L77-L79)
 
 **Problem**: If an AI call hangs indefinitely (OpenRouter network issue), the Express request stays open forever, consuming a connection slot. Under load, hanging connections accumulate and block new users.
 
@@ -463,7 +463,7 @@ server.headersTimeout = 66000;
 
 ### M7. 🏥 No Health Check for MongoDB Connection State
 
-**File**: [index.js](file:///d:/interviewMate/backend/index.js#L50-L52)
+**File**: [index.js](./backend/index.js#L50-L52)
 
 **Problem**: Health check returns `"OK"` even if MongoDB is disconnected. Load balancers and monitoring tools will think the server is healthy when it can't serve any data.
 
@@ -485,7 +485,7 @@ app.get('/api/health', (req, res) => {
 
 ### M8. 📚 Question Bank Routes — Public, Unprotected, No Rate Limit
 
-**File**: [questionRoutes.js](file:///d:/interviewMate/backend/routes/questionRoutes.js)
+**File**: [questionRoutes.js](./backend/routes/questionRoutes.js)
 
 **Problem**: `GET /api/questions`, `GET /api/questions/:id`, `GET /api/questions/stats/aggregates`, and `GET /api/questions/filters/metadata` are all **public** (no auth required) and have **no rate limiting**. A scraper bot can dump your entire question bank in seconds.
 
@@ -504,7 +504,7 @@ router.get('/stats/aggregates', publicApiLimit, getAggregatedStats);
 
 ### M9. 📄 Resume Endpoints Lack Ownership Verification
 
-**File**: [resume.controller.js](file:///d:/interviewMate/backend/controllers/resume.controller.js)
+**File**: [resume.controller.js](./backend/controllers/resume.controller.js)
 
 **Problem**: `getResumeById` and `deleteResume` find resumes by `_id` only — they don't verify that the requesting user owns that resume. Any authenticated user can read or delete another user's resume if they know/guess the MongoDB ObjectId.
 
@@ -524,7 +524,7 @@ exports.deleteResume = async (req, res, next) => {
 
 ### M10. 🛑 No Graceful Shutdown Handling
 
-**File**: [index.js](file:///d:/interviewMate/backend/index.js)
+**File**: [index.js](./backend/index.js)
 
 **Problem**: On `SIGTERM` or `SIGINT` (deploy, restart, crash), the server dies immediately. In-flight requests are dropped, database connections aren't cleanly closed, and any background analysis tasks are lost forever.
 
@@ -591,7 +591,7 @@ app.use(compression());
 
 ### N4. 📖 Missing Pagination Max Limit
 
-**File**: [questionController.js](file:///d:/interviewMate/backend/controllers/questionController.js#L10)
+**File**: [questionController.js](./backend/controllers/questionController.js#L10)
 
 **Problem**: A user can pass `?limit=999999` and dump the entire question database in one request, causing a huge DB read.
 

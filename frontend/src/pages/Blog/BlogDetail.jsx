@@ -117,7 +117,7 @@ const BlogDetail = () => {
       dateModified: blog.updatedAt || blog.publishedAt,
       author: {
         "@type": "Person",
-        name: blog.authorName || "InterviewMate Team",
+        name: blog.authorName || "PlaceMateAI Team",
       },
       mainEntityOfPage: {
         "@type": "WebPage",
@@ -154,14 +154,14 @@ const BlogDetail = () => {
     <div className="min-h-screen text-white pt-24 pb-24 px-4 md:px-8">
       <Helmet>
         <title>
-          {blog?.seo?.metaTitle || `${blog.title} | InterviewMate Blog`}
+          {blog?.seo?.metaTitle || `${blog.title} | PlaceMateAI Blog`}
         </title>
         <meta
           name="description"
           content={
             blog?.seo?.metaDescription ||
             blog.excerpt ||
-            "InterviewMate blog article"
+            "PlaceMateAI blog article"
           }
         />
         <link rel="canonical" href={canonicalUrl} />
@@ -175,7 +175,7 @@ const BlogDetail = () => {
           content={
             blog?.seo?.metaDescription ||
             blog.excerpt ||
-            "InterviewMate blog article"
+            "PlaceMateAI blog article"
           }
         />
         <meta property="og:url" content={canonicalUrl} />
@@ -193,7 +193,7 @@ const BlogDetail = () => {
           content={
             blog?.seo?.metaDescription ||
             blog.excerpt ||
-            "InterviewMate blog article"
+            "PlaceMateAI blog article"
           }
         />
         <meta
@@ -225,7 +225,7 @@ const BlogDetail = () => {
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-500">
             <span className="inline-flex items-center gap-1.5">
-              <FiUser size={13} /> {blog.authorName || "InterviewMate Team"}
+              <FiUser size={13} /> {blog.authorName || "PlaceMateAI Team"}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <FiCalendar size={13} /> {formatDate(blog.publishedAt)}

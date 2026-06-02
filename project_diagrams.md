@@ -1,10 +1,10 @@
-# InterviewMate - Project Diagrams
+# PlaceMateAI - Project Diagrams
 
-This document contains the core diagrams for the InterviewMate major project report, formatted using Mermaid.js.
+This document contains the core diagrams for the PlaceMateAI major project report, formatted using Mermaid.js.
 
 ## 1. Block Diagram (System Architecture)
 
-This diagram illustrates the high-level architecture and components of the InterviewMate platform, including core AI processing and background queues.
+This diagram illustrates the high-level architecture and components of the PlaceMateAI platform, including core AI processing and background queues.
 
 ```mermaid
 graph TD

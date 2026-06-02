@@ -73,7 +73,7 @@ const getAuthorName = (user) => {
   const fullName = sanitizeText(
     `${user?.firstName || ""} ${user?.lastName || ""}`,
   );
-  return fullName || user?.email || "InterviewMate Team";
+  return fullName || user?.email || "PlaceMateAI Team";
 };
 
 const buildPublicBlogQuery = () => ({
@@ -346,7 +346,7 @@ const uploadBlogImage = asyncHandler(async (req, res) => {
   const uploaded = await uploadImageBuffer({
     buffer: req.file.buffer,
     mimetype: req.file.mimetype,
-    folder: "interviewmate/blogs",
+    folder: "placemateai/blogs",
   });
 
   res.status(200).json({

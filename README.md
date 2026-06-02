@@ -1,4 +1,4 @@
-# <img src="./frontend/public/favicon.svg" width="40" height="40" valign="middle"> InterviewMate (PlaceMateAI)
+# <img src="./frontend/public/favicon.svg" width="40" height="40" valign="middle"> PlaceMateAI
 
 <div align="center">
   <p align="center">
@@ -15,7 +15,7 @@
 
 ## 🌟 Overview
 
-**InterviewMate** (also referred to as **PlaceMateAI**) is a full-stack AI interview preparation platform built on the **MERN stack** with voice AI, coding practice, ATS analysis, LinkedIn optimization, and subscription-based usage.
+**PlaceMateAI** is a full-stack AI interview preparation platform built on the **MERN stack** with voice AI, coding practice, ATS analysis, LinkedIn optimization, and subscription-based usage.
 
 It uses a custom real-time orchestration flow with:
 
@@ -40,7 +40,7 @@ It uses a custom real-time orchestration flow with:
 
 ## 🧠 Architecture
 
-InterviewMate is designed as a **modular MERN platform** with an AI orchestration layer for real-time interview experiences.
+PlaceMateAI is designed as a **modular MERN platform** with an AI orchestration layer for real-time interview experiences.
 
 ### AI/Voice Pipeline
 
@@ -103,8 +103,8 @@ For pricing and cost design details, see [pricing.md](./pricing.md) and [usage_b
 1. **Clone the project**
 
    ```bash
-   git clone https://github.com/yashtupkar/InterviewMate.git
-   cd InterviewMate
+   git clone https://github.com/yashtupkar/PlaceMateAI.git
+   cd PlaceMateAI
    ```
 
 2. **Setup Backend**
