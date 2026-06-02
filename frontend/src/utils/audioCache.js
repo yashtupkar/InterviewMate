@@ -27,6 +27,19 @@ export const initDB = async () => {
 
     request.onsuccess = () => {
       dbInstance = request.result;
+
+      // Handle version change and close events to prevent InvalidStateError
+      dbInstance.onversionchange = () => {
+        try {
+          dbInstance.close();
+        } catch (e) {}
+        dbInstance = null;
+      };
+
+      dbInstance.onclose = () => {
+        dbInstance = null;
+      };
+
       resolve(dbInstance);
     };
 
@@ -52,7 +65,7 @@ export const initDB = async () => {
  * @param {Blob|ArrayBuffer} audioData - Audio data
  * @returns {Promise<string>} Cache ID
  */
-export const saveAudio = async (cacheId, text, voiceId, audioData) => {
+export const saveAudio = async (cacheId, text, voiceId, audioData, isRetry = false) => {
   try {
     const db = await initDB();
     const store = db
@@ -80,6 +93,13 @@ export const saveAudio = async (cacheId, text, voiceId, audioData) => {
     });
   } catch (error) {
     console.error("Error saving audio to cache:", error);
+    dbInstance = null; // Clear cached reference on database error
+
+    // Auto-retry once with a fresh connection if connection is closing
+    if (!isRetry && (error.name === "InvalidStateError" || error.message?.includes("closing"))) {
+      console.info("Retrying saveAudio with a fresh database connection...");
+      return saveAudio(cacheId, text, voiceId, audioData, true);
+    }
     throw error;
   }
 };
@@ -89,7 +109,7 @@ export const saveAudio = async (cacheId, text, voiceId, audioData) => {
  * @param {string} cacheId
  * @returns {Promise<Blob|null>} Audio data or null
  */
-export const getAudio = async (cacheId) => {
+export const getAudio = async (cacheId, isRetry = false) => {
   try {
     const db = await initDB();
     const store = db
@@ -120,6 +140,13 @@ export const getAudio = async (cacheId) => {
     });
   } catch (error) {
     console.error("Error retrieving audio from cache:", error);
+    dbInstance = null; // Clear cached reference on database error
+
+    // Auto-retry once with a fresh connection if connection is closing
+    if (!isRetry && (error.name === "InvalidStateError" || error.message?.includes("closing"))) {
+      console.info("Retrying getAudio with a fresh database connection...");
+      return getAudio(cacheId, true);
+    }
     return null;
   }
 };
@@ -130,7 +157,7 @@ export const getAudio = async (cacheId) => {
  * @param {string} voiceId
  * @returns {Promise<{cacheId: string, audio: Blob}|null>}
  */
-export const getAudioByTextAndVoice = async (text, voiceId) => {
+export const getAudioByTextAndVoice = async (text, voiceId, isRetry = false) => {
   try {
     const db = await initDB();
     const store = db
@@ -165,6 +192,13 @@ export const getAudioByTextAndVoice = async (text, voiceId) => {
     });
   } catch (error) {
     console.error("Error retrieving audio by text and voice:", error);
+    dbInstance = null; // Clear cached reference on database error
+
+    // Auto-retry once with a fresh connection if connection is closing
+    if (!isRetry && (error.name === "InvalidStateError" || error.message?.includes("closing"))) {
+      console.info("Retrying getAudioByTextAndVoice with a fresh database connection...");
+      return getAudioByTextAndVoice(text, voiceId, true);
+    }
     return null;
   }
 };

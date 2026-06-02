@@ -1,11 +1,25 @@
 const express = require("express");
 const router = express.Router();
 const ttsController = require("../controllers/ttsController");
+const { clerkAuth: userAuth } = require("../middleware/auth");
 
 /**
  * TTS Routes
  * Base path: /api/tts
+ * All routes require valid user authentication
  */
+
+// Public ticket-based streaming endpoint (must be BEFORE auth middleware because HTML5 <audio> can't send headers)
+router.get("/stream-ticket/:ticketId", ttsController.streamViaTicket);
+
+// Apply auth middleware to all TTS endpoints
+router.use(userAuth);
+
+/**
+ * POST /api/tts/ticket
+ * Generate a short-lived ticket for streaming
+ */
+router.post("/ticket", ttsController.generateTicket);
 
 /**
  * POST /api/tts/generate
@@ -15,13 +29,11 @@ const ttsController = require("../controllers/ttsController");
 router.post("/generate", ttsController.generateTTS);
 
 /**
- * POST & GET /api/tts/stream
- * Stream TTS audio directly
- * Body (POST) or Query (GET): { text, voiceId, engine, sessionId }
+ * POST /api/tts/stream
+ * Stream TTS audio directly (POST only to prevent URL logs/leakage of text)
+ * Body: { text, voiceId, engine, sessionId }
  */
-router.route("/stream")
-  .post(ttsController.streamTTS)
-  .get(ttsController.streamTTS);
+router.post("/stream", ttsController.streamTTS);
 
 /**
  * POST /api/tts/batch

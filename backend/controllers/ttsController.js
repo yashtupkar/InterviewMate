@@ -1,5 +1,6 @@
 const edgeTTSService = require("../services/edgeTTSService");
 const asyncHandler = require("../utils/asyncHandler");
+const crypto = require("crypto");
 
 /**
  * Generate TTS audio for given text
@@ -83,8 +84,14 @@ const generateTTS = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error("TTS Generation Error:", error);
 
-    // Check if error is rate limit
-    if (error.code === "ThrottlingException") {
+    const errMsg = error.message || "";
+    // Check if error is rate limit (AWS Polly format or HTTP 429 or websocket closed throttles)
+    if (
+      error.code === "ThrottlingException" ||
+      errMsg.includes("429") ||
+      errMsg.toLowerCase().includes("rate limit") ||
+      errMsg.toLowerCase().includes("throttled")
+    ) {
       return res.status(429).json({
         message: "Too many TTS requests. Please wait before trying again.",
         retryAfter: 60,
@@ -115,11 +122,8 @@ const generateTTS = asyncHandler(async (req, res) => {
  */
 const streamTTS = asyncHandler(async (req, res) => {
   try {
-    const text = req.method === "GET" ? req.query.text : req.body.text;
-    const voiceId = req.method === "GET" ? req.query.voiceId : req.body.voiceId;
-    const engine = req.method === "GET" ? req.query.engine : req.body.engine || "neural";
-    const sessionId = req.method === "GET" ? req.query.sessionId : req.body.sessionId;
-    const userId = req.user?._id || (req.method === "GET" ? req.query.userId : req.body.userId);
+    const { text, voiceId, engine = "neural", sessionId } = req.body;
+    const userId = req.user?._id || req.body.userId;
 
     // Validation
     if (!text || text.trim().length === 0) {
@@ -150,6 +154,21 @@ const streamTTS = asyncHandler(async (req, res) => {
     audioStream.pipe(res);
   } catch (error) {
     console.error("TTS Stream Error:", error);
+
+    const errMsg = error.message || "";
+    if (
+      error.code === "ThrottlingException" ||
+      errMsg.includes("429") ||
+      errMsg.toLowerCase().includes("rate limit") ||
+      errMsg.toLowerCase().includes("throttled")
+    ) {
+      if (!res.headersSent) {
+        return res.status(429).json({
+          message: "Too many TTS requests. Please wait before trying again.",
+          retryAfter: 60,
+        });
+      }
+    }
 
     if (!res.headersSent) {
       res.status(500).json({
@@ -364,6 +383,100 @@ const getAvailableVoices = asyncHandler(async (req, res) => {
   }
 });
 
+// Ticket cache map for secure streaming (one-time short-lived tokens)
+const ttsTickets = new Map();
+
+/**
+ * Generate a short-lived streaming ticket
+ * POST /api/tts/ticket
+ */
+const generateTicket = asyncHandler(async (req, res) => {
+  try {
+    const { text, voiceId, engine = "neural" } = req.body;
+
+    if (!text || text.trim().length === 0) {
+      return res.status(400).json({ message: "Text cannot be empty" });
+    }
+
+    if (text.length > 3000) {
+      return res.status(400).json({
+        message: "Text exceeds maximum length of 3000 characters",
+      });
+    }
+
+    const ticketId = `ticket_${crypto.randomBytes(16).toString("hex")}`;
+
+    // Store ticket with 30s expiry
+    ttsTickets.set(ticketId, {
+      text,
+      voiceId,
+      engine,
+      createdAt: Date.now(),
+    });
+
+    // Automatically remove expired tickets
+    setTimeout(() => {
+      ttsTickets.delete(ticketId);
+    }, 30000);
+
+    res.status(200).json({
+      success: true,
+      ticketId,
+    });
+  } catch (error) {
+    console.error("Ticket Generation Error:", error);
+    res.status(500).json({
+      message: "Failed to generate streaming ticket",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * Stream TTS audio via ticket ID
+ * GET /api/tts/stream-ticket/:ticketId
+ */
+const streamViaTicket = asyncHandler(async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const ticket = ttsTickets.get(ticketId);
+
+    if (!ticket) {
+      return res.status(410).json({ message: "Streaming ticket expired or invalid" });
+    }
+
+    // Single-use: consume and delete ticket immediately
+    ttsTickets.delete(ticketId);
+
+    const { text, voiceId, engine } = ticket;
+
+    // Set response headers for streaming
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("X-Cache-ID", edgeTTSService.generateCacheId(text, voiceId));
+
+    // Stream the audio directly
+    const audioStream = await edgeTTSService.streamTTS(
+      text,
+      voiceId || "Sophia",
+      {
+        engine,
+        outputFormat: "mp3",
+      },
+    );
+
+    audioStream.pipe(res);
+  } catch (error) {
+    console.error("Ticket Streaming Error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: "Failed to stream audio",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  }
+});
+
 module.exports = {
   generateTTS,
   streamTTS,
@@ -372,4 +485,6 @@ module.exports = {
   getCacheStats,
   clearCache,
   getAvailableVoices,
+  generateTicket,
+  streamViaTicket,
 };

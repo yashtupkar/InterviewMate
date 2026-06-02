@@ -92,16 +92,6 @@ const getOpenAIClient = () => {
   });
 };
 
-// Initialize OpenAI client for TTS (Mouth)
-const getTTSClient = () => {
-  if (!process.env.OPENAI_API_KEY) {
-    return null;
-  }
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-};
-
 const openai = getOpenAIClient();
 
 const parseResumePdf = async (req, res) => {

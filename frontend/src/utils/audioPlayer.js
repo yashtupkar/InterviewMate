@@ -8,6 +8,8 @@ class AudioPlayer {
     this.audioElement = null;
     this.audioContext = null;
     this.isPlaying = false;
+    this.currentBlobUrl = null;
+    this.activePlayCleanup = null;
     this.listeners = {
       onPlay: [],
       onPause: [],
@@ -89,7 +91,7 @@ class AudioPlayer {
       }
 
       // Stop current playback if any
-      if (this.isPlaying) {
+      if (this.isPlaying || this.activePlayCleanup) {
         this.stop();
       }
 
@@ -115,9 +117,16 @@ class AudioPlayer {
 
       return new Promise((resolve) => {
         const onEnd = () => {
-          this.audioElement?.removeEventListener("ended", onEnd);
+          cleanup();
           resolve();
         };
+        const cleanup = () => {
+          this.audioElement?.removeEventListener("ended", onEnd);
+          if (this.activePlayCleanup === cleanup) {
+            this.activePlayCleanup = null;
+          }
+        };
+        this.activePlayCleanup = cleanup;
         this.audioElement?.addEventListener("ended", onEnd);
       });
     } catch (error) {
@@ -133,9 +142,32 @@ class AudioPlayer {
    * @param {Object} options
    * @returns {Promise<void>}
    */
+  /**
+   * Revoke current Blob URL if any, to prevent memory leaks
+   * @private
+   */
+  revokeCurrentBlob() {
+    if (this.currentBlobUrl) {
+      try {
+        URL.revokeObjectURL(this.currentBlobUrl);
+      } catch (err) {
+        console.warn("Failed to revoke blob URL:", err);
+      }
+      this.currentBlobUrl = null;
+    }
+  }
+
+  /**
+   * Play audio from Blob
+   * @param {Blob} audioBlob
+   * @param {Object} options
+   * @returns {Promise<void>}
+   */
   async playFromBlob(audioBlob, options = {}) {
     try {
+      this.revokeCurrentBlob();
       const url = URL.createObjectURL(audioBlob);
+      this.currentBlobUrl = url;
       return this.playFromUrl(url, options);
     } catch (error) {
       console.error("Error playing blob:", error);
@@ -158,8 +190,16 @@ class AudioPlayer {
         throw new Error("Audio element initialization failed");
       }
 
-      if (this.isPlaying) {
+      if (this.isPlaying || this.activePlayCleanup) {
         this.stop();
+      }
+
+      if (url !== this.currentBlobUrl) {
+        this.revokeCurrentBlob();
+      }
+
+      if (url.startsWith("blob:")) {
+        this.currentBlobUrl = url;
       }
 
       this.audioElement.src = url;
@@ -174,13 +214,21 @@ class AudioPlayer {
 
       return new Promise((resolve) => {
         const onEnd = () => {
-          this.audioElement?.removeEventListener("ended", onEnd);
-          // Clean up object URL
-          if (url.startsWith("blob:")) {
-            URL.revokeObjectURL(url);
-          }
+          cleanup();
           resolve();
         };
+        const cleanup = () => {
+          this.audioElement?.removeEventListener("ended", onEnd);
+          if (url === this.currentBlobUrl) {
+            this.revokeCurrentBlob();
+          } else if (url.startsWith("blob:")) {
+            URL.revokeObjectURL(url);
+          }
+          if (this.activePlayCleanup === cleanup) {
+            this.activePlayCleanup = null;
+          }
+        };
+        this.activePlayCleanup = cleanup;
         this.audioElement?.addEventListener("ended", onEnd);
       });
     } catch (error) {
@@ -207,6 +255,10 @@ class AudioPlayer {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
     }
+    if (this.activePlayCleanup) {
+      this.activePlayCleanup();
+    }
+    this.revokeCurrentBlob();
   }
 
   /**
@@ -339,6 +391,12 @@ class AudioPlayer {
       this.audioContext.close();
       this.audioContext = null;
     }
+
+    if (this.activePlayCleanup) {
+      this.activePlayCleanup();
+    }
+
+    this.revokeCurrentBlob();
 
     // Clear listeners
     Object.keys(this.listeners).forEach((key) => {

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useContext, useEffect } from "react";
 import axios from "axios";
+import { useAuth } from "@clerk/clerk-react";
 import { AppContext } from "../context/AppContext";
 import { getAudioPlayer } from "../utils/audioPlayer";
 import * as audioCache from "../utils/audioCache";
@@ -21,6 +22,7 @@ import {
  */
 export const useEdgeTTS = () => {
   const { backend_URL } = useContext(AppContext);
+  const { getToken } = useAuth();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState(null);
@@ -45,15 +47,20 @@ export const useEdgeTTS = () => {
 
     playerRef.current = getAudioPlayer();
 
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnd = () => setIsPlaying(false);
+    const handleError = (err) => {
+      setError(err?.message || "Audio playback error");
+      setIsPlaying(false);
+    };
+
     // Setup player event listeners
     if (playerRef.current) {
-      playerRef.current.on("onPlay", () => setIsPlaying(true));
-      playerRef.current.on("onPause", () => setIsPlaying(false));
-      playerRef.current.on("onEnd", () => setIsPlaying(false));
-      playerRef.current.on("onError", (err) => {
-        setError(err?.message || "Audio playback error");
-        setIsPlaying(false);
-      });
+      playerRef.current.on("onPlay", handlePlay);
+      playerRef.current.on("onPause", handlePause);
+      playerRef.current.on("onEnd", handleEnd);
+      playerRef.current.on("onError", handleError);
     }
 
     // Initialize audio cache
@@ -63,7 +70,10 @@ export const useEdgeTTS = () => {
 
     return () => {
       if (playerRef.current) {
-        playerRef.current.destroy();
+        playerRef.current.off("onPlay", handlePlay);
+        playerRef.current.off("onPause", handlePause);
+        playerRef.current.off("onEnd", handleEnd);
+        playerRef.current.off("onError", handleError);
       }
       // Cancel any ongoing speech synthesis
       if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -155,10 +165,17 @@ export const useEdgeTTS = () => {
    * @private
    */
   const fetchAudioFromEdgeTTS = useCallback(
-    async (text, voiceId) => {
+    async (text, voiceId, silent = false) => {
       try {
-        setIsLoading(true);
-        setError(null);
+        if (!silent) {
+          setIsLoading(true);
+          setError(null);
+        }
+
+        const token = await getToken();
+        if (!token) {
+          throw new Error("No authentication token available. Please sign in again.");
+        }
 
         const payload = {
           text: text.trim(),
@@ -170,12 +187,18 @@ export const useEdgeTTS = () => {
           `${backend_URL}/api/tts/generate`,
           payload,
           {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
             signal: abortControllerRef.current?.signal,
             timeout: 30000, // 30 second timeout
           },
         );
 
         if (response.data.success) {
+          if (!silent) {
+            setIsLoading(false);
+          }
           return response.data;
         } else {
           throw new Error(
@@ -183,13 +206,72 @@ export const useEdgeTTS = () => {
           );
         }
       } catch (err) {
+        if (axios.isCancel(err)) {
+          return;
+        }
         console.error("Edge-TTS API error:", err.response?.data || err.message);
+        if (!silent) {
+          setError(err.response?.data?.message || err.message);
+          setIsLoading(false);
+        }
+        throw err;
+      }
+    },
+    [backend_URL, getToken],
+  );
+
+  /**
+   * Fetch streaming ticket from Edge-TTS API
+   * @private
+   */
+  const fetchTicketFromEdgeTTS = useCallback(
+    async (text, voiceId) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const token = await getToken();
+        if (!token) {
+          throw new Error("No authentication token available. Please sign in again.");
+        }
+
+        const payload = {
+          text: text.trim(),
+          voiceId: voiceId || "Sophia",
+          engine: "neural",
+        };
+
+        const response = await axios.post(
+          `${backend_URL}/api/tts/ticket`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            signal: abortControllerRef.current?.signal,
+            timeout: 10000, // 10 second timeout for ticket
+          },
+        );
+
+        if (response.data.success) {
+          setIsLoading(false);
+          return response.data.ticketId;
+        } else {
+          throw new Error(
+            response.data.message || "Unknown error from TTS ticket API",
+          );
+        }
+      } catch (err) {
+        if (axios.isCancel(err)) {
+          return;
+        }
+        console.error("Edge-TTS ticket API error:", err.response?.data || err.message);
         setError(err.response?.data?.message || err.message);
         setIsLoading(false);
         throw err;
       }
     },
-    [backend_URL],
+    [backend_URL, getToken],
   );
 
   /**
@@ -432,7 +514,7 @@ export const useEdgeTTS = () => {
 
           lastSpeakTimeRef.current = Date.now();
 
-          // 1. Check local cache first
+          // 1. Check local IndexedDB cache first
           const cachedAudio = await audioCache.getAudioByTextAndVoice(
             text,
             voiceId,
@@ -442,28 +524,34 @@ export const useEdgeTTS = () => {
             const base64 = await audioCache.blobToBase64(cachedAudio.audio);
             await playerRef.current.play(base64, { volume: 1.0 });
           } else {
-            // 2. Stream directly from the GET endpoint for immediate playback
-            const streamUrl = `${backend_URL}/api/tts/stream?text=${encodeURIComponent(text)}&voiceId=${encodeURIComponent(voiceId)}`;
-            
-            await playerRef.current.playFromUrl(streamUrl, { volume: 1.0 });
+            // 2. Cache miss: fetch a streaming ticket first for low-latency streaming
+            const ticketId = await fetchTicketFromEdgeTTS(text, voiceId);
 
-            // 3. Cache the audio in the background (non-blocking) for future instant hits
-            (async () => {
-              try {
-                const ttsResponse = await fetchAudioFromEdgeTTS(text, voiceId);
-                if (ttsResponse && ttsResponse.success) {
-                  const audioBlob = audioCache.base64ToBlob(ttsResponse.audioBase64);
-                  await audioCache.saveAudio(
-                    ttsResponse.cacheId,
-                    text,
-                    ttsResponse.voiceId,
-                    audioBlob,
-                  );
-                }
-              } catch (cacheErr) {
-                console.warn("Background audio cache failed:", cacheErr);
-              }
-            })();
+            if (ticketId) {
+              const streamUrl = `${backend_URL}/api/tts/stream-ticket/${ticketId}`;
+
+              // Start background generation and caching (non-blocking, silent)
+              fetchAudioFromEdgeTTS(text, voiceId, true)
+                .then(async (ttsResponse) => {
+                  if (ttsResponse && ttsResponse.audioBase64) {
+                    const audioBlob = audioCache.base64ToBlob(ttsResponse.audioBase64);
+                    await audioCache.saveAudio(
+                      ttsResponse.cacheId,
+                      text,
+                      ttsResponse.voiceId,
+                      audioBlob,
+                    );
+                  }
+                })
+                .catch((cacheErr) => {
+                  console.warn("Background audio generation/caching failed:", cacheErr);
+                });
+
+              // Stream using HTML5 audio via public ticket-based URL
+              await playerRef.current.playFromUrl(streamUrl, { volume: 1.0 });
+            } else {
+              throw new Error("Failed to generate stream ticket");
+            }
           }
 
           setIsPlaying(false);
@@ -477,7 +565,7 @@ export const useEdgeTTS = () => {
     } finally {
       isProcessingQueue.current = false;
     }
-  }, [backend_URL, fetchAudioFromEdgeTTS]);
+  }, [fetchAudioFromEdgeTTS, fetchTicketFromEdgeTTS, backend_URL]);
 
   /**
    * Main speak function - Hybrid approach
@@ -627,13 +715,21 @@ export const useEdgeTTS = () => {
    */
   const getAvailableVoices = useCallback(async () => {
     try {
-      const response = await axios.get(`${backend_URL}/api/tts/voices`);
+      const token = await getToken();
+      if (!token) {
+        throw new Error("No authentication token available. Please sign in again.");
+      }
+      const response = await axios.get(`${backend_URL}/api/tts/voices`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       return response.data.voices;
     } catch (err) {
       console.error("Error fetching voices:", err);
       throw err;
     }
-  }, [backend_URL]);
+  }, [backend_URL, getToken]);
 
   /**
    * Clear audio cache
