@@ -3,21 +3,21 @@ import { useLocation, Link, useNavigate, useSearchParams } from "react-router-do
 import { Helmet } from "react-helmet-async";
 import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import axios from 'axios';
-import { 
-  Play, 
-  Star, 
-  UserPlus, 
-  Mic, 
-  TrendingUp, 
+import {
+  Play,
+  Star,
+  UserPlus,
+  Mic,
+  TrendingUp,
   ChevronRight,
-  CheckCircle2, 
-  PlayCircle, 
-  Users, 
-  BarChart, 
-  FileText, 
+  CheckCircle2,
+  PlayCircle,
+  Users,
+  BarChart,
+  FileText,
   BookOpen,
-  Plus, 
-  Minus, 
+  Plus,
+  Minus,
   Sparkles,
   ArrowRight,
   Rocket,
@@ -37,7 +37,7 @@ const LandingHome = ({ backendStatus }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { getToken, isSignedIn } = useAuth();
-  
+
   const [openIndex, setOpenIndex] = useState(null);
   const toggleAccordion = (index) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -65,16 +65,16 @@ const LandingHome = ({ backendStatus }) => {
   const [loadingPlanId, setLoadingPlanId] = useState(null);
 
   const fetchTier = useCallback(async () => {
-      if (!isSignedIn) return;
-      try {
-          const token = await getToken();
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
-              headers: { Authorization: `Bearer ${token}` }
-          });
-          setCurrentTier(res.data.tier);
-      } catch {
-          // Non-critical
-      }
+    if (!isSignedIn) return;
+    try {
+      const token = await getToken();
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/subscription/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCurrentTier(res.data.tier);
+    } catch {
+      // Non-critical
+    }
   }, [getToken, isSignedIn]);
 
   useEffect(() => { fetchTier(); }, [fetchTier]);
@@ -219,29 +219,29 @@ const LandingHome = ({ backendStatus }) => {
   ];
 
   const faqsData = [
-    { 
-      q: "What types of AI capabilities does your platform offer?", 
-      a: "Our platform features state-of-the-art AI for real-time voice interview simulation, detailed performance analytics, automated resume parsing/scoring, and intelligent group discussion agents with distinct personas." 
+    {
+      q: "What types of AI capabilities does your platform offer?",
+      a: "Our platform features state-of-the-art AI for real-time voice interview simulation, detailed performance analytics, automated resume parsing/scoring, and intelligent group discussion agents with distinct personas."
     },
-    { 
-      q: "How does your platform ensure data privacy and security?", 
-      a: "We prioritize your data security with end-to-end encryption for all sessions. Your audio and personal data are never used to train global models without explicit consent, and we comply with industry-standard privacy regulations." 
+    {
+      q: "How does your platform ensure data privacy and security?",
+      a: "We prioritize your data security with end-to-end encryption for all sessions. Your audio and personal data are never used to train global models without explicit consent, and we comply with industry-standard privacy regulations."
     },
-    { 
-      q: "Can your platform integrate with our existing software systems?", 
-      a: "Yes, we offer flexible API integrations for enterprise partners, allowing you to sync interview results and candidate scores directly with your ATS or HRM systems." 
+    {
+      q: "Can your platform integrate with our existing software systems?",
+      a: "Yes, we offer flexible API integrations for enterprise partners, allowing you to sync interview results and candidate scores directly with your ATS or HRM systems."
     },
-    { 
-      q: "What kind of support and training do you provide to users?", 
-      a: "We offer comprehensive onboarding materials, 24/7 technical support, and detailed guides for every feature. Premium users also get access to dedicated account managers for personalized coaching strategies." 
+    {
+      q: "What kind of support and training do you provide to users?",
+      a: "We offer comprehensive onboarding materials, 24/7 technical support, and detailed guides for every feature. Premium users also get access to dedicated account managers for personalized coaching strategies."
     },
-    { 
-      q: "How scalable is your platform as our business grows?", 
-      a: "PlaceMateAI is built on a cloud-native architecture that scales horizontally. Whether you're a single user or an enterprise conducting thousands of interviews daily, our system handles the load with sub-500ms latency." 
+    {
+      q: "How scalable is your platform as our business grows?",
+      a: "PlaceMateAI is built on a cloud-native architecture that scales horizontally. Whether you're a single user or an enterprise conducting thousands of interviews daily, our system handles the load with sub-500ms latency."
     },
-    { 
-      q: "Is there a trial period or demo available before committing to a subscription?", 
-      a: "Absolutely! We offer a generous free tier that includes basic interview practice and resume scoring. You can also request a personalized demo to explore our advanced enterprise features." 
+    {
+      q: "Is there a trial period or demo available before committing to a subscription?",
+      a: "Absolutely! We offer a generous free tier that includes basic interview practice and resume scoring. You can also request a personalized demo to explore our advanced enterprise features."
     }
   ];
 
@@ -270,9 +270,9 @@ const LandingHome = ({ backendStatus }) => {
       <Helmet>
         <title>PlaceMateAI | Single Page Home</title>
       </Helmet>
-      
+
       <div className="min-h-screen overflow-x-hidden selection:bg-indigo-500/30 text-white font-sans bg-[#080808]">
-        
+
         {/* Background Component */}
         <Background />
 
@@ -286,7 +286,7 @@ const LandingHome = ({ backendStatus }) => {
           </div>
 
           <h1 className="text-5xl md:text-8xl font-medium tracking-tighter max-w-5xl leading-[1.05] mb-8 text-white drop-shadow-2xl">
-            Become <span className="italic text-[#bef264]">Unstoppable</span> — <br className="hidden md:block"/>
+            Become <span className="italic text-[#bef264]">Unstoppable</span> — <br className="hidden md:block" />
             Crack Your <span className="italic">Dream Job</span> with AI
           </h1>
 
@@ -309,7 +309,7 @@ const LandingHome = ({ backendStatus }) => {
                 </button>
               </Link>
             </SignedIn>
-            
+
             <a href="#features" className="px-4 py-3 w-full sm:w-auto rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm hover:bg-white/10 transition-all flex items-center justify-center gap-2 backdrop-blur-sm group">
               <Play size={18} className="text-[#bef264] group-hover:scale-110 transition-transform" />
               See How It Works
@@ -417,7 +417,7 @@ const LandingHome = ({ backendStatus }) => {
                   <ul className="space-y-4 pt-4">
                     {feature.bullets.map((bullet, i) => (
                       <li key={i} className="flex items-start gap-3">
-                        <CheckCircle2 size={18} className="text-black fill-[#bef264] shrink-0 mt-0.5" /> 
+                        <CheckCircle2 size={18} className="text-black fill-[#bef264] shrink-0 mt-0.5" />
                         <span className="text-[15px] font-medium text-gray-300">{bullet}</span>
                       </li>
                     ))}
@@ -477,7 +477,7 @@ const LandingHome = ({ backendStatus }) => {
                   >
                     Yearly
                   </button>
-                  <span 
+                  <span
                     onClick={() => setBillingCycle("yearly")}
                     className="bg-[#bef264]/10 text-[#bef264] text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter border border-[#bef264]/20 animate-pulse cursor-pointer"
                   >
@@ -491,11 +491,10 @@ const LandingHome = ({ backendStatus }) => {
               {plans.map((plan) => (
                 <div
                   key={plan.name}
-                  className={`relative p-6 rounded-[1.5rem] flex flex-col ${plan.name === "Free" && "col-span-3 md:col-span-1 hidden"} transition-all duration-300 hover:translate-y-[-4px] ${
-                    plan.recommended
+                  className={`relative p-6 rounded-[1.5rem] flex flex-col ${plan.name === "Free" && "col-span-3 md:col-span-1 hidden"} transition-all duration-300 hover:translate-y-[-4px] ${plan.recommended
                       ? "bg-[#121214] border-2 border-[#bef264] shadow-[0_0_40px_rgba(190,242,100,0.1)] scale-105 z-20"
                       : "bg-[#121214] border border-white/5 shadow-xl"
-                  }`}
+                    }`}
                 >
                   <div className="mb-6">
                     <h4 className="text-lg font-bold text-white mb-1">{plan.name}</h4>
@@ -520,13 +519,12 @@ const LandingHome = ({ backendStatus }) => {
                     <button
                       onClick={() => handlePlanClick(plan)}
                       disabled={loadingPlanId === getPlanId(plan) || isCurrentPlan(plan)}
-                      className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2 ${
-                        isCurrentPlan(plan)
-                        ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
-                        : plan.recommended
-                        ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
-                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                      } disabled:opacity-60`}
+                      className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm flex items-center justify-center gap-2 ${isCurrentPlan(plan)
+                          ? "bg-white/5 border border-white/10 text-zinc-500 cursor-not-allowed"
+                          : plan.recommended
+                            ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
+                            : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                        } disabled:opacity-60`}
                     >
                       {loadingPlanId === getPlanId(plan) ? (
                         <FiLoader className="animate-spin w-4 h-4" />
@@ -536,11 +534,10 @@ const LandingHome = ({ backendStatus }) => {
                   ) : (
                     <Link
                       to="/signup"
-                      className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm ${
-                        plan.recommended
-                        ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
-                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
-                      }`}
+                      className={`w-full py-3 rounded-lg font-bold text-center mb-6 transition-all active:scale-[0.98] text-sm ${plan.recommended
+                          ? "bg-[#bef264] text-black hover:bg-[#d9ff96]"
+                          : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                        }`}
                     >
                       Get {plan.name}
                     </Link>
@@ -640,37 +637,33 @@ const LandingHome = ({ backendStatus }) => {
 
             <div className="w-full space-y-3 mt-4">
               {faqsData.map((faq, idx) => (
-                <div 
-                  key={idx} 
-                  className={`group transition-all duration-300 rounded-2xl overflow-hidden ${
-                    openIndex === idx 
-                    ? ' bg-[#1f2022] shadow-xl shadow-[#bef264]/5' 
+                <div
+                  key={idx}
+                  className={`group transition-all duration-300 rounded-2xl overflow-hidden ${openIndex === idx
+                      ? ' bg-[#1f2022] shadow-xl shadow-[#bef264]/5'
                       : ' bg-[#1f2022] hover:bg-zinc-800'
-                  }`}
+                    }`}
                 >
-                  <button 
+                  <button
                     className="w-full px-6 py-3 flex items-center justify-between text-left focus:outline-none"
                     onClick={() => toggleAccordion(idx)}
                   >
-                    <span className={`font-semibold text-base md:text-lg transition-colors duration-300 ${
-                      openIndex === idx ? 'text-white' : 'text-white group-hover:text-zinc-200'
-                    }`}>
+                    <span className={`font-semibold text-base md:text-lg transition-colors duration-300 ${openIndex === idx ? 'text-white' : 'text-white group-hover:text-zinc-200'
+                      }`}>
                       {faq.q}
                     </span>
-                    
-                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      openIndex === idx 
-                        ? 'bg-[#bef264] text-black' 
+
+                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${openIndex === idx
+                        ? 'bg-[#bef264] text-black'
                         : 'bg-zinc-800 text-zinc-400 md:group-hover:bg-zinc-700'
-                    }`}>
+                      }`}>
                       {openIndex === idx ? <Minus size={16} strokeWidth={2.5} /> : <Plus size={16} strokeWidth={2} />}
                     </div>
                   </button>
-                  
-                  <div 
-                    className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                      openIndex === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-                    }`}
+
+                  <div
+                    className={`overflow-hidden transition-all duration-500 ease-in-out ${openIndex === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                      }`}
                   >
                     <div className="px-6 pb-6 pt-0">
                       <div className="h-px w-full bg-white/5 mb-4" />

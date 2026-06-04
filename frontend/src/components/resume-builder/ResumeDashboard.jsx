@@ -102,14 +102,127 @@ const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
+const DuplicateResumeModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  value,
+  onChange,
+  isSubmitting,
+}) => {
+  return (
+    <UniversalPopup
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="max-w-md"
+      className="!bg-zinc-900 !border-zinc-800 !rounded-[2rem] shadow-2xl relative"
+      showClose={false}
+    >
+      <div className="flex flex-col items-start">
+        <h2 className="text-2xl font-black text-white mb-4 tracking-tight leading-tight">
+          Duplicate Resume
+        </h2>
+
+        <p className="text-zinc-400 text-sm font-medium mb-6 leading-relaxed pr-4">
+          Give your duplicate resume a name.
+        </p>
+
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Resume title"
+          className="w-full bg-zinc-800 border border-zinc-700 focus:border-lime-400/60 rounded-xl px-4 py-3 text-white text-sm outline-none transition-all mb-8"
+          onKeyDown={(e) => e.key === "Enter" && !isSubmitting && onConfirm()}
+          autoFocus
+        />
+
+        <div className="flex items-center gap-3 w-full">
+          <button
+            className="flex-1 bg-[#bef264] hover:bg-[#d9ff96] text-black py-4 rounded-xl font-black text-sm transition-all active:scale-[0.98] disabled:opacity-50"
+            onClick={onConfirm}
+            disabled={isSubmitting || !value.trim()}
+          >
+            {isSubmitting ? "Duplicating…" : "Duplicate"}
+          </button>
+          <button
+            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 py-4 rounded-xl font-black text-sm transition-all"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </UniversalPopup>
+  );
+};
+
+const TEMPLATE_CATEGORIES = {
+  all: { title: "All Styles", description: "Explore all of our professional, ATS-optimized resume layouts." },
+  classic: { title: "Classic", description: "Timeless, clean, and highly reliable traditional layouts." },
+  professional: { title: "Professional", description: "Corporate-ready designs tailored for business, finance, and technical executives." },
+  creative: { title: "Creative", description: "Vibrant and expressive layouts perfect for portfolios, designers, and marketers." },
+  modern: { title: "Modern", description: "Sleek, minimal, and high-impact designs suited for start-ups and tech roles." },
+};
+
+const CATEGORY_MAP = {
+  classic: ["classic", "simple", "standard"],
+  professional: ["professional", "corporate", "executive", "grid"],
+  creative: ["creative", "elegant"],
+  modern: ["modern", "tech"],
+};
+
 const ResumeDashboard = ({ onNew, onEdit }) => {
-  const { resumes, isLoading, deleteResume } = useResume();
+  const { resumes, isLoading, deleteResume, duplicateResume } = useResume();
   const [view, setView] = useState("dashboard"); // 'dashboard' or 'templates'
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [duplicatingResume, setDuplicatingResume] = useState(null);
+  const [duplicateTitle, setDuplicateTitle] = useState("");
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [userTier, setUserTier] = useState({ tier: "Free", limit: 1 });
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { getToken, isSignedIn } = useAuth();
+
+  const openDuplicateModal = (resume) => {
+    const sourceTitle =
+      typeof resume?.title === "string" && resume.title.trim()
+        ? resume.title.trim()
+        : "Untitled Resume";
+    setDuplicatingResume(resume);
+    setDuplicateTitle(`${sourceTitle} (Copy)`);
+    setShowDuplicateModal(true);
+  };
+
+  const closeDuplicateModal = () => {
+    setShowDuplicateModal(false);
+    setDuplicatingResume(null);
+    setDuplicateTitle("");
+    setIsDuplicating(false);
+  };
+
+  const handleDuplicate = async () => {
+    if (!duplicatingResume?._id) return;
+
+    if (!duplicateTitle.trim()) {
+      return;
+    }
+
+    setIsDuplicating(true);
+    const duplicated = await duplicateResume(
+      duplicatingResume._id,
+      duplicateTitle.trim(),
+    );
+    setIsDuplicating(false);
+
+    if (duplicated?._id) {
+      closeDuplicateModal();
+      onEdit(duplicated._id);
+    }
+  };
 
   useEffect(() => {
     const fetchTier = async () => {
@@ -145,6 +258,10 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
   }
 
   if (view === "templates") {
+    const filteredKeys = selectedCategory === "all"
+      ? Object.keys(templates)
+      : CATEGORY_MAP[selectedCategory] || [];
+
     return (
       <div className="flex-1  p-6 md:p-10 overflow-y-auto custom-scrollbar animate-fade">
         <div className="max-w-7xl mx-auto">
@@ -153,8 +270,8 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
               <div className="text-[#bef264] text-[10px] font-black uppercase tracking-[0.3em] mb-2 sm:mb-4 block underline decoration-[#bef264]/30 underline-offset-4">
                 Template Selection
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
-                Choose your <span className="text-[#bef264] italic">Style</span>
+              <h1 className="text-2xl md:text-3xl   text-white tracking-tight leading-tight">
+                Choose your <span className="text-[#bef264] ">Style</span>
               </h1>
               <p className="text-zinc-500 font-medium text-sm sm:text-md mt-2 sm:mt-4">
                 Select a professional layout to start your journey
@@ -169,8 +286,32 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
             </button>
           </header>
 
-          <div className="grid grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-8">
-            {Object.keys(templates).map((key) => {
+          {/* Categories Pill Navigation */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 bg-zinc-900/60 p-1.5 rounded-2xl border border-zinc-800/80 max-w-fit shadow-lg backdrop-blur-md">
+            {Object.keys(TEMPLATE_CATEGORIES).map((catKey) => {
+              const isActive = selectedCategory === catKey;
+              return (
+                <button
+                  key={catKey}
+                  onClick={() => setSelectedCategory(catKey)}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+                    isActive
+                      ? "bg-[#bef264] text-zinc-950 shadow-[0_0_20px_rgba(190,242,100,0.15)] scale-105"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                  }`}
+                >
+                  {TEMPLATE_CATEGORIES[catKey].title}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="text-zinc-500 font-medium text-xs tracking-wide mb-8">
+            {TEMPLATE_CATEGORIES[selectedCategory].description}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {filteredKeys.map((key) => {
               const themeColor = TEMPLATE_THEMES[key] || "#bef264";
               const customData = {
                 ...DUMMY_RESUME_DATA,
@@ -187,17 +328,15 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
               return (
                 <div key={key} className="group flex flex-col">
                   <div
-                    className="relative aspect-[210/297] bg-white rounded-xl sm:rounded-2xl shadow-lg border border-zinc-200 overflow-hidden cursor-pointer transform group-hover:-translate-y-2 transition-all duration-500"
+                    className="relative aspect-[210/297] bg-white rounded-md sm:rounded-lg shadow-lg overflow-hidden cursor-pointer transform group-hover:-translate-y-2 transition-all duration-500"
                     onClick={() => onNew(key)}
                   >
                     <ResumeCardPreview resume={customData} />
                     <div className="absolute inset-0 bg-zinc-950/0 group-hover:bg-zinc-950/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                       <div
-                        className="bg-white text-zinc-950 px-6 py-2 rounded-xl font-black text-[10px] tracking-[0.2em] shadow-2xl border-b-4 border-zinc-200 active:border-b-0 active:translate-y-1 transition-all"
-                        style={{ color: themeColor }}
+                        className="bg-[#bef264] text-black px-6 py-2 rounded-xl font-black text-[10px] tracking-[0.2em] shadow-2xl border-b-4 border-lime-700/30 active:border-b-0 active:translate-y-1 transition-all"
                       >
-                        USE{" "}
-                        <span className="hidden md:block">THIS TEMPLATE</span>
+                        CHOOSE
                       </div>
                     </div>
                   </div>
@@ -262,7 +401,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                 setView("templates");
               }
             }}
-            className="group relative aspect-[210/297] bg-black rounded-xl sm:rounded-2xl border-2 border-dashed border-zinc-700 hover:border-lime-400/50 hover:bg-lime-400/5 transition-all flex flex-col items-center justify-center gap-3"
+            className="group relative aspect-[210/297] bg-black rounded-md sm:rounded-lg border-2 border-dashed border-zinc-700 hover:border-lime-400/50 hover:bg-lime-400/5 transition-all flex flex-col items-center justify-center gap-3"
           >
             <div className="text-zinc-500 group-hover:text-lime-400 transition-colors">
               <FiPlusCircle className="w-10 h-10 stroke-[1.5]" />
@@ -276,7 +415,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
           {resumes.map((resume) => (
             <div key={resume._id} className="group flex flex-col">
               <div
-                className="relative aspect-[210/297] bg-zinc-800 rounded-xl sm:rounded-2xlshadow-sm hover:shadow-2xl hover:shadow-lime-400/10 transition-all overflow-hidden cursor-pointer mb-3 border border-zinc-800"
+                className="relative aspect-[210/297] bg-zinc-800 rounded-md sm:rounded-lg shadow-sm hover:shadow-2xl hover:shadow-lime-400/10 transition-all overflow-hidden cursor-pointer mb-3"
                 onClick={() => onEdit(resume._id)}
               >
                 {/* Real Resume Preview */}
@@ -292,7 +431,7 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
 
               <div className="flex items-start justify-between px-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-black text-white truncate text-sm sm:text-lg leading-tight group-hover:text-lime-400 transition-colors uppercase tracking-tight capitalize">
+                  <h3 className="font-black text-white truncate text-sm sm:text-lg leading-tight group-hover:text-lime-400 transition-colors capitalize tracking-tight">
                     {resume.title || "Untitled"}
                   </h3>
                   <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
@@ -318,6 +457,13 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
                     <button className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white rounded-lg transition-all">
                       <Download className="w-3.5 h-3.5 text-lime-400" />{" "}
                       Download PDF
+                    </button>
+                    <button
+                      onClick={() => openDuplicateModal(resume)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-zinc-400 hover:bg-zinc-800 hover:text-white rounded-lg transition-all"
+                    >
+                      <IoCreate className="w-3.5 h-3.5 text-lime-400" />
+                      Duplicate
                     </button>
                     <div className="h-px bg-zinc-800 my-1.5 mx-1"></div>
                     <button
@@ -357,6 +503,15 @@ const ResumeDashboard = ({ onNew, onEdit }) => {
             setDeletingId(null);
           }
         }}
+      />
+
+      <DuplicateResumeModal
+        isOpen={showDuplicateModal}
+        onClose={closeDuplicateModal}
+        onConfirm={handleDuplicate}
+        value={duplicateTitle}
+        onChange={setDuplicateTitle}
+        isSubmitting={isDuplicating}
       />
     </div>
   );

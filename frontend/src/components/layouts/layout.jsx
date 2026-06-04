@@ -251,7 +251,7 @@ const Layout = ({ children }) => {
                     navigate("/#waitlist");
                   }
                 }}
-                className="hidden md:block bg-[#bef264] text-black px-3 py-1.5 rounded-md font-semibold hover:brightness-110 transition-all text-sm"
+                className="hidden md:block bg-[#bef264] border-b-4  border-lime-800/60 text-black px-3 py-1.5 rounded-md font-semibold hover:brightness-110 transition-all text-sm"
               >
                 Join Waitlist
               </button>
@@ -266,7 +266,7 @@ const Layout = ({ children }) => {
                 </Link>
               )}
               <Link to="/dashboard" className="hidden md:block">
-                <button className="bg-[#bef264] text-black px-3 py-1.5 rounded-md font-semibold hover:brightness-110 transition-all text-sm">
+                <button className="bg-[#bef264] text-black border-b-4  border-lime-800/60 px-3 py-1.5 rounded-md font-semibold hover:brightness-110 transition-all text-sm">
                   Dashboard
                 </button>
               </Link>

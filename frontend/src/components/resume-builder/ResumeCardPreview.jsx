@@ -8,8 +8,12 @@ import CorporateTemplate from "./resume-templates/CorporateTemplate";
 import ClassicTemplate from "./resume-templates/ClassicTemplate";
 import ElegantTemplate from "./resume-templates/ElegantTemplate";
 import StandardTemplate from "./resume-templates/StandardTemplate";
+import SimpleTemplate from "./resume-templates/SimpleTemplate";
+import GridTemplate from "./resume-templates/GridTemplate";
 
 export const templates = {
+  grid: GridTemplate,
+  simple: SimpleTemplate,
   modern: ModernTemplate,
   professional: ProfessionalTemplate,
   creative: CreativeTemplate,
@@ -25,15 +29,26 @@ export const DUMMY_RESUME_DATA = {
   title: "Preview",
   template: "modern",
   personalInfo: {
-    fullName: "JONATHAN DOE",
-    jobTitle: "SENIOR SOFTWARE ENGINEER",
+    fullName: "Jonathan Doe",
+    jobTitle: "Senior Software Engineer",
     email: "jonathan.doe@example.com",
     phone: "+1 (555) 000-1111",
     location: "San Francisco, CA",
-    photoUrl: "/dummy-avatar.png",
+    photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=150&h=150",
     objective:
       "Results-oriented Senior Software Engineer with over 8 years of experience in designing and implementing scalable web applications. Proven track record of leading development teams, optimizing system performance, and delivering high-quality user experiences. Expertise in React, Node.js, and cloud-native architectures.",
+    links: [
+      { label: "LinkedIn", url: "https://linkedin.com/in/jonathandoe" },
+      { label: "GitHub", url: "https://github.com/jonathandoe" }
+    ],
   },
+  profiles: [
+    {
+      title: "Summary",
+      content: "Results-oriented Senior Software Engineer with over 8 years of experience in designing and implementing scalable web applications. Proven track record of leading development teams, optimizing system performance, and delivering high-quality user experiences. Expertise in React, Node.js, and cloud-native architectures.",
+      visible: true,
+    },
+  ],
   experience: [
     {
       company: "Tech Innovators Inc.",
@@ -43,6 +58,7 @@ export const DUMMY_RESUME_DATA = {
       current: true,
       description:
         "Implemented a microservices architecture that reduced server costs by 35%.\nLed a team of 12 engineers in the successful rollout of an AI-driven analytics dashboard.\nCollaborated with product teams to define technical roadmaps and ensure architectural integrity.",
+      visible: true,
     },
     {
       company: "Global Stack Solutions",
@@ -52,39 +68,81 @@ export const DUMMY_RESUME_DATA = {
       endDate: "2021-02-28",
       description:
         "Developed and maintained a high-traffic fintech platform serving 500k+ active users.\nOptimized database queries and API response times, resulting in a 50% performance improvement.\nDesigned reusable UI components and a design system used across 5 core products.",
+      visible: true,
     },
   ],
   education: [
     {
       institution: "Stanford University",
-      degree: "M.S. in Computer Science (Specialization in AI)",
+      degree: "M.S. in Computer Science",
+      field: "Artificial Intelligence",
       startDate: "2013-09-01",
       endDate: "2015-05-15",
       location: "Stanford, CA",
+      gpa: "3.9/4.0",
+      visible: true,
     },
   ],
   skills: [
     {
       category: "Frontend",
       subSkills: "React, Next.js, Redux, TailwindCSS, TypeScript, Webpack",
+      visible: true,
     },
     {
       category: "Backend",
       subSkills: "Node.js, Express, Python, Go, GraphQL, REST APIs",
+      visible: true,
     },
   ],
   projects: [
     {
-      title: "SmartScribe AI",
+      title: "SmartScribe AI Platform",
       link: "https://github.com/jdoe/smartscribe",
-      description:
-        "An open-source real-time transcription tool using OpenAI Whisper API.",
+      githubUrl: "https://github.com/jdoe/smartscribe",
+      startDate: "2022-01-01",
+      endDate: "2022-06-01",
+      description: "Developed an open-source real-time transcription and summary platform powered by OpenAI Whisper and GPT-4.\nImplemented clean audio chunking pipelines and achieved 98% transcription accuracy with 200ms latency.\nSecured over 1,500 Github stars and supported 20,000+ monthly active users during launch.",
+      visible: true,
     },
   ],
-  languages: [{ language: "English", level: 5 }],
+  achievements: [
+    {
+      title: "1st Place Winner",
+      description: "TechCrunch Disrupt Hackathon (out of 300+ global competing engineering teams)",
+      date: "2022",
+      visible: true,
+    }
+  ],
+  certifications: [
+    {
+      name: "AWS Certified Solutions Architect",
+      issuer: "Amazon Web Services",
+      date: "2023",
+      visible: true,
+    }
+  ],
+  customSections: [
+    {
+      id: "lang-sec",
+      title: "Languages",
+      entries: [
+        {
+          title: "English",
+          subtitle: "Native proficiency",
+          visible: true,
+        },
+        {
+          title: "Spanish",
+          subtitle: "Intermediate fluency",
+          visible: true,
+        }
+      ]
+    }
+  ],
   customizations: {
     colors: {
-      accent: "#bef264",
+      accent: "#000000",
       text: "#18181b",
       background: "#ffffff",
       applyTo: {
@@ -94,7 +152,7 @@ export const DUMMY_RESUME_DATA = {
         headingsLine: true,
       },
     },
-    fonts: { body: "Inter", headings: "Inter" },
+    fonts: { body: "Source Serif Pro", headings: "Source Serif Pro" },
     layout: {
       spacing: {
         fontSize: "10pt",
@@ -116,12 +174,12 @@ const ResumeCardPreview = ({ resume }) => {
     personalInfo: resume.personalInfo || {},
     customizations: resume.customizations || {
       colors: {
-        accent: "#bef264",
+        accent: "#000000",
         text: "#18181b",
         background: "#ffffff",
         applyTo: {},
       },
-      fonts: { body: "Inter", headings: "Inter" },
+      fonts: { body: "Source Serif Pro", headings: "Source Serif Pro" },
       layout: {
         spacing: {
           fontSize: "10pt",

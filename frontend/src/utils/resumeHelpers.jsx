@@ -6,6 +6,13 @@ import {
   Twitter,
   Briefcase,
   Link as LinkIcon,
+  Globe,
+  Mail,
+  Phone,
+  MapPin,
+  Youtube,
+  Instagram,
+  Facebook,
 } from "lucide-react";
 
 const locales = {
@@ -129,11 +136,15 @@ export const getFontFamily = (fontName) => {
 /**
  * Returns an icon component for a given link label and URL.
  */
-export const getLinkIcon = (label, url) => {
-  const text = (label + url).toLowerCase();
-  if (text.includes("linkedin")) return <Linkedin size={14} />;
-  if (text.includes("github")) return <Github size={14} />;
-  if (text.includes("twitter")) return <Twitter size={14} />;
-  if (text.includes("portfolio")) return <Briefcase size={14} />;
-  return <LinkIcon size={14} />;
+export const getLinkIcon = (label, url, size = 14) => {
+  const text = (String(label || "") + String(url || "")).toLowerCase();
+  if (text.includes("linkedin")) return <Linkedin size={size} aria-hidden="true" />;
+  if (text.includes("github")) return <Github size={size} aria-hidden="true" />;
+  if (text.includes("twitter") || text.includes(" x.com") || text.includes("/x")) return <Twitter size={size} aria-hidden="true" />;
+  if (text.includes("portfolio") || text.includes("website") || text.includes("personal")) return <Briefcase size={size} aria-hidden="true" />;
+  if (text.includes("youtube")) return <Youtube size={size} aria-hidden="true" />;
+  if (text.includes("instagram")) return <Instagram size={size} aria-hidden="true" />;
+  if (text.includes("facebook")) return <Facebook size={size} aria-hidden="true" />;
+  if (text.includes("globe") || text.includes("blog")) return <Globe size={size} aria-hidden="true" />;
+  return <LinkIcon size={size} aria-hidden="true" />;
 };

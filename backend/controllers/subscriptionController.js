@@ -1,6 +1,7 @@
 const Subscription = require("../models/Subscription");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const CreditService = require("../services/creditService");
 const {
   PLAN_CONFIG,
   createRazorpayOrder,
@@ -649,78 +650,40 @@ const requestRefund = async (req, res) => {
 // ─── POST /subscription/deduct-credits ────────────────────────────────────────
 // ─── Helper: perform actual deduction ─────────────────────────────────────────
 const internalDeductCredits = async (clerkId, amount, service) => {
-  const { subscription } = await ensureSubscription(clerkId);
+  const user = await User.findOne({ clerkId });
+  if (!user) {
+    throw Object.assign(new Error("User not found"), { statusCode: 404 });
+  }
+
   const normalizedService =
     typeof service === "string" ? service.trim().toLowerCase() : null;
 
-  // Prefer centralized pricing config when service is provided.
-  const configuredAmount = normalizedService
-    ? getServiceCost(normalizedService, subscription.tier)
-    : null;
+  const finalAmount =
+    normalizedService && getServiceCost(normalizedService, "Free") !== undefined
+      ? null // Let CreditService handle cost from config
+      : Number(amount);
 
-  let finalAmount = configuredAmount;
+  const result = await CreditService.deduct(
+    user._id,
+    normalizedService,
+    finalAmount,
+  );
 
-  // Backward compatibility for older clients calling with explicit amount only.
-  if (finalAmount === null || Number.isNaN(finalAmount)) {
-    finalAmount = Number(amount);
-    if (!Number.isFinite(finalAmount) || finalAmount < 0) {
-      throw Object.assign(new Error("Invalid amount for credit deduction"), {
-        statusCode: 400,
-      });
-    }
-  }
-
-  if (
-    normalizedService &&
-    isUnlimitedTierService(subscription.tier, normalizedService)
-  ) {
-    return {
-      success: true,
-      message: `Unlimited credits for ${normalizedService} on Infinite Elite`,
-      credits: subscription.credits,
-      topupCredits: subscription.topupCredits,
-    };
-  }
-
-  if (normalizedService && finalAmount === 0) {
-    return {
-      success: true,
-      message: `${normalizedService} included in your plan`,
-      credits: subscription.credits,
-      topupCredits: subscription.topupCredits,
-      deducted: 0,
-    };
-  }
-
-  const totalAvailable =
-    (subscription.credits || 0) + (subscription.topupCredits || 0);
-
-  if (totalAvailable < finalAmount) {
+  if (!result.success) {
     throw Object.assign(
-      new Error(
-        `Insufficient credits for ${normalizedService || "requested service"}. Need ${finalAmount}, have ${totalAvailable.toFixed(1)}`,
-      ),
-      { statusCode: 400 },
+      new Error(result.message || "Credit deduction failed"),
+      {
+        statusCode: 400,
+      },
     );
   }
 
-  // Deduct from main credits first
-  if (subscription.credits >= finalAmount) {
-    subscription.credits -= finalAmount;
-  } else {
-    // Use all main credits and deduct remainder from topup credits
-    const remainder = finalAmount - subscription.credits;
-    subscription.credits = 0;
-    subscription.topupCredits = (subscription.topupCredits || 0) - remainder;
-  }
-
-  await subscription.save();
   return {
     success: true,
-    message: "Credits deducted",
-    credits: subscription.credits,
-    topupCredits: subscription.topupCredits,
-    deducted: finalAmount,
+    message: result.message || "Credits deducted",
+    credits: result.remaining,
+    topupCredits: result.topupRemaining,
+    deducted: result.amount,
   };
 };
 
