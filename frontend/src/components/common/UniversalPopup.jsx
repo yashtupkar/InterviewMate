@@ -30,6 +30,18 @@ const UniversalPopup = ({
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [portalContainer, setPortalContainer] = useState(document.body);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setPortalContainer(document.fullscreenElement || document.body);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    handleFullscreenChange();
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -103,7 +115,7 @@ const UniversalPopup = ({
         </div>
       </div>
     </div>,
-    document.body,
+    portalContainer,
   );
 };
 

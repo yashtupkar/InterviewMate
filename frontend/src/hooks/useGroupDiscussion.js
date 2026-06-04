@@ -87,16 +87,16 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         setIsUserSpeaking(true);
 
         if (isFinal) {
-          finalBufferRef.current = (finalBufferRef.current + " " + transcriptChunk).trim();
+          finalBufferRef.current = deduplicateTranscriptText((finalBufferRef.current + " " + transcriptChunk).trim());
           interimTextRef.current = "";
         } else {
           interimTextRef.current = transcriptChunk;
         }
-        setLiveText((finalBufferRef.current + " " + interimTextRef.current).trim());
+        setLiveText(deduplicateTranscriptText((finalBufferRef.current + " " + interimTextRef.current).trim()));
 
         if (finalizeTimerRef.current) clearTimeout(finalizeTimerRef.current);
         finalizeTimerRef.current = setTimeout(() => {
-          const spoken = finalBufferRef.current.trim();
+          const spoken = deduplicateTranscriptText(finalBufferRef.current.trim());
           finalBufferRef.current = "";
           interimTextRef.current = "";
           setLiveText("");
@@ -664,3 +664,43 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     }
   };
 }
+
+/**
+ * Robustly deduplicates consecutive duplicate words, repeating phrase patterns, 
+ * and consecutive identical sentences/clauses within a transcript text string.
+ */
+const deduplicateTranscriptText = (text) => {
+  if (!text) return "";
+
+  // Split text into words, preserving spaces
+  const words = text.trim().split(/\s+/);
+  const cleaned = [];
+  
+  let i = 0;
+  while (i < words.length) {
+    let matchFound = false;
+    
+    // Check phrase lengths from 20 words down to 1 word
+    for (let len = 20; len >= 1; len--) {
+      if (i + len * 2 <= words.length) {
+        // Compare segment [i, i+len) with segment [i+len, i+len*2)
+        const first = words.slice(i, i + len).map(w => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")).join(" ");
+        const second = words.slice(i + len, i + len * 2).map(w => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")).join(" ");
+        
+        if (first && first === second) {
+          // Keep the latter portion which represents the ongoing speech
+          i += len;
+          matchFound = true;
+          break;
+        }
+      }
+    }
+    
+    if (!matchFound) {
+      cleaned.push(words[i]);
+      i++;
+    }
+  }
+  
+  return cleaned.join(" ");
+};

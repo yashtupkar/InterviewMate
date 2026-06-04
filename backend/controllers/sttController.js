@@ -34,7 +34,6 @@ exports.getDeepgramToken = async (req, res) => {
                            grantErr.response?.data?.err_msg.toLowerCase().includes("permission"));
       
       if (isForbidden) {
-        console.warn("[STT] Deepgram /v1/auth/grant returned Forbidden (Insufficient permissions). Falling back to using the API Key directly.");
         return res.json({ token: apiKey, isFallback: true });
       }
       

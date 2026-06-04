@@ -54,6 +54,11 @@ export const useCustomInterview = () => {
   const [hasCallEnded, setHasCallEnded] = useState(false);
   const [activeCodingTask, setActiveCodingTask] = useState(null);
   const [codingPopupTask, setCodingPopupTask] = useState(null);
+  const codingPopupTaskRef = useRef(null);
+  const updateCodingPopupTask = useCallback((task) => {
+    codingPopupTaskRef.current = task;
+    setCodingPopupTask(task);
+  }, []);
   const [isProcessing, setIsProcessing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("Initializing...");
   const [availableVoices, setAvailableVoices] = useState([]);
@@ -151,9 +156,7 @@ export const useCustomInterview = () => {
       ...resumeKeywords,
     ],
     onSpeechStarted: () => {
-      console.log("%c[STT:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
       if (isAgentSpeakingRef.current) {
-        console.log("[STT:Barge-In] User speech start detected. Stopping agent TTS.");
         stopSpeaking();
         isAgentSpeakingRef.current = false;
         setIsAgentSpeaking(false);
@@ -161,12 +164,9 @@ export const useCustomInterview = () => {
     },
     onTranscript: ({ transcript, isFinal, confidence }) => {
       if (transcript.trim()) {
-        console.log(
-          `[STT:DG] Transcript chunk: "${transcript}" | Confidence: ${confidence.toFixed(4)} | IsFinal: ${isFinal}`
-        );
+     
 
         if (isAgentSpeakingRef.current) {
-          console.log("[STT:Barge-In] User transcript received. Stopping agent TTS.");
           stopSpeaking();
           isAgentSpeakingRef.current = false;
           setIsAgentSpeaking(false);
@@ -174,17 +174,18 @@ export const useCustomInterview = () => {
 
         let interimTranscript = "";
         if (isFinal) {
-          sttFinalBufferRef.current = (sttFinalBufferRef.current + " " + transcript).trim();
+          sttFinalBufferRef.current = deduplicateTranscriptText((sttFinalBufferRef.current + " " + transcript).trim());
         } else {
           interimTranscript = transcript;
         }
 
         const currentText = (sttFinalBufferRef.current + " " + interimTranscript).trim();
         if (currentText) {
-          const hasSpeechUpdate = currentText !== lastRecognizedTextRef.current;
+          const cleanedText = deduplicateTranscriptText(currentText);
+          const hasSpeechUpdate = cleanedText !== lastRecognizedTextRef.current;
           if (!hasSpeechUpdate && !interimTranscript.trim()) return;
 
-          lastRecognizedTextRef.current = currentText;
+          lastRecognizedTextRef.current = cleanedText;
           lastSpeechEventTimeRef.current = Date.now();
 
           setIsUserSpeaking(true);
@@ -196,10 +197,10 @@ export const useCustomInterview = () => {
             cancelCountdown();
           }
 
-          updateUserTranscript(currentText);
+          updateUserTranscript(cleanedText);
 
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          const snapshotText = currentText;
+          const snapshotText = cleanedText;
           silenceTimerRef.current = setTimeout(() => {
             const stableSilence =
               Date.now() - lastSpeechEventTimeRef.current >= PAUSE_DETECT;
@@ -215,13 +216,19 @@ export const useCustomInterview = () => {
       }
     },
     onSpeechEnded: () => {
-      console.log("%c[STT:VAD] Speech ended detected by Deepgram VAD", "color: #f59e0b; font-weight: bold;");
     }
   });
 
-  const SILENCE_THRESHOLD = 2000;
-  const COUNTDOWN_DURATION = 5000; // 5 seconds for user to continue speaking or auto-send
-  const PAUSE_DETECT = 500; // Start countdown after 0.5s of silence to give user time to think
+  const muteCustomMic = useCallback(() => {
+    isMutedRef.current = true;
+    setIsMuted(true);
+    setIsMicEnabled(false);
+    hookSetMuted(true);
+  }, [hookSetMuted, setIsMicEnabled]);
+
+
+  const COUNTDOWN_DURATION = 3000; // 3 seconds for user to continue speaking or auto-send
+  const PAUSE_DETECT = 1000; // Start countdown after 1.0s of silence to give user time to think
   const SUPPORTED_CODING_LANGUAGES = [
     "javascript",
     "html",
@@ -401,7 +408,7 @@ export const useCustomInterview = () => {
         normalized,
       );
 
-    return hasLanguage && hasTimeLimit && hasExplicitTask;
+    return hasLanguage && hasExplicitTask;
   };
 
   const normalizeCodingTask = (task, sourceText = "") => {
@@ -465,23 +472,26 @@ export const useCustomInterview = () => {
   // Helper to update transcript in state
   const updateUserTranscript = useCallback(
     (text) => {
+      if (!currentUserMessageIdRef.current) {
+        currentUserMessageIdRef.current = Date.now();
+      }
+      const currentId = currentUserMessageIdRef.current;
+
       setContextTranscript((prev) => {
         const lastMsg = prev[prev.length - 1];
         if (
           lastMsg &&
           !lastMsg.isAgent &&
-          lastMsg.id === currentUserMessageIdRef.current
+          lastMsg.id === currentId
         ) {
           const newTranscript = [...prev];
           newTranscript[newTranscript.length - 1] = { ...lastMsg, text: text };
           return newTranscript;
         } else {
-          const newId = Date.now();
-          currentUserMessageIdRef.current = newId;
           return [
             ...prev,
             {
-              id: newId,
+              id: currentId,
               role: "user",
               speaker: "You",
               text: text,
@@ -621,7 +631,7 @@ export const useCustomInterview = () => {
   );
 
   const detectCodingQuestion = (text) => {
-    if (activeCodingTaskRef.current || codingPopupTask) return;
+    if (activeCodingTaskRef.current || codingPopupTaskRef.current) return;
 
     if (!hasCodingTaskStructure(text)) {
       return;
@@ -639,13 +649,15 @@ export const useCustomInterview = () => {
           .trim();
         const taskData = normalizeCodingTask(JSON.parse(jsonStr), tagMatch[1]);
         if (taskData) {
-          setCodingPopupTask(taskData);
+          updateCodingPopupTask(taskData);
+          muteCustomMic();
           return;
         }
       } catch (e) {
         const fuzzyTask = extractFuzzyTask(tagMatch[1]);
         if (fuzzyTask) {
-          setCodingPopupTask(fuzzyTask);
+          updateCodingPopupTask(fuzzyTask);
+          muteCustomMic();
           return;
         }
       }
@@ -674,7 +686,8 @@ export const useCustomInterview = () => {
             text,
           );
           if (taskData) {
-            setCodingPopupTask(taskData);
+            updateCodingPopupTask(taskData);
+            muteCustomMic();
             return;
           }
         } catch (e) {}
@@ -682,7 +695,8 @@ export const useCustomInterview = () => {
 
       const fuzzyTask = extractFuzzyTask(text);
       if (fuzzyTask) {
-        setCodingPopupTask(fuzzyTask);
+        updateCodingPopupTask(fuzzyTask);
+        muteCustomMic();
         return;
       }
     }
@@ -820,6 +834,14 @@ export const useCustomInterview = () => {
                 handleEndCall();
                 return;
               }
+              if (activeCodingTaskRef.current || codingPopupTaskRef.current) {
+                console.log("[TTS:Complete] Coding task active/pending. Keeping mic off.");
+                isMutedRef.current = true;
+                setIsMuted(true);
+                setIsMicEnabled(false);
+                hookSetMuted(true);
+                return;
+              }
               if (!hasCallEndedRef.current && !hasEndedRef.current) {
                 isMutedRef.current = false;
                 setIsMuted(false);
@@ -832,6 +854,13 @@ export const useCustomInterview = () => {
             console.error("[TTS] Polly error:", err);
             isAgentSpeakingRef.current = false;
             setIsAgentSpeaking(false);
+            if (activeCodingTaskRef.current || codingPopupTaskRef.current) {
+              isMutedRef.current = true;
+              setIsMuted(true);
+              setIsMicEnabled(false);
+              hookSetMuted(true);
+              return;
+            }
             if (!hasCallEndedRef.current && !hasEndedRef.current) {
               isMutedRef.current = false;
               setIsMuted(false);
@@ -844,6 +873,13 @@ export const useCustomInterview = () => {
         console.error("[TTS] Critical failure:", err);
         isAgentSpeakingRef.current = false;
         setIsAgentSpeaking(false);
+        if (activeCodingTaskRef.current || codingPopupTaskRef.current) {
+          isMutedRef.current = true;
+          setIsMuted(true);
+          setIsMicEnabled(false);
+          hookSetMuted(true);
+          return;
+        }
         if (!hasCallEndedRef.current && !hasEndedRef.current) {
           isMutedRef.current = false;
           setIsMuted(false);
@@ -1241,15 +1277,15 @@ export const useCustomInterview = () => {
       if (isDebugEnabled && debugCodingSpace) {
         activeCodingTaskRef.current = previewCodingTask;
         setActiveCodingTask(previewCodingTask);
-        setCodingPopupTask(null);
+        updateCodingPopupTask(null);
       } else if (isDebugEnabled && debugCodingAlert) {
         activeCodingTaskRef.current = null;
         setActiveCodingTask(null);
-        setCodingPopupTask(previewCodingTask);
+        updateCodingPopupTask(previewCodingTask);
       } else {
         activeCodingTaskRef.current = null;
         setActiveCodingTask(null);
-        setCodingPopupTask(null);
+        updateCodingPopupTask(null);
       }
 
       return;
@@ -1280,9 +1316,11 @@ export const useCustomInterview = () => {
     if (isAgentSpeakingRef.current || !codingPopupTask) return;
     activeCodingTaskRef.current = codingPopupTask;
     setActiveCodingTask(codingPopupTask);
-    setCodingPopupTask(null);
+    updateCodingPopupTask(null);
     setIsMuted(true);
     isMutedRef.current = true;
+    setIsMicEnabled(false);
+    hookSetMuted(true);
     stopSpeaking();
     isAgentSpeakingRef.current = false;
     setIsAgentSpeaking(false);
@@ -1290,7 +1328,7 @@ export const useCustomInterview = () => {
 
   const handleSkipChallenge = () => {
     if (isAgentSpeakingRef.current || !codingPopupTask) return;
-    setCodingPopupTask(null);
+    updateCodingPopupTask(null);
     activeCodingTaskRef.current = null;
     const skipMsg =
       "I'm not able to attempt this coding question right now. Let's move on.";
@@ -1315,6 +1353,9 @@ export const useCustomInterview = () => {
     activeCodingTaskRef.current = null;
     setActiveCodingTask(null);
     setIsMuted(false);
+    isMutedRef.current = false;
+    setIsMicEnabled(true);
+    hookSetMuted(false);
     isAgentSpeakingRef.current = false;
     setIsAgentSpeaking(false);
     // Analyze the code submission to detect if it's empty or just default template
@@ -1392,4 +1433,44 @@ export const useCustomInterview = () => {
       confirmEndSession,
     },
   };
+};
+
+/**
+ * Robustly deduplicates consecutive duplicate words, repeating phrase patterns, 
+ * and consecutive identical sentences/clauses within a transcript text string.
+ */
+const deduplicateTranscriptText = (text) => {
+  if (!text) return "";
+
+  // Split text into words, preserving spaces
+  const words = text.trim().split(/\s+/);
+  const cleaned = [];
+  
+  let i = 0;
+  while (i < words.length) {
+    let matchFound = false;
+    
+    // Check phrase lengths from 20 words down to 1 word
+    for (let len = 20; len >= 1; len--) {
+      if (i + len * 2 <= words.length) {
+        // Compare segment [i, i+len) with segment [i+len, i+len*2)
+        const first = words.slice(i, i + len).map(w => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")).join(" ");
+        const second = words.slice(i + len, i + len * 2).map(w => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")).join(" ");
+        
+        if (first && first === second) {
+          // Keep the latter portion which represents the ongoing speech
+          i += len;
+          matchFound = true;
+          break;
+        }
+      }
+    }
+    
+    if (!matchFound) {
+      cleaned.push(words[i]);
+      i++;
+    }
+  }
+  
+  return cleaned.join(" ");
 };
