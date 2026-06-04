@@ -85,12 +85,12 @@ const generateTTS = asyncHandler(async (req, res) => {
     console.error("TTS Generation Error:", error);
 
     const errMsg = error.message || "";
-    // Check if error is rate limit (AWS Polly format or HTTP 429 or websocket closed throttles)
+    // Azure SDK rate-limit / quota errors
     if (
-      error.code === "ThrottlingException" ||
       errMsg.includes("429") ||
       errMsg.toLowerCase().includes("rate limit") ||
-      errMsg.toLowerCase().includes("throttled")
+      errMsg.toLowerCase().includes("throttled") ||
+      errMsg.toLowerCase().includes("quota exceeded")
     ) {
       return res.status(429).json({
         message: "Too many TTS requests. Please wait before trying again.",
@@ -98,14 +98,10 @@ const generateTTS = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check if error is related to invalid text
-    if (
-      error.code === "InvalidParameterValue" ||
-      error.code === "InvalidParameterException"
-    ) {
-      return res.status(400).json({
-        message: "Invalid text for TTS processing",
-        error: error.message,
+    // Azure missing credentials
+    if (errMsg.includes("credentials missing")) {
+      return res.status(503).json({
+        message: "TTS service not configured. Contact support.",
       });
     }
 
@@ -157,10 +153,10 @@ const streamTTS = asyncHandler(async (req, res) => {
 
     const errMsg = error.message || "";
     if (
-      error.code === "ThrottlingException" ||
       errMsg.includes("429") ||
       errMsg.toLowerCase().includes("rate limit") ||
-      errMsg.toLowerCase().includes("throttled")
+      errMsg.toLowerCase().includes("throttled") ||
+      errMsg.toLowerCase().includes("quota exceeded")
     ) {
       if (!res.headersSent) {
         return res.status(429).json({
@@ -340,44 +336,55 @@ const clearCache = asyncHandler(async (req, res) => {
  */
 const getAvailableVoices = asyncHandler(async (req, res) => {
   try {
-    const voices = {
-      femaleVoices: [
-        {
-          id: "Joanna",
-          name: "Joanna (Professional Female)",
-          engine: "neural",
-        },
-        { id: "Ivy", name: "Ivy (Young Female)", engine: "neural" },
-        { id: "Kimberly", name: "Kimberly (Clear Female)", engine: "neural" },
-      ],
-      maleVoices: [
-        {
-          id: "Matthew",
-          name: "Matthew (Professional Male)",
-          engine: "neural",
-        },
-        { id: "Justin", name: "Justin (Young Male)", engine: "neural" },
-        { id: "Liam", name: "Liam (Formal Male)", engine: "neural" },
-      ],
-      agentMapping: {
-        sophia: {
-          voiceId: "Joanna",
-          description: "Empathetic and people-focused",
-        },
-        rohan: { voiceId: "Matthew", description: "Analytical and logical" },
-        marcus: { voiceId: "Liam", description: "Bold and direct" },
-        emma: { voiceId: "Ivy", description: "Creative and unconventional" },
-      },
-    };
+    const key = process.env.AZURE_SPEECH_KEY;
+    const region = process.env.AZURE_SPEECH_REGION || "centralindia";
+
+    if (!key) {
+      throw new Error("Azure Speech key is missing in environment variables.");
+    }
+
+    const axios = require("axios");
+    const resp = await axios.get(
+      `https://${region}.tts.speech.microsoft.com/cognitiveservices/voices/list`,
+      {
+        headers: { "Ocp-Apim-Subscription-Key": key },
+        timeout: 10000,
+      }
+    );
+
+    const rawVoices = resp.data;
+
+    // Filter to English voices only and map to the unified structure
+    const englishVoices = rawVoices
+      .filter((v) => v.Locale.startsWith("en-"))
+      .map((v) => {
+        let formattedName = v.DisplayName;
+        if (v.VoiceType === "NeuralHD") {
+          formattedName += " (HD)";
+        } else if (v.VoiceType === "Neural") {
+          formattedName += " (Neural)";
+        }
+
+        return {
+          id: v.ShortName,
+          name: formattedName,
+          description: `${v.LocaleName} — ${v.VoiceType} voice`,
+          language: v.Locale,
+          gender: v.Gender.toLowerCase(),
+        };
+      });
+
+    // Sort alphabetically by name
+    englishVoices.sort((a, b) => a.name.localeCompare(b.name));
 
     res.status(200).json({
       success: true,
-      voices,
+      voices: englishVoices,
     });
   } catch (error) {
     console.error("Get Voices Error:", error);
     res.status(500).json({
-      message: "Failed to get available voices",
+      message: "Failed to get available voices directly from Azure",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }

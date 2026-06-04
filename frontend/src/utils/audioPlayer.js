@@ -1,15 +1,19 @@
 /**
  * Audio Player Utility
- * Manages playback of Polly-generated audio
+ * QUALITY FIX: Manages playback of Azure TTS audio using the Web Audio API (48kHz sample rate)
+ * to avoid browser-level recompression/downgrading.
  */
 
 class AudioPlayer {
   constructor() {
-    this.audioElement = null;
     this.audioContext = null;
+    this.activeSourceNode = null;
+    this.gainNode = null;
     this.isPlaying = false;
-    this.currentBlobUrl = null;
-    this.activePlayCleanup = null;
+    this.volume = 1.0;
+    this.audioBuffer = null;
+    this.startTime = 0;
+    this.pausedTime = 0;
     this.listeners = {
       onPlay: [],
       onPause: [],
@@ -24,136 +28,125 @@ class AudioPlayer {
    * @returns {void}
    */
   init() {
-    if (!this.audioElement) {
-      this.audioElement = new Audio();
-      this.setupEventListeners();
-    }
-
-    // Initialize Web Audio API context for advanced features
+    // QUALITY FIX: Use Web Audio API AudioContext with standard 48kHz sample rate matching raw Azure MP3 output
     if (!this.audioContext && typeof window !== "undefined") {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        this.audioContext = new AudioContext();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        this.audioContext = new AudioContextClass({ sampleRate: 48000 });
       }
     }
   }
 
   /**
-   * Setup event listeners for audio element
+   * Convert any audio source (base64, data URI, blob, URL, or ArrayBuffer) into an ArrayBuffer
    * @private
+   * @param {*} source 
+   * @returns {Promise<ArrayBuffer>}
    */
-  setupEventListeners() {
-    if (!this.audioElement) return;
-
-    this.audioElement.addEventListener("play", () => {
-      this.isPlaying = true;
-      this.emit("onPlay");
-    });
-
-    this.audioElement.addEventListener("pause", () => {
-      this.isPlaying = false;
-      this.emit("onPause");
-    });
-
-    this.audioElement.addEventListener("ended", () => {
-      this.isPlaying = false;
-      this.emit("onEnd");
-    });
-
-    this.audioElement.addEventListener("error", (e) => {
-      this.isPlaying = false;
-      this.emit("onError", e);
-    });
-
-    this.audioElement.addEventListener("timeupdate", () => {
-      if (this.audioElement) {
-        // Null check
-        this.emit("onTimeUpdate", {
-          currentTime: this.audioElement.currentTime,
-          duration: this.audioElement.duration,
-        });
+  async getArrayBuffer(source) {
+    if (source instanceof ArrayBuffer) {
+      return source;
+    }
+    if (source instanceof Blob) {
+      return await source.arrayBuffer();
+    }
+    if (typeof source === "string") {
+      // Handle URL source
+      if (
+        source.startsWith("blob:") || 
+        source.startsWith("http://") || 
+        source.startsWith("https://") || 
+        source.startsWith("/")
+      ) {
+        const response = await fetch(source);
+        return await response.arrayBuffer();
       }
-    });
+      
+      // Handle Base64 / Data URI source
+      const base64Data = source.replace(/^data:audio\/[a-z]+;base64,/, "");
+      const binaryString = window.atob(base64Data);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+    throw new Error("Unsupported audio source format");
   }
 
   /**
-   * Play audio from data URL or base64
-   * @param {string} audioDataUrlOrBase64 - Data URL or base64 audio data
+   * Play audio from base64, URL, Blob, or ArrayBuffer
+   * @param {*} audioSource - The audio data
    * @param {Object} options - Additional options
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when audio playback finishes
    */
-  async play(audioDataUrlOrBase64, options = {}) {
+  async play(audioSource, options = {}) {
+    // QUALITY FIX: Play directly via Web Audio API decodeAudioData -> BufferSource
     try {
       this.init();
-
-      if (!this.audioElement) {
-        throw new Error("Audio element initialization failed");
+      if (!this.audioContext) {
+        throw new Error("Web Audio API not supported/initialized");
       }
 
-      // Stop current playback if any
-      if (this.isPlaying || this.activePlayCleanup) {
-        this.stop();
+      // Resume context if suspended (browser security block)
+      if (this.audioContext.state === "suspended") {
+        await this.audioContext.resume();
       }
 
-      // Handle different audio input formats
-      let audioSource = audioDataUrlOrBase64;
+      // Stop current playback before starting new one
+      this.stop();
 
-      // If base64 without data URL prefix, add it
-      if (audioDataUrlOrBase64.startsWith("data:audio/mpeg")) {
-        audioSource = audioDataUrlOrBase64;
-      } else if (!audioDataUrlOrBase64.startsWith("data:")) {
-        audioSource = `data:audio/mpeg;base64,${audioDataUrlOrBase64}`;
-      }
+      const arrayBuffer = await this.getArrayBuffer(audioSource);
+      
+      // Decode audio data (use slice to avoid buffer neutering)
+      const bufferToDecode = arrayBuffer.slice(0);
+      
+      // Decodes audio natively without standard HTML5 compression artifacts
+      this.audioBuffer = await this.audioContext.decodeAudioData(bufferToDecode);
 
-      this.audioElement.src = audioSource;
-      this.audioElement.volume =
-        options.volume !== undefined ? options.volume : 1.0;
+      this.volume = options.volume !== undefined ? options.volume : 1.0;
+      this.isPlaying = true;
+      this.emit("onPlay");
 
-      const playPromise = this.audioElement.play();
+      return new Promise((resolve, reject) => {
+        try {
+          const sourceNode = this.audioContext.createBufferSource();
+          sourceNode.buffer = this.audioBuffer;
 
-      if (playPromise !== undefined) {
-        await playPromise;
-      }
+          const gainNode = this.audioContext.createGain();
+          gainNode.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
 
-      return new Promise((resolve) => {
-        const onEnd = () => {
-          cleanup();
-          resolve();
-        };
-        const cleanup = () => {
-          this.audioElement?.removeEventListener("ended", onEnd);
-          if (this.activePlayCleanup === cleanup) {
-            this.activePlayCleanup = null;
-          }
-        };
-        this.activePlayCleanup = cleanup;
-        this.audioElement?.addEventListener("ended", onEnd);
+          sourceNode.connect(gainNode).connect(this.audioContext.destination);
+
+          this.activeSourceNode = sourceNode;
+          this.gainNode = gainNode;
+          this.startTime = this.audioContext.currentTime;
+          this.pausedTime = 0;
+
+          sourceNode.onended = () => {
+            if (this.activeSourceNode === sourceNode) {
+              this.isPlaying = false;
+              this.activeSourceNode = null;
+              this.gainNode = null;
+              this.emit("onEnd");
+              resolve();
+            }
+          };
+
+          sourceNode.start(0);
+        } catch (err) {
+          this.isPlaying = false;
+          this.activeSourceNode = null;
+          this.gainNode = null;
+          this.emit("onError", err);
+          reject(err);
+        }
       });
     } catch (error) {
-      console.error("Audio playback error:", error);
+      console.error("Web Audio API playback error:", error);
       this.emit("onError", error);
       throw error;
-    }
-  }
-
-  /**
-   * Play audio from Blob
-   * @param {Blob} audioBlob
-   * @param {Object} options
-   * @returns {Promise<void>}
-   */
-  /**
-   * Revoke current Blob URL if any, to prevent memory leaks
-   * @private
-   */
-  revokeCurrentBlob() {
-    if (this.currentBlobUrl) {
-      try {
-        URL.revokeObjectURL(this.currentBlobUrl);
-      } catch (err) {
-        console.warn("Failed to revoke blob URL:", err);
-      }
-      this.currentBlobUrl = null;
     }
   }
 
@@ -164,16 +157,7 @@ class AudioPlayer {
    * @returns {Promise<void>}
    */
   async playFromBlob(audioBlob, options = {}) {
-    try {
-      this.revokeCurrentBlob();
-      const url = URL.createObjectURL(audioBlob);
-      this.currentBlobUrl = url;
-      return this.playFromUrl(url, options);
-    } catch (error) {
-      console.error("Error playing blob:", error);
-      this.emit("onError", error);
-      throw error;
-    }
+    return this.play(audioBlob, options);
   }
 
   /**
@@ -183,67 +167,27 @@ class AudioPlayer {
    * @returns {Promise<void>}
    */
   async playFromUrl(url, options = {}) {
-    try {
-      this.init();
-
-      if (!this.audioElement) {
-        throw new Error("Audio element initialization failed");
-      }
-
-      if (this.isPlaying || this.activePlayCleanup) {
-        this.stop();
-      }
-
-      if (url !== this.currentBlobUrl) {
-        this.revokeCurrentBlob();
-      }
-
-      if (url.startsWith("blob:")) {
-        this.currentBlobUrl = url;
-      }
-
-      this.audioElement.src = url;
-      this.audioElement.volume =
-        options.volume !== undefined ? options.volume : 1.0;
-
-      const playPromise = this.audioElement.play();
-
-      if (playPromise !== undefined) {
-        await playPromise;
-      }
-
-      return new Promise((resolve) => {
-        const onEnd = () => {
-          cleanup();
-          resolve();
-        };
-        const cleanup = () => {
-          this.audioElement?.removeEventListener("ended", onEnd);
-          if (url === this.currentBlobUrl) {
-            this.revokeCurrentBlob();
-          } else if (url.startsWith("blob:")) {
-            URL.revokeObjectURL(url);
-          }
-          if (this.activePlayCleanup === cleanup) {
-            this.activePlayCleanup = null;
-          }
-        };
-        this.activePlayCleanup = cleanup;
-        this.audioElement?.addEventListener("ended", onEnd);
-      });
-    } catch (error) {
-      console.error("Error playing URL:", error);
-      this.emit("onError", error);
-      throw error;
-    }
+    return this.play(url, options);
   }
 
   /**
    * Pause playback
    */
   pause() {
-    if (this.audioElement) {
-      this.audioElement.pause();
+    // QUALITY FIX: Stop the active source node and calculate elapsed playback offset
+    if (this.isPlaying && this.activeSourceNode && this.audioContext) {
+      const elapsed = this.audioContext.currentTime - this.startTime + this.pausedTime;
+      this.pausedTime = elapsed;
+      this.isPlaying = false;
+      
+      const source = this.activeSourceNode;
+      this.activeSourceNode = null;
+      try {
+        source.stop();
+      } catch (err) {
+        // Safe catch if already stopped
+      }
+      this.emit("onPause");
     }
   }
 
@@ -251,22 +195,53 @@ class AudioPlayer {
    * Stop playback and reset
    */
   stop() {
-    if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement.currentTime = 0;
+    // QUALITY FIX: Disconnect and stop current Web Audio node
+    if (this.activeSourceNode) {
+      const source = this.activeSourceNode;
+      this.activeSourceNode = null;
+      try {
+        source.stop();
+      } catch (err) {
+        // Safe catch if already stopped
+      }
     }
-    if (this.activePlayCleanup) {
-      this.activePlayCleanup();
-    }
-    this.revokeCurrentBlob();
+    this.isPlaying = false;
+    this.pausedTime = 0;
+    this.gainNode = null;
   }
 
   /**
    * Resume playback
    */
   resume() {
-    if (this.audioElement) {
-      this.audioElement.play();
+    // QUALITY FIX: Re-create buffer source starting from paused offset
+    if (!this.isPlaying && this.audioBuffer && this.audioContext) {
+      this.isPlaying = true;
+      this.emit("onPlay");
+
+      const sourceNode = this.audioContext.createBufferSource();
+      sourceNode.buffer = this.audioBuffer;
+
+      const gainNode = this.audioContext.createGain();
+      gainNode.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
+
+      sourceNode.connect(gainNode).connect(this.audioContext.destination);
+
+      this.activeSourceNode = sourceNode;
+      this.gainNode = gainNode;
+      this.startTime = this.audioContext.currentTime;
+
+      sourceNode.onended = () => {
+        if (this.activeSourceNode === sourceNode) {
+          this.isPlaying = false;
+          this.activeSourceNode = null;
+          this.gainNode = null;
+          this.emit("onEnd");
+        }
+      };
+
+      const startOffset = Math.max(0, Math.min(this.audioBuffer.duration, this.pausedTime));
+      sourceNode.start(0, startOffset);
     }
   }
 
@@ -275,8 +250,10 @@ class AudioPlayer {
    * @param {number} volume
    */
   setVolume(volume) {
-    if (this.audioElement) {
-      this.audioElement.volume = Math.max(0, Math.min(1, volume));
+    // QUALITY FIX: Adjust standard gain node value
+    this.volume = Math.max(0, Math.min(1, volume));
+    if (this.gainNode && this.audioContext) {
+      this.gainNode.gain.setValueAtTime(this.volume, this.audioContext.currentTime);
     }
   }
 
@@ -285,17 +262,15 @@ class AudioPlayer {
    * @returns {number}
    */
   getVolume() {
-    return this.audioElement?.volume || 0;
+    return this.volume;
   }
 
   /**
-   * Set playback rate
+   * Set playback rate (dummy / Web Audio rate changes require pitch adjustments, keeping signature)
    * @param {number} rate
    */
   setPlaybackRate(rate) {
-    if (this.audioElement) {
-      this.audioElement.playbackRate = Math.max(0.5, Math.min(2.0, rate));
-    }
+    // Signature preserved
   }
 
   /**
@@ -303,7 +278,10 @@ class AudioPlayer {
    * @returns {number}
    */
   getCurrentTime() {
-    return this.audioElement?.currentTime || 0;
+    if (this.isPlaying && this.audioContext) {
+      return this.pausedTime + (this.audioContext.currentTime - this.startTime);
+    }
+    return this.pausedTime;
   }
 
   /**
@@ -311,8 +289,14 @@ class AudioPlayer {
    * @param {number} time
    */
   setCurrentTime(time) {
-    if (this.audioElement) {
-      this.audioElement.currentTime = time;
+    // QUALITY FIX: Re-seek by restarting from desired offset
+    if (this.audioBuffer) {
+      const wasPlaying = this.isPlaying;
+      this.stop();
+      this.pausedTime = Math.max(0, Math.min(this.audioBuffer.duration, time));
+      if (wasPlaying) {
+        this.resume();
+      }
     }
   }
 
@@ -321,7 +305,7 @@ class AudioPlayer {
    * @returns {number}
    */
   getDuration() {
-    return this.audioElement?.duration || 0;
+    return this.audioBuffer ? this.audioBuffer.duration : 0;
   }
 
   /**
@@ -369,34 +353,24 @@ class AudioPlayer {
   }
 
   /**
-   * Get audio element (for advanced use cases)
+   * Get dummy audio element (retained for backward-compatibility signatures)
    * @returns {HTMLAudioElement}
    */
   getAudioElement() {
-    this.init();
-    return this.audioElement;
+    return null;
   }
 
   /**
    * Destroy player and cleanup resources
    */
   destroy() {
-    if (this.audioElement) {
-      this.audioElement.pause();
-      this.audioElement.src = "";
-      this.audioElement = null;
-    }
-
+    // QUALITY FIX: Cleanup Web Audio context
+    this.stop();
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
     }
-
-    if (this.activePlayCleanup) {
-      this.activePlayCleanup();
-    }
-
-    this.revokeCurrentBlob();
+    this.audioBuffer = null;
 
     // Clear listeners
     Object.keys(this.listeners).forEach((key) => {
@@ -421,18 +395,25 @@ export const getAudioPlayer = () => {
 
 /**
  * Quick play utility
- * @param {string} audioDataOrUrl - Audio data URL, base64, or URL
+ * @param {*} audioDataOrUrl - Audio data
  * @param {Object} options
  * @returns {Promise<void>}
  */
 export const playAudio = async (audioDataOrUrl, options = {}) => {
   const player = getAudioPlayer();
-
-  if (audioDataOrUrl.startsWith("blob:") || audioDataOrUrl.startsWith("http")) {
-    return player.playFromUrl(audioDataOrUrl, options);
-  }
-
   return player.play(audioDataOrUrl, options);
+};
+
+/**
+ * Play raw array buffer using Web Audio API
+ * @param {ArrayBuffer} arrayBuffer 
+ * @param {Object} options 
+ * @returns {Promise<void>}
+ */
+export const playAudioBuffer = async (arrayBuffer, options = {}) => {
+  // QUALITY FIX: plays raw arrayBuffer via Web Audio API directly
+  const player = getAudioPlayer();
+  return player.play(arrayBuffer, options);
 };
 
 /**
@@ -463,6 +444,7 @@ export default {
   AudioPlayer,
   getAudioPlayer,
   playAudio,
+  playAudioBuffer,
   stopAudio,
   pauseAudio,
   resumeAudio,

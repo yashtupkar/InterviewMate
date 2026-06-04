@@ -4,6 +4,73 @@
  */
 
 export const EDGE_VOICES = {
+  // Premium Azure Dragon HD Voices (US English)
+  en_US_Ava_Dragon: {
+    id: "en-US-Ava:DragonHDLatestNeural",
+    name: "Ava HD (US Female)",
+    description: "Premium ultra-realistic HD voice (Dragon model)",
+    language: "en-US",
+    gender: "female",
+  },
+  en_US_Andrew_Dragon: {
+    id: "en-US-Andrew:DragonHDLatestNeural",
+    name: "Andrew HD (US Male)",
+    description: "Premium ultra-realistic HD voice (Dragon model)",
+    language: "en-US",
+    gender: "male",
+  },
+  en_US_Adam_Dragon: {
+    id: "en-US-Adam:DragonHDLatestNeural",
+    name: "Adam HD (US Male)",
+    description: "Premium warm conversational HD voice (Dragon model)",
+    language: "en-US",
+    gender: "male",
+  },
+  en_US_Alloy_Dragon: {
+    id: "en-US-Alloy:DragonHDLatestNeural",
+    name: "Alloy HD (US Male)",
+    description: "Premium versatile HD voice (Dragon model)",
+    language: "en-US",
+    gender: "male",
+  },
+  en_US_Aria_Dragon: {
+    id: "en-US-Aria:DragonHDLatestNeural",
+    name: "Aria HD (US Female)",
+    description: "Premium expressive conversational HD voice (Dragon model)",
+    language: "en-US",
+    gender: "female",
+  },
+  en_US_Bree_Dragon: {
+    id: "en-US-Bree:DragonHDLatestNeural",
+    name: "Bree HD (US Female)",
+    description: "Premium energetic HD voice (Dragon model)",
+    language: "en-US",
+    gender: "female",
+  },
+  en_US_Brian_Dragon: {
+    id: "en-US-Brian:DragonHDLatestNeural",
+    name: "Brian HD (US Male)",
+    description: "Premium youthful HD voice (Dragon model)",
+    language: "en-US",
+    gender: "male",
+  },
+
+  // Premium Azure Dragon HD Voices (Indian English)
+  en_IN_Diya_Dragon: {
+    id: "en-IN-Diya:DragonHDLatestNeural",
+    name: "Diya HD (IN Female)",
+    description: "Premium Indian English HD voice (Dragon model)",
+    language: "en-IN",
+    gender: "female",
+  },
+  en_IN_Meera_Dragon: {
+    id: "en-IN-Meera:DragonHDLatestNeural",
+    name: "Meera HD (IN Female)",
+    description: "Premium conversational Indian English HD voice (Dragon model)",
+    language: "en-IN",
+    gender: "female",
+  },
+
   // US English Voices
   en_US_Aria: {
     id: "en-US-AriaNeural",
@@ -32,6 +99,13 @@ export const EDGE_VOICES = {
     id: "en-US-AvaNeural",
     name: "Ava (US Female)",
     description: "Cheerful and creative",
+    language: "en-US",
+    gender: "female",
+  },
+  en_US_Amanda: {
+    id: "en-US-AmandaMultilingualNeural",
+    name: "Amanda (US Female)",
+    description: "Multilingual US female voice",
     language: "en-US",
     gender: "female",
   },
@@ -149,7 +223,7 @@ export const EDGE_VOICES = {
  */
 export const AGENT_VOICE_MAPPING = {
   sophia: {
-    voiceId: "en-US-AriaNeural",
+    voiceId: "en-US-AvaNeural",
     description: "Empathetic and people-focused",
     personality: "Warm and supportive",
     color: "#ec4899",
@@ -167,7 +241,7 @@ export const AGENT_VOICE_MAPPING = {
     color: "#f59e0b",
   },
   emma: {
-    voiceId: "en-US-AvaNeural",
+    voiceId: "en-US-AmandaMultilingualNeural",
     description: "Creative and unconventional",
     personality: "Enthusiastic and innovative",
     color: "#10b981",
@@ -192,13 +266,13 @@ export const AGENT_VOICE_MAPPING = {
  * @returns {string} Voice ID
  */
 export const getVoiceIdFromAgent = (agentName) => {
-  if (!agentName) return "en-US-AriaNeural";
+  if (!agentName) return "en-US-AvaNeural";
 
   const agent = AGENT_VOICE_MAPPING[agentName.toLowerCase()];
   if (agent) return agent.voiceId;
 
   // Fallback to default voice
-  return "en-US-AriaNeural";
+  return "en-US-AvaNeural";
 };
 
 /**
@@ -219,7 +293,7 @@ export const getAgentMetadata = (agentName) => {
  */
 export const getVoiceConfig = (voiceId) => {
   const voice = Object.values(EDGE_VOICES).find((v) => v.id === voiceId);
-  return voice || EDGE_VOICES.en_US_Aria;
+  return voice || EDGE_VOICES.en_US_Ava;
 };
 
 /**

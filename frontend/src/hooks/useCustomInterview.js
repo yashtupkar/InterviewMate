@@ -78,7 +78,7 @@ export const useCustomInterview = () => {
     "Write a JavaScript function to check if a given string is a palindrome.";
   const debugCodingTimeRaw = Number(searchParams.get("codingTime"));
 
-  // Edge-TTS Hook
+  // Azure Neural TTS Hook
   const { speakText, stopSpeaking } = useEdgeTTS();
 
   // Refs
@@ -735,7 +735,7 @@ export const useCustomInterview = () => {
             }, 500);
           },
           onError: (err) => {
-            console.error("[TTS] Edge-TTS error:", err);
+            console.error("[TTS] Azure TTS error:", err);
             isAgentSpeakingRef.current = false;
             setIsAgentSpeaking(false);
             if (

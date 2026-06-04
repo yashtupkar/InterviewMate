@@ -142,7 +142,7 @@ export const getDeviceType = () => {
  */
 export const logTTSBackendSelection = () => {
   const userAgent = navigator.userAgent;
-  const backend = shouldUseBrowserNativeTTS() ? "Browser Native" : "Edge-TTS";
+  const backend = shouldUseBrowserNativeTTS() ? "Browser Native" : "Azure Neural TTS";
   const browser = getBrowserName();
   const device = getDeviceType();
 

@@ -11,10 +11,13 @@ import {
 } from "../utils/browserDetection";
 
 /**
- * Custom Hook for Hybrid Edge-TTS Integration
+ * Custom Hook for Hybrid Azure Neural TTS Integration
  * Strategy:
  * - Chrome: Use browser native speech (Web Speech API - fast, free)
- * - All other browsers: Use Edge-TTS via backend (consistent, premium neural voices)
+ * - All other browsers: Use Azure Neural TTS via backend (consistent, premium neural voices)
+ *
+ * Fallback: if the Azure backend call fails, automatically falls back to
+ * browser Web Speech API before propagating the error.
  *
  * Usage:
  * const { speakText, stopSpeaking, isPlaying } = useEdgeTTS();
@@ -161,7 +164,8 @@ export const useEdgeTTS = () => {
   }, [ttsBehaviorRef.useBrowserNative]);
 
   /**
-   * Fetch audio from Edge-TTS API
+   * Fetch audio from Azure Neural TTS API
+   * Falls back to browser Web Speech API if the backend call fails.
    * @private
    */
   const fetchAudioFromEdgeTTS = useCallback(
@@ -179,7 +183,7 @@ export const useEdgeTTS = () => {
 
         const payload = {
           text: text.trim(),
-          voiceId: voiceId || "en-US-AriaNeural",
+          voiceId: voiceId || "en-US-AvaNeural",
           engine: "neural",
         };
 
@@ -209,7 +213,34 @@ export const useEdgeTTS = () => {
         if (axios.isCancel(err)) {
           return;
         }
-        console.error("Edge-TTS API error:", err.response?.data || err.message);
+
+        console.error("Azure TTS API error:", err.response?.data || err.message);
+
+        // ── Web Speech API fallback ────────────────────────────────────────
+        // If the Azure backend is unreachable or returns an error, try the
+        // browser's built-in speech synthesis so the interview is never blocked.
+        if (!silent && typeof window !== "undefined" && window.speechSynthesis) {
+          console.warn("Azure TTS failed — falling back to browser Web Speech API");
+          try {
+            await new Promise((resolve, reject) => {
+              const utterance = new SpeechSynthesisUtterance(text);
+              utterance.lang = "en-US";
+              utterance.onend   = resolve;
+              utterance.onerror = (e) => {
+                if (e.error !== "interrupted") reject(new Error(e.error));
+                else resolve();
+              };
+              window.speechSynthesis.speak(utterance);
+            });
+            if (!silent) setIsLoading(false);
+            // Return null so callers know it was a fallback (no audioBase64)
+            return null;
+          } catch (fallbackErr) {
+            console.error("Web Speech API fallback also failed:", fallbackErr.message);
+          }
+        }
+        // ──────────────────────────────────────────────────────────────────
+
         if (!silent) {
           setError(err.response?.data?.message || err.message);
           setIsLoading(false);
@@ -221,7 +252,7 @@ export const useEdgeTTS = () => {
   );
 
   /**
-   * Fetch streaming ticket from Edge-TTS API
+   * Fetch streaming ticket from Azure Neural TTS API
    * @private
    */
   const fetchTicketFromEdgeTTS = useCallback(
@@ -342,7 +373,8 @@ export const useEdgeTTS = () => {
         },
         Emma: {
           gender: "female",
-          pitch: 1.25, // Energetic/creative tone
+          pitch: 1.0,
+          rate: 1.0,
           keywords: ["Google UK English Female", "Google UK English", "Samantha", "Female"],
         },
         Drew: {
@@ -453,11 +485,13 @@ export const useEdgeTTS = () => {
           };
         }
 
-        // 2. Fetch from Edge-TTS API
+        // 2. Fetch from Azure Neural TTS API
         const ttsResponse = await fetchAudioFromEdgeTTS(text, voiceId);
 
         if (!ttsResponse) {
-          throw new Error("Failed to fetch audio from Edge-TTS backend");
+          // ttsResponse is null when the Web Speech API fallback was used —
+          // audio already played, nothing to cache
+          return { audioBase64: null, fromCache: false, fallback: true };
         }
 
         // 3. Cache the audio (non-blocking)
@@ -481,7 +515,7 @@ export const useEdgeTTS = () => {
           fromCache: false,
         };
       } catch (err) {
-        console.error("Error getting Edge-TTS audio:", err);
+        console.error("Error getting Azure TTS audio:", err);
         throw err;
       }
     },
@@ -570,7 +604,7 @@ export const useEdgeTTS = () => {
   /**
    * Main speak function - Hybrid approach
    * Uses browser native TTS for Chrome
-   * Falls back to Edge-TTS via backend for other browsers/devices
+   * Falls back to Azure Neural TTS via backend for other browsers/devices
    */
   const speakText = useCallback(
     (text, voiceId = "Sophia", options = {}) => {
@@ -614,7 +648,7 @@ export const useEdgeTTS = () => {
                 reject(err);
               });
           } else {
-            // Use Edge-TTS backend service
+            // Use Azure Neural TTS backend service
             audioQueueRef.current.push({
               text,
               voiceId: resolvedVoiceId,
