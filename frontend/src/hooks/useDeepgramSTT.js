@@ -9,7 +9,7 @@ import { createPCMRecorder } from "../utils/pcmRecorder";
  * @param {string} config.backendUrl Backend application URL for fetching tokens
  * @param {Function} config.getToken Clerk or JWT secure token generator function
  * @param {string} config.model Deepgram model to use (default: 'nova-2')
- * @param {string} config.language ISO language code (default: 'en-US')
+ * @param {string} config.language ISO language code (default: 'en-IN')
  * @param {Array<string>} config.keywords Static vocab/boosting keywords list
  * @param {Function} config.onSpeechStarted Event handler for Deepgram VAD speech start
  * @param {Function} config.onUtteranceEnd Event handler for Deepgram VAD utterance completed
@@ -20,9 +20,10 @@ import { createPCMRecorder } from "../utils/pcmRecorder";
 export function useDeepgramSTT({
   backendUrl,
   getToken,
-  model = "nova-2",
-  language = "en-US",
+  model = "nova-3",
+  language = "en-IN",
   keywords = [],
+  initialMuted = false,
   onSpeechStarted,
   onUtteranceEnd,
   onTranscript,
@@ -30,7 +31,7 @@ export function useDeepgramSTT({
   onError
 } = {}) {
   const [isListening, setIsListening] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(initialMuted);
   const [volume, setVolume] = useState(0);
   const [error, setError] = useState("");
   const [finalTranscript, setFinalTranscript] = useState("");
@@ -41,7 +42,7 @@ export function useDeepgramSTT({
   const isListeningRef = useRef(false);
   const stopRequestedRef = useRef(false);
   const streamRef = useRef(null);
-  const mutedRef = useRef(false);
+  const mutedRef = useRef(initialMuted);
 
   const stopMediaStream = useCallback(() => {
     if (streamRef.current) {
@@ -141,9 +142,13 @@ export function useDeepgramSTT({
 
       // Combine static and dynamic keywords
       const allKeywords = [...(keywords || []), ...(dynamicKeywords || [])];
+      const isNova3OrFlux = model && (model.includes("nova-3") || model.includes("flux"));
       allKeywords.forEach((term) => {
-        wsUrl += `&keyterm=${encodeURIComponent(term)}`;
-        wsUrl += `&keywords=${encodeURIComponent(term)}:2`;
+        if (isNova3OrFlux) {
+          wsUrl += `&keyterm=${encodeURIComponent(term)}`;
+        } else {
+          wsUrl += `&keywords=${encodeURIComponent(term)}:2`;
+        }
       });
 
       const ws = new WebSocket(wsUrl, ["token", token]);
@@ -229,6 +234,11 @@ export function useDeepgramSTT({
     setIsMuted(next);
   }, []);
 
+  const setMuted = useCallback((value) => {
+    mutedRef.current = value;
+    setIsMuted(value);
+  }, []);
+
   const clearTranscript = useCallback(() => {
     setFinalTranscript("");
     setInterimTranscript("");
@@ -245,6 +255,7 @@ export function useDeepgramSTT({
   return {
     isListening,
     isMuted,
+    setMuted,
     volume,
     error,
     liveText,

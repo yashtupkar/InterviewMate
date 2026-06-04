@@ -137,3 +137,124 @@ export const getLinkIcon = (label, url) => {
   if (text.includes("portfolio")) return <Briefcase size={14} />;
   return <LinkIcon size={14} />;
 };
+
+/**
+ * Extracts unique keywords from a resume object (such as names, skills, projects, and experiences).
+ * @param {Object} resume The resume object from ResumeContext
+ * @returns {Array<string>} An array of unique keyword strings
+ */
+export const getKeywordsFromResume = (resume) => {
+  if (!resume) return [];
+  const words = [];
+  
+  const STOP_WORDS = new Set([
+    "a", "an", "the", "and", "or", "but", "about", "above", "after", "along", 
+    "amid", "among", "as", "at", "by", "for", "from", "in", "into", "like", 
+    "minus", "near", "of", "off", "on", "onto", "out", "over", "past", "since", 
+    "through", "to", "under", "until", "up", "with", "within", "without", 
+    "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", 
+    "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", 
+    "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", 
+    "theirs", "themselves", "what", "which", "who", "whom", "this", "that", 
+    "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", 
+    "have", "has", "had", "having", "do", "does", "did", "doing", "would", 
+    "should", "could", "ought", "i'm", "you're", "he's", "she's", "it's", 
+    "we're", "they're", "i've", "you've", "we've", "they've", "i'd", "you'd", 
+    "he'd", "she'd", "we'd", "they'd", "i'll", "you'll", "he'll", "she'll", 
+    "we'll", "they'll", "isn't", "aren't", "wasn't", "weren't", "hasn't", 
+    "haven't", "hadn't", "doesn't", "don't", "didn't", "won't", "wouldn't", 
+    "shan't", "shouldn't", "can't", "cannot", "couldn't", "mustn't", "let's", 
+    "that's", "who's", "what's", "here's", "there's", "when's", "where's", 
+    "why's", "how's"
+  ]);
+
+  const addText = (text) => {
+    if (!text || typeof text !== "string") return;
+    // Match words and technical terms like C++, C#, .NET, Node.js, React
+    const matches = text.match(/[A-Za-z0-9+#.-]+/g);
+    if (matches) {
+      matches.forEach((word) => {
+        let cleanWord = word.trim();
+        // Remove trailing punctuation
+        cleanWord = cleanWord.replace(/[.,;:!?)]+$/, "").replace(/^[.(]+/, "");
+        const lower = cleanWord.toLowerCase();
+        if (cleanWord.length > 2 && !STOP_WORDS.has(lower)) {
+          words.push(cleanWord);
+        }
+      });
+    }
+  };
+
+  // 1. Personal Info
+  if (resume.personalInfo) {
+    addText(resume.personalInfo.fullName);
+    addText(resume.personalInfo.firstName);
+    addText(resume.personalInfo.lastName);
+    addText(resume.personalInfo.jobTitle);
+    addText(resume.personalInfo.location);
+  }
+
+  // 2. Profiles
+  if (Array.isArray(resume.profiles)) {
+    resume.profiles.forEach((p) => {
+      if (p.visible !== false) addText(p.content);
+    });
+  }
+
+  // 3. Experience
+  if (Array.isArray(resume.experience)) {
+    resume.experience.forEach((e) => {
+      if (e.visible !== false) {
+        addText(e.title);
+        addText(e.company);
+        addText(e.location);
+        addText(e.description);
+      }
+    });
+  }
+
+  // 4. Education
+  if (Array.isArray(resume.education)) {
+    resume.education.forEach((edu) => {
+      if (edu.visible !== false) {
+        addText(edu.institution);
+        addText(edu.degree);
+        addText(edu.field);
+        addText(edu.location);
+      }
+    });
+  }
+
+  // 5. Skills
+  if (Array.isArray(resume.skills)) {
+    resume.skills.forEach((s) => {
+      if (s.visible !== false) {
+        addText(s.category);
+        addText(s.subSkills);
+      }
+    });
+  }
+
+  // 6. Projects
+  if (Array.isArray(resume.projects)) {
+    resume.projects.forEach((proj) => {
+      if (proj.visible !== false) {
+        addText(proj.title);
+        addText(proj.description);
+      }
+    });
+  }
+
+  // 7. Certifications
+  if (Array.isArray(resume.certifications)) {
+    resume.certifications.forEach((c) => {
+      if (c.visible !== false) {
+        addText(c.name);
+        addText(c.issuer);
+      }
+    });
+  }
+
+  // Get unique keywords, limit to 80 to prevent hitting API query length limits
+  return Array.from(new Set(words)).slice(0, 80);
+};

@@ -460,7 +460,7 @@ const customInterviewController = {
       }
 
       const response = await openai.chat.completions.create({
-        model: "google/gemini-2.0-flash-lite-001", // Highly optimized for low-latency
+        model: "google/gemini-2.5-flash-lite", // Highly optimized for low-latency
         messages: [
           { role: "system", content: systemPrompt },
           ...enhancedMessages,

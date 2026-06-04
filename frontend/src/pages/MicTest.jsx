@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, useContext } from "react";
 import "./MicTest.css";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { AppContext } from "../context/AppContext";
 import { useDeepgramSTT } from "../hooks/useDeepgramSTT";
 
 function MicTest() {
   const { backend_URL } = useContext(AppContext);
   const { getToken } = useAuth();
+  const { user } = useUser();
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
 
@@ -23,8 +24,22 @@ function MicTest() {
   } = useDeepgramSTT({
     backendUrl: backend_URL,
     getToken,
-    model: "nova-2",
-    language: "en-US",
+    model: "nova-3",
+    language: "en-IN",
+    keywords: [
+      user?.fullName,
+      user?.firstName,
+      user?.lastName,
+      user?.primaryEmailAddress?.emailAddress,
+      "tupkar",
+      "Chhindwara",
+      "Sausar",
+      "Madhya Pradesh",
+      "PlaceMateAI",
+    ]
+      .filter(Boolean)
+      .flatMap((item) => (typeof item === "string" ? item.split(/[\s@.]+/) : []))
+      .filter((word) => word.length > 0),
     onTranscript: ({ transcript, isFinal, confidence }) => {
       // Keep logging details for developers/debugging
       console.log(

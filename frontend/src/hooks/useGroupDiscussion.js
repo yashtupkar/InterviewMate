@@ -6,6 +6,8 @@ import { AppContext } from "../context/AppContext";
 import usePollyTTS from "./usePollyTTS";
 import { interviewAgents } from "../constants/agents";
 import { useDeepgramSTT } from "./useDeepgramSTT";
+import { useResume } from "../context/ResumeContext";
+import { getKeywordsFromResume } from "../utils/resumeHelpers";
 
 const AGENT_COLORS = interviewAgents.reduce((acc, agent) => {
   acc[agent.name] = `#${agent.bg}`;
@@ -23,6 +25,8 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   const { getToken } = useAuth();
   const { user } = useUser();
   const { backend_URL } = useContext(AppContext);
+  const { resumeData } = useResume();
+  const resumeKeywords = getKeywordsFromResume(resumeData);
 
   const topic = meta.topic || "Group Discussion";
   const maxTime = meta.timeLimit || FALLBACK_MAX_GD_TIME;
@@ -38,8 +42,13 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   } = useDeepgramSTT({
     backendUrl: backend_URL,
     getToken: () => getTokenRef.current(),
-    model: "nova-2",
-    language: "en-US",
+    model: "nova-3",
+    language: "en-IN",
+    keywords: [
+      user?.firstName || "Candidate",
+      "PlaceMateAI",
+      ...resumeKeywords,
+    ],
     onSpeechStarted: () => {
       console.log("%c[STT:GD:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
       if (agentSpeakingRef.current) {
@@ -520,6 +529,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     const next = !mutedRef.current;
     mutedRef.current = next;
     setIsMuted(next);
+    hookToggleMute();
   };
 
   useEffect(() => {

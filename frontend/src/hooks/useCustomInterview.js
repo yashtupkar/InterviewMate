@@ -10,6 +10,8 @@ import usePollyTTS from "./usePollyTTS";
 import { useDeepgramSTT } from "./useDeepgramSTT";
 import { analyzeCodeSubmission } from "../utils/codeSubmissionUtils";
 import { createPCMRecorder } from "../utils/pcmRecorder";
+import { useResume } from "../context/ResumeContext";
+import { getKeywordsFromResume } from "../utils/resumeHelpers";
 
 export const useCustomInterview = () => {
   const {
@@ -31,6 +33,8 @@ export const useCustomInterview = () => {
 
   const { backend_URL } = useContext(AppContext);
   const { user } = useUser();
+  const { resumeData } = useResume();
+  const resumeKeywords = getKeywordsFromResume(resumeData);
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,7 +46,7 @@ export const useCustomInterview = () => {
   } = location.state || {};
 
   const [timeLeft, setTimeLeft] = useState((initialDuration || 10) * 60);
-  const [isMuted, setIsMuted] = useState(!isMicEnabled);
+  const [isMuted, setIsMuted] = useState(true);
   const [isVideoOn, setIsVideoOn] = useState(isCameraEnabled);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
@@ -131,14 +135,21 @@ export const useCustomInterview = () => {
     startSTT: hookStartSTT,
     stopSTT: hookStopSTT,
     toggleMute: hookToggleMute,
+    setMuted: hookSetMuted,
     clearTranscript: hookClearTranscript,
     isListening: hookIsListening,
     isMuted: hookIsMuted
   } = useDeepgramSTT({
     backendUrl: backend_URL,
     getToken,
-    model: "nova-2",
-    language: "en-US",
+    model: "nova-3",
+    language: "en-IN",
+    initialMuted: true,
+    keywords: [
+      userName,
+      "PlaceMateAI",
+      ...resumeKeywords,
+    ],
     onSpeechStarted: () => {
       console.log("%c[STT:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
       if (isAgentSpeakingRef.current) {
@@ -775,6 +786,10 @@ export const useCustomInterview = () => {
       try {
         isAgentSpeakingRef.current = true;
         setIsAgentSpeaking(true);
+        isMutedRef.current = true;
+        setIsMuted(true);
+        setIsMicEnabled(false);
+        hookSetMuted(true);
 
         // Use AWS Polly TTS instead of browser native
         await speakText(cleanText, agentName, {
@@ -805,18 +820,36 @@ export const useCustomInterview = () => {
                 handleEndCall();
                 return;
               }
+              if (!hasCallEndedRef.current && !hasEndedRef.current) {
+                isMutedRef.current = false;
+                setIsMuted(false);
+                setIsMicEnabled(true);
+                hookSetMuted(false);
+              }
             }, 500);
           },
           onError: (err) => {
             console.error("[TTS] Polly error:", err);
             isAgentSpeakingRef.current = false;
             setIsAgentSpeaking(false);
+            if (!hasCallEndedRef.current && !hasEndedRef.current) {
+              isMutedRef.current = false;
+              setIsMuted(false);
+              setIsMicEnabled(true);
+              hookSetMuted(false);
+            }
           },
         });
       } catch (err) {
         console.error("[TTS] Critical failure:", err);
         isAgentSpeakingRef.current = false;
         setIsAgentSpeaking(false);
+        if (!hasCallEndedRef.current && !hasEndedRef.current) {
+          isMutedRef.current = false;
+          setIsMuted(false);
+          setIsMicEnabled(true);
+          hookSetMuted(false);
+        }
       }
     },
     [
@@ -826,6 +859,8 @@ export const useCustomInterview = () => {
       isUserSpeaking,
       isAgentSpeaking,
       isAiThinking,
+      hookSetMuted,
+      setIsMicEnabled,
     ],
   );
 
@@ -860,6 +895,11 @@ export const useCustomInterview = () => {
           setCountdownMessageId(null);
           setIsUserSpeaking(false);
 
+          isMutedRef.current = true;
+          setIsMuted(true);
+          setIsMicEnabled(false);
+          hookSetMuted(true);
+
           // Auto-send the message using stored text
           const msgText = pendingMessageRef.current.trim();
           if (msgText) {
@@ -868,7 +908,7 @@ export const useCustomInterview = () => {
         }
       }, 50); // Update every 50ms for smooth progress
     },
-    [COUNTDOWN_DURATION, handleUserSpeech],
+    [COUNTDOWN_DURATION, handleUserSpeech, hookSetMuted, setIsMicEnabled],
   );
 
   const cancelCountdown = useCallback(() => {
@@ -906,7 +946,24 @@ export const useCustomInterview = () => {
     }
 
     hookStartSTT(keywordsList);
-  }, [hookStartSTT, setCallStatus, displayInterviewData]);
+
+    // Initial greeting from the agent if transcript is empty
+    const greetingText = `Hello ${userName}! I'm ${agentName}, your AI interviewer. Welcome! Let's get started. Could you please begin by introducing yourself?`;
+    const initialMessage = {
+      id: Date.now(),
+      role: "assistant",
+      speaker: agentName,
+      text: greetingText,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isAgent: true,
+    };
+    setContextTranscript([initialMessage]);
+    transcriptRef.current = [{ role: "assistant", content: greetingText }];
+    playTTS(greetingText);
+  }, [hookStartSTT, setCallStatus, displayInterviewData, userName, agentName, setContextTranscript, playTTS]);
 
   const handleEndCall = useCallback(() => {
     setShowEndConfirm(false);
@@ -1197,6 +1254,8 @@ export const useCustomInterview = () => {
 
       return;
     }
+    setIsMicEnabled(false);
+    isMutedRef.current = true;
     setTimeout(startSTT, 1000);
     return () => {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -1211,6 +1270,7 @@ export const useCustomInterview = () => {
     setIsMuted(newMuted);
     setIsMicEnabled(!newMuted);
     isMutedRef.current = newMuted;
+    hookSetMuted(newMuted);
   };
 
   const toggleVideo = () => setIsVideoOn(!isVideoOn);
