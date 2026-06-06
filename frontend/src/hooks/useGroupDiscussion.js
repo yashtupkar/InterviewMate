@@ -5,7 +5,7 @@ import { toast } from "react-hot-toast";
 import { AppContext } from "../context/AppContext";
 import usePollyTTS from "./usePollyTTS";
 import { interviewAgents } from "../constants/agents";
-import { useDeepgramSTT } from "./useDeepgramSTT";
+import { useBrowserSTT } from "./useBrowserSTT";
 import { useResume } from "../context/ResumeContext";
 import { getKeywordsFromResume } from "../utils/resumeHelpers";
 
@@ -31,26 +31,19 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   const topic = meta.topic || "Group Discussion";
   const maxTime = meta.timeLimit || FALLBACK_MAX_GD_TIME;
 
-  // Reusable Deepgram STT Hook configuration
+  // Reusable Browser STT Hook configuration
   const {
     startSTT: hookStartSTT,
     stopSTT: hookStopSTT,
     toggleMute: hookToggleMute,
+    setMuted: hookSetMuted,
     clearTranscript: hookClearTranscript,
     isListening: hookIsListening,
     isMuted: hookIsMuted
-  } = useDeepgramSTT({
-    backendUrl: backend_URL,
-    getToken: () => getTokenRef.current(),
-    model: "nova-3",
+  } = useBrowserSTT({
     language: "en-IN",
-    keywords: [
-      user?.firstName || "Candidate",
-      "PlaceMateAI",
-      ...resumeKeywords,
-    ],
     onSpeechStarted: () => {
-      console.log("%c[STT:GD:VAD] Speech started detected by Deepgram VAD", "color: #22c55e; font-weight: bold;");
+      console.log("%c[STT:GD:VAD] Speech started detected by browser recognition", "color: #22c55e; font-weight: bold;");
       if (agentSpeakingRef.current) {
         console.log("[STT:GD:Barge-In] User speech start detected. Stopping agent TTS.");
         stopSpeaking();
@@ -62,7 +55,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     onTranscript: ({ transcript: transcriptChunk, isFinal, confidence }) => {
       if (transcriptChunk.trim()) {
         console.log(
-          `[STT:GD:DG] Transcript chunk: "${transcriptChunk}" | Confidence: ${confidence.toFixed(4)} | IsFinal: ${isFinal}`
+          `[STT:GD:Browser] Transcript chunk: "${transcriptChunk}" | Confidence: ${confidence.toFixed(4)} | IsFinal: ${isFinal}`
         );
 
         if (agentSpeakingRef.current) {
@@ -154,7 +147,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       }
     },
     onSpeechEnded: () => {
-      console.log("%c[STT:GD:VAD] Speech ended detected by Deepgram VAD", "color: #f59e0b; font-weight: bold;");
+      console.log("%c[STT:GD:VAD] Speech ended detected by browser recognition", "color: #f59e0b; font-weight: bold;");
     }
   });
 
@@ -400,18 +393,29 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     setSpeakingAgent(agent.name);
     agentSpeakingRef.current = true;
 
+    // Mute microphone to prevent acoustic feedback (echo) transcribing agent voice
+    hookSetMuted(true);
+
     if (aliveRef.current) {
       prefetchNextTurn(agent.name);
     }
 
-    await hookSpeakText(text, agent.name, {
-      onComplete: () => { },
-      onError: (err) => console.error("TTS error:", err),
-    });
-
-    setSpeakingAgent(null);
-    agentSpeakingRef.current = false;
-    busyRef.current = false;
+    try {
+      await hookSpeakText(text, agent.name, {
+        onComplete: () => { },
+        onError: (err) => console.error("TTS error:", err),
+      });
+    } catch (speakErr) {
+      console.error("Agent speech execution error:", speakErr);
+    } finally {
+      // Unmute microphone if user didn't manually mute
+      if (!mutedRef.current) {
+        hookSetMuted(false);
+      }
+      setSpeakingAgent(null);
+      agentSpeakingRef.current = false;
+      busyRef.current = false;
+    }
 
 
     if (finalEndpoint === "conclude") {
