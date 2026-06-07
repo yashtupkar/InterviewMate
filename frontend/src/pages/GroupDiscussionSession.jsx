@@ -8,6 +8,7 @@ import { useGroupDiscussion } from "../hooks/useGroupDiscussion";
 // Components
 import GDHeader from "../components/group-discussion/GDHeader";
 import GDPrepModal from "../components/group-discussion/GDPrepModal";
+import GDStarterModal from "../components/group-discussion/GDStarterModal";
 import GDEndedOverlay from "../components/group-discussion/GDEndedOverlay";
 import GDConfirmEndModal from "../components/group-discussion/GDConfirmEndModal";
 import GDParticipantGrid from "../components/group-discussion/GDParticipantGrid";
@@ -46,6 +47,11 @@ export default function GroupDiscussionSession() {
           prepCountdown={state.prepCountdown}
           topic={constants.topic}
           handlePrepEnd={actions.handlePrepEnd}
+        />
+        <GDStarterModal
+          showStarterModal={state.showStarterModal}
+          countdown={state.starterCountdown}
+          topic={constants.topic}
         />
         <GDEndedOverlay
           sessionEnded={state.sessionEnded}

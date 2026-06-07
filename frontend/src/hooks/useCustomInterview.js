@@ -7,7 +7,8 @@ import { useInterview } from "../context/InterviewContext";
 import { AppContext } from "../context/AppContext";
 import { interviewAgents } from "../constants/agents";
 import usePollyTTS from "./usePollyTTS";
-import { useDeepgramSTT } from "./useDeepgramSTT";
+import { useSTT } from "../voice/stt/hooks/useSTT";
+import { STTProviderType } from "../voice/stt/types";
 import { analyzeCodeSubmission } from "../utils/codeSubmissionUtils";
 import { createPCMRecorder } from "../utils/pcmRecorder";
 import { useResume } from "../context/ResumeContext";
@@ -135,27 +136,22 @@ export const useCustomInterview = () => {
     : interviewData?.agentName || "Sophia";
   const displayInterviewData = isPreview ? MOCK_INTERVIEW_DATA : interviewData;
 
-  // Reusable Deepgram STT Hook configuration
+  // Reusable STT Hook configuration
   const {
-    startSTT: hookStartSTT,
-    stopSTT: hookStopSTT,
-    toggleMute: hookToggleMute,
+    start: hookStartSTT,
+    stop: hookStopSTT,
     setMuted: hookSetMuted,
     clearTranscript: hookClearTranscript,
     isListening: hookIsListening,
-    isMuted: hookIsMuted
-  } = useDeepgramSTT({
+    isMuted: hookIsMuted,
+  } = useSTT({
+    provider: STTProviderType.DEEPGRAM,
     backendUrl: backend_URL,
     getToken,
     model: "nova-3",
     language: "en-IN",
-    initialMuted: true,
-    keywords: [
-      userName,
-      "PlaceMateAI",
-      ...resumeKeywords,
-    ],
-    onSpeechStarted: () => {
+    keywords: [userName, "PlaceMateAI", ...resumeKeywords],
+    onSpeechStart: () => {
       if (isAgentSpeakingRef.current) {
         stopSpeaking();
         isAgentSpeakingRef.current = false;
@@ -164,8 +160,6 @@ export const useCustomInterview = () => {
     },
     onTranscript: ({ transcript, isFinal, confidence }) => {
       if (transcript.trim()) {
-     
-
         if (isAgentSpeakingRef.current) {
           stopSpeaking();
           isAgentSpeakingRef.current = false;
@@ -174,12 +168,18 @@ export const useCustomInterview = () => {
 
         let interimTranscript = "";
         if (isFinal) {
-          sttFinalBufferRef.current = deduplicateTranscriptText((sttFinalBufferRef.current + " " + transcript).trim());
+          sttFinalBufferRef.current = deduplicateTranscriptText(
+            (sttFinalBufferRef.current + " " + transcript).trim(),
+          );
         } else {
           interimTranscript = transcript;
         }
 
-        const currentText = (sttFinalBufferRef.current + " " + interimTranscript).trim();
+        const currentText = (
+          sttFinalBufferRef.current +
+          " " +
+          interimTranscript
+        ).trim();
         if (currentText) {
           const cleanedText = deduplicateTranscriptText(currentText);
           const hasSpeechUpdate = cleanedText !== lastRecognizedTextRef.current;
@@ -204,7 +204,8 @@ export const useCustomInterview = () => {
           silenceTimerRef.current = setTimeout(() => {
             const stableSilence =
               Date.now() - lastSpeechEventTimeRef.current >= PAUSE_DETECT;
-            const textUnchanged = lastRecognizedTextRef.current === snapshotText;
+            const textUnchanged =
+              lastRecognizedTextRef.current === snapshotText;
             if (!stableSilence || !textUnchanged) return;
 
             const messageId = currentUserMessageIdRef.current;
@@ -215,8 +216,7 @@ export const useCustomInterview = () => {
         }
       }
     },
-    onSpeechEnded: () => {
-    }
+    onSpeechEnd: () => {},
   });
 
   const muteCustomMic = useCallback(() => {
@@ -225,7 +225,6 @@ export const useCustomInterview = () => {
     setIsMicEnabled(false);
     hookSetMuted(true);
   }, [hookSetMuted, setIsMicEnabled]);
-
 
   const COUNTDOWN_DURATION = 3000; // 3 seconds for user to continue speaking or auto-send
   const PAUSE_DETECT = 1000; // Start countdown after 1.0s of silence to give user time to think
@@ -479,11 +478,7 @@ export const useCustomInterview = () => {
 
       setContextTranscript((prev) => {
         const lastMsg = prev[prev.length - 1];
-        if (
-          lastMsg &&
-          !lastMsg.isAgent &&
-          lastMsg.id === currentId
-        ) {
+        if (lastMsg && !lastMsg.isAgent && lastMsg.id === currentId) {
           const newTranscript = [...prev];
           newTranscript[newTranscript.length - 1] = { ...lastMsg, text: text };
           return newTranscript;
@@ -835,7 +830,9 @@ export const useCustomInterview = () => {
                 return;
               }
               if (activeCodingTaskRef.current || codingPopupTaskRef.current) {
-                console.log("[TTS:Complete] Coding task active/pending. Keeping mic off.");
+                console.log(
+                  "[TTS:Complete] Coding task active/pending. Keeping mic off.",
+                );
                 isMutedRef.current = true;
                 setIsMuted(true);
                 setIsMicEnabled(false);
@@ -973,11 +970,15 @@ export const useCustomInterview = () => {
 
     // Dynamically compile any target role/skills for keyword boosting
     const keywordsList = [];
-    if (displayInterviewData?.role) keywordsList.push(displayInterviewData.role);
-    if (displayInterviewData?.interviewType) keywordsList.push(displayInterviewData.interviewType);
+    if (displayInterviewData?.role)
+      keywordsList.push(displayInterviewData.role);
+    if (displayInterviewData?.interviewType)
+      keywordsList.push(displayInterviewData.interviewType);
     if (displayInterviewData?.skills) {
       if (typeof displayInterviewData.skills === "string") {
-        displayInterviewData.skills.split(",").forEach(s => keywordsList.push(s.trim()));
+        displayInterviewData.skills
+          .split(",")
+          .forEach((s) => keywordsList.push(s.trim()));
       }
     }
 
@@ -999,7 +1000,15 @@ export const useCustomInterview = () => {
     setContextTranscript([initialMessage]);
     transcriptRef.current = [{ role: "assistant", content: greetingText }];
     playTTS(greetingText);
-  }, [hookStartSTT, setCallStatus, displayInterviewData, userName, agentName, setContextTranscript, playTTS]);
+  }, [
+    hookStartSTT,
+    setCallStatus,
+    displayInterviewData,
+    userName,
+    agentName,
+    setContextTranscript,
+    playTTS,
+  ]);
 
   const handleEndCall = useCallback(() => {
     setShowEndConfirm(false);
@@ -1436,41 +1445,109 @@ export const useCustomInterview = () => {
 };
 
 /**
- * Robustly deduplicates consecutive duplicate words, repeating phrase patterns, 
- * and consecutive identical sentences/clauses within a transcript text string.
+ * Robustly deduplicates consecutive duplicate words, repeating phrase patterns,
+ * consecutive identical sentences/clauses, similar self-corrections, and gap-based stutters.
  */
 const deduplicateTranscriptText = (text) => {
   if (!text) return "";
 
-  // Split text into words, preserving spaces
-  const words = text.trim().split(/\s+/);
-  const cleaned = [];
+  // Helper to normalize a word for comparison
+  const normalize = (w) => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+
+  let words = text.trim().split(/\s+/);
   
+  // Phase 1: Clean up consecutive exact word/phrase duplicates (dynamic length 1 to 20)
   let i = 0;
+  let cleaned = [];
   while (i < words.length) {
     let matchFound = false;
-    
-    // Check phrase lengths from 20 words down to 1 word
     for (let len = 20; len >= 1; len--) {
       if (i + len * 2 <= words.length) {
-        // Compare segment [i, i+len) with segment [i+len, i+len*2)
-        const first = words.slice(i, i + len).map(w => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")).join(" ");
-        const second = words.slice(i + len, i + len * 2).map(w => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "")).join(" ");
-        
+        const first = words.slice(i, i + len).map(normalize).join(" ");
+        const second = words.slice(i + len, i + len * 2).map(normalize).join(" ");
         if (first && first === second) {
-          // Keep the latter portion which represents the ongoing speech
-          i += len;
+          i += len; // Skip first occurrence, keep second
           matchFound = true;
           break;
         }
       }
     }
-    
     if (!matchFound) {
       cleaned.push(words[i]);
       i++;
     }
   }
-  
+
+  // Phase 2: Handle consecutive highly similar phrases (self-corrections / edits)
+  // E.g., "So I'm in the field of remote work..." -> "So I'm in the favor of remote work..."
+  words = cleaned;
+  cleaned = [];
+  i = 0;
+  while (i < words.length) {
+    let matchFound = false;
+    for (let len = 20; len >= 4; len--) {
+      if (i + len * 2 <= words.length) {
+        const firstArr = words.slice(i, i + len).map(normalize);
+        const secondArr = words.slice(i + len, i + len * 2).map(normalize);
+        
+        // Ensure they start with the same normalized word
+        if (firstArr[0] === secondArr[0]) {
+          let matches = 0;
+          for (let j = 0; j < len; j++) {
+            if (firstArr[j] === secondArr[j]) matches++;
+          }
+          const similarity = matches / len;
+          
+          if (similarity >= 0.8) {
+            i += len; // Skip first (uncorrected), keep second
+            matchFound = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!matchFound) {
+      cleaned.push(words[i]);
+      i++;
+    }
+  }
+
+  // Phase 3: Handle overlapping repeats separated by small correction words (exact match with gap)
+  // E.g., "the most flexibility us the most flexibility" -> "us the most flexibility"
+  words = cleaned;
+  cleaned = [];
+  i = 0;
+  while (i < words.length) {
+    let matchFound = false;
+    for (let len = 10; len >= 3; len--) {
+      for (let gap = 1; gap <= 3; gap++) {
+        if (i + len * 2 + gap <= words.length) {
+          const first = words.slice(i, i + len).map(normalize).join(" ");
+          const second = words.slice(i + len + gap, i + len * 2 + gap).map(normalize).join(" ");
+          
+          if (first && first === second) {
+            i += len; // Skip the first occurrence of the phrase
+            matchFound = true;
+            break;
+          }
+        }
+      }
+      if (matchFound) break;
+    }
+    if (!matchFound) {
+      cleaned.push(words[i]);
+      i++;
+    }
+  }
+
+  // Phase 4: Clean up simple adjacent single-word duplicates again
+  words = cleaned;
+  cleaned = [];
+  for (let k = 0; k < words.length; k++) {
+    if (k === 0 || normalize(words[k]) !== normalize(words[k - 1])) {
+      cleaned.push(words[k]);
+    }
+  }
+
   return cleaned.join(" ");
 };

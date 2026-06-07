@@ -356,7 +356,7 @@ const getNextAgentTurn = async (req, res) => {
  */
 const addUserMessage = async (req, res) => {
   try {
-    const { sessionId, text } = req.body;
+    const { sessionId, text, confidence, duration } = req.body;
     const userId = req.user?._id;
 
     const session = await GDSession.findOne({ _id: sessionId, userId });
@@ -368,6 +368,9 @@ const addUserMessage = async (req, res) => {
         role: "user",
         text: text.trim(),
         timestamp: new Date(),
+        confidence: typeof confidence === "number" ? confidence : 1.0,
+        duration: typeof duration === "number" ? duration : 0,
+        status: "final",
       });
       await session.save();
     }
@@ -528,12 +531,16 @@ const addAgentMessage = async (req, res) => {
     if (!session) return res.status(404).json({ message: "Session not found" });
 
     if (text && text.trim()) {
+      const estimatedDuration = text.trim().split(/\s+/).length * 0.4;
       session.transcript.push({
         speaker: name,
         role: "agent",
         text: text.trim(),
         agentPersonality: personality || "",
         timestamp: new Date(),
+        confidence: 1.0,
+        duration: estimatedDuration,
+        status: "final",
       });
       await session.save();
     }

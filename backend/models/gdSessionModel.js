@@ -6,6 +6,9 @@ const transcriptEntrySchema = new mongoose.Schema({
   text: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
   agentPersonality: { type: String, default: "" },
+  confidence: { type: Number, default: 1.0 },
+  duration: { type: Number, default: 0 },
+  status: { type: String, enum: ["interim", "final"], default: "final" },
 });
 
 const gdSessionSchema = new mongoose.Schema({
