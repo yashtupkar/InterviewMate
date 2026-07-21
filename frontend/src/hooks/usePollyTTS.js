@@ -105,7 +105,10 @@ export const usePollyTTS = () => {
         }
       };
 
-      window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
+      window.speechSynthesis.addEventListener(
+        "voiceschanged",
+        handleVoicesChanged,
+      );
 
       timeoutId = setTimeout(() => {
         window.speechSynthesis.removeEventListener(
@@ -194,8 +197,15 @@ export const usePollyTTS = () => {
    * @private
    */
   const useBrowserNativeTTS = useCallback((text, agentName) => {
+    console.log("[usePollyTTS] useBrowserNativeTTS called");
     return new Promise((resolve, reject) => {
       try {
+        console.log(
+          "[usePollyTTS] speechSynthesis pending:",
+          window.speechSynthesis.pending,
+          "speaking:",
+          window.speechSynthesis.speaking,
+        );
         // Only cancel if something is actually pending or playing
         if (window.speechSynthesis.pending || window.speechSynthesis.speaking) {
           window.speechSynthesis.cancel();
@@ -207,7 +217,7 @@ export const usePollyTTS = () => {
           speakWithNativeTTS(text, agentName, resolve, reject);
         }
       } catch (err) {
-        console.error("Browser native TTS error:", err);
+        console.error("[usePollyTTS] Browser native TTS error:", err);
         setError(err.message);
         reject(err);
       }
@@ -218,117 +228,133 @@ export const usePollyTTS = () => {
    * Helper to speak with native TTS
    * @private
    */
-  const speakWithNativeTTS = useCallback(async (text, agentName, resolve, reject) => {
-    try {
-      // Voice mapping for browser native TTS with unique pitch and speed for each agent
-      const voiceConfig = {
-        Sophia: {
-          gender: "female",
-          pitch: 1.0, // Higher pitched female
-          // Slightly faster
-          keywords: ["Google US English", "Samantha", "Female"],
-        },
-        Rohan: {
-          gender: "male",
-          pitch: 1.1, // Higher pitched male
-          rate: 1.0, // Slightly slower
-          keywords: ["Google UK English Male", "David", "Male"],
-        },
-        Marcus: {
-          gender: "male",
-          pitch: 0.9, // Lower pitched male
-          rate: 1.0, // Normal speed
-          keywords: ["Google UK English Male", "David", "Male"],
-        },
-        Emma: {
-          gender: "female",
-          pitch: 1.3, // Neutral female
-          // Fast
-          keywords: ["Google US English", "Samantha", "Female"],
-        },
-        Drew: {
-          gender: "male",
-          pitch: 1.2, // Medium-high pitched male
-          rate: 0.9, // Slower
-          keywords: ["Google UK English Male", "David", "Male"],
-        },
-        Rachel: {
-          gender: "female",
-          pitch: 0.8, // Lower pitched female
-          // Slightly faster
-          keywords: ["Google US English", "Samantha", "Female"],
-        },
-      };
-
-      const config = voiceConfig[agentName] || {
-        gender: "female",
-        pitch: 1.0,
-        rate: 1.0,
-        keywords: ["Google US English"],
-      };
-
-      // Validate rate and pitch are finite numbers
-      const validRate =
-        typeof config.rate === "number" && isFinite(config.rate)
-          ? config.rate
-          : 1.0;
-      const validPitch =
-        typeof config.pitch === "number" && isFinite(config.pitch)
-          ? config.pitch
-          : 1.0;
-
-      const voices = await getReadyBrowserVoices();
-      let selectedVoice = null;
-
-      // Try to find voice by keywords
-      for (const keyword of config.keywords) {
-        selectedVoice = voices.find(
-          (v) => v.name.includes(keyword) && v.lang.includes("en"),
+  const speakWithNativeTTS = useCallback(
+    async (text, agentName, resolve, reject) => {
+      try {
+        console.log(
+          "[usePollyTTS] speakWithNativeTTS called with text:",
+          text,
+          "agentName:",
+          agentName,
         );
-        if (selectedVoice) break;
-      }
+        // Voice mapping for browser native TTS with unique pitch and speed for each agent
+        const voiceConfig = {
+          Sophia: {
+            gender: "female",
+            pitch: 1.0, // Higher pitched female
+            // Slightly faster
+            keywords: ["Google US English", "Samantha", "Female"],
+          },
+          Rohan: {
+            gender: "male",
+            pitch: 1.1, // Higher pitched male
+            rate: 1.0, // Slightly slower
+            keywords: ["Google UK English Male", "David", "Male"],
+          },
+          Marcus: {
+            gender: "male",
+            pitch: 0.9, // Lower pitched male
+            rate: 1.0, // Normal speed
+            keywords: ["Google UK English Male", "David", "Male"],
+          },
+          Emma: {
+            gender: "female",
+            pitch: 1.3, // Neutral female
+            // Fast
+            keywords: ["Google US English", "Samantha", "Female"],
+          },
+          Drew: {
+            gender: "male",
+            pitch: 1.2, // Medium-high pitched male
+            rate: 0.9, // Slower
+            keywords: ["Google UK English Male", "David", "Male"],
+          },
+          Rachel: {
+            gender: "female",
+            pitch: 0.8, // Lower pitched female
+            // Slightly faster
+            keywords: ["Google US English", "Samantha", "Female"],
+          },
+        };
 
-      // Fallback to first English voice
-      if (!selectedVoice) {
-        selectedVoice = voices.find((v) => v.lang.includes("en"));
-      }
+        const config = voiceConfig[agentName] || {
+          gender: "female",
+          pitch: 1.0,
+          rate: 1.0,
+          keywords: ["Google US English"],
+        };
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      if (selectedVoice) utterance.voice = selectedVoice;
-      utterance.rate = validRate; // Use validated rate
-      utterance.pitch = validPitch; // Use validated pitch
-      utterance.volume = 1.0;
+        // Validate rate and pitch are finite numbers
+        const validRate =
+          typeof config.rate === "number" && isFinite(config.rate)
+            ? config.rate
+            : 1.0;
+        const validPitch =
+          typeof config.pitch === "number" && isFinite(config.pitch)
+            ? config.pitch
+            : 1.0;
 
-      utterance.onstart = () => {
-        setIsPlaying(true);
-        setError(null);
-      };
+        const voices = await getReadyBrowserVoices();
+        console.log("[usePollyTTS] Available voices:", voices.length);
+        let selectedVoice = null;
 
-      utterance.onend = () => {
-        setIsPlaying(false);
-        utteranceRef.current = null;
-        resolve(true);
-      };
+        // Try to find voice by keywords
+        for (const keyword of config.keywords) {
+          selectedVoice = voices.find(
+            (v) => v.name.includes(keyword) && v.lang.includes("en"),
+          );
+          if (selectedVoice) break;
+        }
 
-      utterance.onerror = (event) => {
-        // Only reject on actual errors, not on interrupts during normal flow
-        if (event.error !== "interrupted") {
+        // Fallback to first English voice
+        if (!selectedVoice) {
+          selectedVoice = voices.find((v) => v.lang.includes("en"));
+        }
+
+        console.log("[usePollyTTS] Selected voice:", selectedVoice);
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        if (selectedVoice) utterance.voice = selectedVoice;
+        utterance.rate = validRate; // Use validated rate
+        utterance.pitch = validPitch; // Use validated pitch
+        utterance.volume = 1.0;
+
+        utterance.onstart = () => {
+          console.log("[usePollyTTS] Native TTS onstart");
+          setIsPlaying(true);
+          setError(null);
+        };
+
+        utterance.onend = () => {
+          console.log("[usePollyTTS] Native TTS onend");
           setIsPlaying(false);
           utteranceRef.current = null;
-          const errorMsg = `Speech synthesis error: ${event.error}`;
-          setError(errorMsg);
-          reject(new Error(errorMsg));
-        }
-      };
+          resolve(true);
+        };
 
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-    } catch (err) {
-      console.error("Browser native TTS error:", err);
-      setError(err.message);
-      reject(err);
-    }
-  }, [getReadyBrowserVoices]);
+        utterance.onerror = (event) => {
+          console.error("[usePollyTTS] Native TTS onerror:", event);
+          // Only reject on actual errors, not on interrupts during normal flow
+          if (event.error !== "interrupted") {
+            setIsPlaying(false);
+            utteranceRef.current = null;
+            const errorMsg = `Speech synthesis error: ${event.error}`;
+            setError(errorMsg);
+            reject(new Error(errorMsg));
+          }
+        };
+
+        utteranceRef.current = utterance;
+        console.log("[usePollyTTS] Calling speechSynthesis.speak");
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error("[usePollyTTS] Browser native TTS error:", err);
+        setError(err.message);
+        reject(err);
+      }
+    },
+    [getReadyBrowserVoices],
+  );
 
   /**
    * Get or generate audio
@@ -393,6 +419,12 @@ export const usePollyTTS = () => {
    * @private
    */
   const processQueue = useCallback(async () => {
+    console.log(
+      "[usePollyTTS] processQueue called, queue length:",
+      audioQueueRef.current.length,
+      "isProcessing:",
+      isProcessingQueue.current,
+    );
     if (isProcessingQueue.current || audioQueueRef.current.length === 0) {
       return;
     }
@@ -405,6 +437,12 @@ export const usePollyTTS = () => {
           audioQueueRef.current.shift();
 
         try {
+          console.log(
+            "[usePollyTTS] Processing queue item, text:",
+            text,
+            "voiceId:",
+            voiceId,
+          );
           // Rate limiting: minimum 100ms between requests
           const timeSinceLastSpeak = Date.now() - lastSpeakTimeRef.current;
           if (timeSinceLastSpeak < 100) {
@@ -416,23 +454,34 @@ export const usePollyTTS = () => {
           lastSpeakTimeRef.current = Date.now();
 
           // Get or generate audio
+          console.log("[usePollyTTS] Getting/generating audio");
           const audioData = await getOrGenerateAudio(text, voiceId);
+          console.log(
+            "[usePollyTTS] Got audio data, from cache:",
+            audioData.fromCache,
+          );
 
           // Play audio
+          console.log("[usePollyTTS] Playing audio");
           await playerRef.current.play(audioData.audioBase64, {
             volume: 1.0,
           });
+          console.log("[usePollyTTS] Audio playback completed");
 
           setIsPlaying(false);
           onComplete?.();
         } catch (err) {
-          console.error("Queue processing error:", err);
+          console.error("[usePollyTTS] Queue processing error:", err);
           setError(err.message);
           onError?.(err);
         }
       }
     } finally {
       isProcessingQueue.current = false;
+      console.log(
+        "[usePollyTTS] processQueue completed, queue length now:",
+        audioQueueRef.current.length,
+      );
     }
   }, [getOrGenerateAudio]);
 
@@ -443,6 +492,12 @@ export const usePollyTTS = () => {
    */
   const speakText = useCallback(
     (text, voiceId = "Sophia", options = {}) => {
+      console.log(
+        "[usePollyTTS] speakText called with text:",
+        text,
+        "voiceId:",
+        voiceId,
+      );
       return new Promise((resolve, reject) => {
         try {
           if (!text || text.trim().length === 0) {
@@ -471,28 +526,39 @@ export const usePollyTTS = () => {
 
           setCurrentVoiceId(resolvedVoiceId);
 
+          console.log(
+            "[usePollyTTS] useBrowserNative:",
+            ttsBehaviorRef.useBrowserNative,
+          );
+
           // Use browser native TTS if available and enabled
           if (ttsBehaviorRef.useBrowserNative) {
+            console.log("[usePollyTTS] Using browser native TTS");
             useBrowserNativeTTS(text, voiceId)
               .then(() => {
+                console.log("[usePollyTTS] Browser native TTS completed");
                 options.onComplete?.();
                 resolve(true);
               })
               .catch((err) => {
+                console.error("[usePollyTTS] Browser native TTS error:", err);
                 options.onError?.(err);
                 reject(err);
               });
           } else {
+            console.log("[usePollyTTS] Using AWS Polly");
             // Use AWS Polly (original queue-based approach)
             // Add to queue with promise callbacks
             audioQueueRef.current.push({
               text,
               voiceId: resolvedVoiceId,
               onComplete: () => {
+                console.log("[usePollyTTS] Polly TTS completed");
                 options.onComplete?.();
                 resolve(true);
               },
               onError: (err) => {
+                console.error("[usePollyTTS] Polly TTS error:", err);
                 options.onError?.(err);
                 reject(err);
               },
@@ -502,7 +568,7 @@ export const usePollyTTS = () => {
             processQueue().catch(reject);
           }
         } catch (err) {
-          console.error("Speak error:", err);
+          console.error("[usePollyTTS] Speak error:", err);
           setError(err.message);
           options.onError?.(err);
           reject(err);

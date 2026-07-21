@@ -5,6 +5,7 @@ const {
   getProactiveAgentResponse,
   getConclusionStatement,
   analyzeGDTranscript,
+  getUserPressurePrompt,
 } = require("../services/GDAnalyzer");
 const { rewardReferrer } = require("./referralController");
 const CreditService = require("../services/creditService");
@@ -14,32 +15,53 @@ const { SERVICE_CREDITS } = require("../config/pricingConfig");
 const AGENT_ROSTER = [
   {
     name: "Rohan",
-    personality:
-      "Analytical and logical. Always backs points with data and structure. Tends to play devil's advocate.",
+    personality: "assertive and competitive",
+    styleKey: "assertive",
+    behaviorHint: `
+- Often disagrees and takes the opposing view
+- Interrupts with "Actually, I think that's not entirely right..."
+- Tries to dominate but sometimes overreaches
+- Uses phrases like "With due respect, I disagree..." or "That's a bit of an oversimplification"
+- Confident tone, speaks fast (reflect via short sentences)`,
     voiceId: "echo",
     color: "#6366f1",
     avatarSeed: "rohan",
   },
   {
-    name: "Sophia",
-    personality:
-      "Empathetic and people-focused. Highlights human impact, social consequences, and emotional aspects of issues.",
-    voiceId: "nova",
-    color: "#ec4899",
-    avatarSeed: "sophia",
-  },
-  {
     name: "Marcus",
-    personality:
-      "Bold and direct. Takes strong stances, challenges weak arguments, and pushes for actionable conclusions.",
+    personality: "analytical and fact-driven",
+    styleKey: "analytical",
+    behaviorHint: `
+- Always brings in a statistic, example, or logical framework
+- Says things like "If you look at the data..." or "Research shows..."
+- Sometimes sounds slightly robotic but very credible
+- Builds on others' points with structured reasoning`,
     voiceId: "onyx",
     color: "#f59e0b",
     avatarSeed: "marcus",
   },
   {
+    name: "Sophia",
+    personality: "empathetic and collaborative",
+    styleKey: "empathetic",
+    behaviorHint: `
+- Validates others before adding her point
+- Uses "That's a great point, and I'd add..." or "I see where you're coming from..."
+- Often tries to bring quiet participants into the discussion
+- Sometimes too agreeable — can be pushed around`,
+    voiceId: "nova",
+    color: "#ec4899",
+    avatarSeed: "sophia",
+  },
+  {
     name: "Emma",
-    personality:
-      "Creative and unconventional. Brings fresh perspectives, out-of-the-box ideas, and challenges conventional wisdom.",
+    personality: "creative and unconventional",
+    styleKey: "creative",
+    behaviorHint: `
+- Brings unexpected angles, analogies, or out-of-box thinking
+- Says things like "Here's an interesting way to look at it..." 
+- Sometimes goes slightly off-topic but recovers
+- Fumbles more than others: "uh... actually, ok so hear me out..."`,
     voiceId: "shimmer",
     color: "#10b981",
     avatarSeed: "emma",
@@ -148,10 +170,12 @@ function pickAgents(count = 4) {
   return shuffled.slice(0, count);
 }
 
-// ── Helper: pick next random agent (avoid repeating last speaker) ─────────────
+// ── Helper: pick next agent based on weights (avoid repeating last speaker) ───
 function pickNextAgent(agents, lastSpeakerName) {
+  const weights = { assertive: 3, analytical: 2, empathetic: 2, creative: 2 };
   const available = agents.filter((a) => a.name !== lastSpeakerName);
-  const pool = available.length > 0 ? available : agents;
+  const pool = (available.length > 0 ? available : agents)
+    .flatMap((a) => Array(weights[a.styleKey] || 2).fill(a));
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
@@ -283,7 +307,7 @@ const openGDSession = async (req, res) => {
  */
 const getNextAgentTurn = async (req, res) => {
   try {
-    const { sessionId, userMessage, proactive = false, lastSpeaker, skipSave = false } = req.body;
+    const { sessionId, userMessage, proactive = false, lastSpeaker, skipSave = false, addressUser = false, userName, isInterrupt: clientInterrupt = false } = req.body;
     const userId = req.user?._id;
 
     const session = await GDSession.findOne({ _id: sessionId, userId });
@@ -299,24 +323,62 @@ const getNextAgentTurn = async (req, res) => {
       });
     }
 
-    // Pick next random agent
+    // Determine turnsSinceUser and whether user pressure was already sent in the current silence streak
+    let turnsSinceUser = 0;
+    let pressureSentInCurrentStreak = false;
+
+    // If user message is sent in this request, turnsSinceUser is 0.
+    // Otherwise, we calculate from the saved transcript history.
+    if (!userMessage || !userMessage.trim()) {
+      for (let i = session.transcript.length - 1; i >= 0; i--) {
+        if (session.transcript[i].role === "user") {
+          break;
+        }
+        turnsSinceUser++;
+        if (session.transcript[i].isPressure) {
+          pressureSentInCurrentStreak = true;
+        }
+      }
+    }
+
+    // Pick next agent
     const agent = pickNextAgent(session.agents, lastSpeaker);
 
-    // Generate agent response
     let agentText;
-    if (proactive) {
-      agentText = await getProactiveAgentResponse(
-        agent,
-        session.topic,
-        session.transcript
-      );
-    } else {
-      agentText = await getAgentResponse(
+    let isPressure = addressUser || (turnsSinceUser >= 4 && !pressureSentInCurrentStreak);
+    let isInterrupt = false;
+
+    if (isPressure) {
+      isPressure = true;
+      const displayUserName = userName || "User";
+      agentText = await getUserPressurePrompt(
         agent,
         session.topic,
         session.transcript,
-        userMessage
+        displayUserName
       );
+    } else {
+      // Normal/Proactive turn
+      // 20% interrupt chance for normal agent response or explicitly requested by client
+      isInterrupt = clientInterrupt || (!proactive && Math.random() < 0.2);
+
+      if (proactive) {
+        agentText = await getProactiveAgentResponse(
+          agent,
+          session.topic,
+          session.transcript,
+          session.agents
+        );
+      } else {
+        agentText = await getAgentResponse(
+          agent,
+          session.topic,
+          session.transcript,
+          userMessage,
+          session.agents,
+          isInterrupt
+        );
+      }
     }
 
     if (!agentText) {
@@ -331,6 +393,8 @@ const getNextAgentTurn = async (req, res) => {
         text: agentText,
         agentPersonality: agent.personality,
         timestamp: new Date(),
+        isPressure,
+        isInterrupt,
       });
       await session.save();
     }
@@ -341,8 +405,11 @@ const getNextAgentTurn = async (req, res) => {
         color: agent.color,
         avatarSeed: agent.avatarSeed,
         voiceId: agent.voiceId,
+        personality: agent.personality,
       },
       text: agentText,
+      isPressure,
+      isInterrupt,
     });
   } catch (error) {
     console.error("getNextAgentTurn error:", error);
@@ -524,7 +591,7 @@ const concludeGDSession = async (req, res) => {
 
 const addAgentMessage = async (req, res) => {
   try {
-    const { sessionId, name, text, personality } = req.body;
+    const { sessionId, name, text, personality, isPressure, isInterrupt } = req.body;
     const userId = req.user?._id;
 
     const session = await GDSession.findOne({ _id: sessionId, userId });
@@ -541,6 +608,8 @@ const addAgentMessage = async (req, res) => {
         confidence: 1.0,
         duration: estimatedDuration,
         status: "final",
+        isPressure: !!isPressure,
+        isInterrupt: !!isInterrupt,
       });
       await session.save();
     }

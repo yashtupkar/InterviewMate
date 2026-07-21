@@ -30,17 +30,36 @@ export default function GroupDiscussionSession() {
     navigate
   );
 
+  React.useEffect(() => {
+    const handleKey = (e) => {
+      // Space to toggle mute — but only if not typing in an input
+      if (
+        e.code === "Space" &&
+        !state.showPrepModal &&
+        !state.showStarterModal &&
+        !state.sessionEnded &&
+        document.activeElement.tagName !== "INPUT" &&
+        document.activeElement.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        actions.toggleMute();
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [state.showPrepModal, state.showStarterModal, state.sessionEnded, actions]);
+
   return (
     <>
       <Helmet>
         <title>Group Discussion Session | PlaceMateAI</title>
       </Helmet>
       <div className="h-screen flex flex-col bg-background overflow-hidden selection:bg-[#bef264]/30 text-zinc-100">
-        {/* Mesh Background Effects
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 opacity-40">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#bef264]/5 rounded-full blur-[120px] animate-pulse-slow" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[120px] animate-pulse-slow delay-700" />
-        </div> */}
+        {/* Mesh Background Effects */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#bef264]/3 rounded-full blur-[140px] animate-pulse-slow" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/3 rounded-full blur-[140px] animate-pulse-slow delay-700" />
+        </div>
 
         <GDPrepModal
           showPrepModal={state.showPrepModal}
@@ -68,6 +87,8 @@ export default function GroupDiscussionSession() {
             topic={constants.topic}
             duration={state.duration}
             isMuted={state.isMuted}
+            userTurnCount={state.userTurnCount}
+            agentTurnCount={state.agentTurnCount}
           />
 
           <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 pt-8 pb-4 grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6 overflow-hidden">
@@ -85,6 +106,8 @@ export default function GroupDiscussionSession() {
                 isConcludingPhase={state.isConcludingPhase}
                 isMuted={state.isMuted}
                 sessionEnded={state.sessionEnded}
+                userTurnCount={state.userTurnCount}
+                agentTurnCount={state.agentTurnCount}
               />
               <GDControlBar
                 toggleMute={actions.toggleMute}
@@ -107,6 +130,8 @@ export default function GroupDiscussionSession() {
                 invigilatorStatus={state.invigilatorStatus}
                 invigilatorMessage={state.invigilatorMessage}
                 invTimer={state.invTimer}
+                turnsSinceUser={state.turnsSinceUser}
+                isConcludingPhase={state.isConcludingPhase}
               />
               <GDTranscriptView
                 transcript={state.transcript}
@@ -114,6 +139,7 @@ export default function GroupDiscussionSession() {
                 user={state.user}
                 AGENT_IMAGES={constants.AGENT_IMAGES}
                 endRef={refs.endRef}
+                agentAddressingUser={state.agentAddressingUser}
               />
             </div>
           </main>

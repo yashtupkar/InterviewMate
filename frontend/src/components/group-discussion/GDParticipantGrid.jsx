@@ -13,6 +13,8 @@ const GDParticipantGrid = ({
   isConcludingPhase,
   isMuted,
   sessionEnded,
+  userTurnCount = 0,
+  agentTurnCount = 0,
 }) => {
   const AgentTile = ({ agent }) => {
     const on = speakingAgent === agent.name;
@@ -133,6 +135,11 @@ const GDParticipantGrid = ({
               : "border-white/5 bg-zinc-900/60 hover:bg-zinc-800/60"
         }`}
       >
+        {userTurnCount > 0 && (
+          <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-black text-emerald-400 uppercase tracking-wider z-20">
+            Spoke {userTurnCount}×
+          </div>
+        )}
         {isUserSpeaking && (
           <div className="absolute inset-0 rounded-3xl animate-pulse opacity-15 bg-emerald-500" />
         )}

@@ -1,7 +1,7 @@
 import React from "react";
 import { FiMessageSquare, FiClock, FiMic, FiMicOff } from "react-icons/fi";
 
-const GDHeader = ({ topic, duration, isMuted }) => {
+const GDHeader = ({ topic, duration, isMuted, userTurnCount = 0, agentTurnCount = 0 }) => {
   const fmt = (s) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
@@ -22,6 +22,13 @@ const GDHeader = ({ topic, duration, isMuted }) => {
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
+        {(userTurnCount > 0 || agentTurnCount > 0) && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full dark:bg-zinc-900 bg-gray-50 border dark:border-white/5 border-black/5 text-[10px] font-semibold dark:text-zinc-300 text-gray-700 shadow-inner">
+            <span className="text-[#bef264] font-black">You: {userTurnCount} turns</span>
+            <span className="opacity-30">|</span>
+            <span>Share: {Math.round((userTurnCount / (userTurnCount + agentTurnCount)) * 100)}%</span>
+          </div>
+        )}
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full dark:bg-zinc-900 bg-gray-50 border dark:border-white/5 border-black/5 shadow-inner">
           <FiClock className="text-[#bef264]" size={12} />
           <span className="text-[10px] font-mono font-semibold dark:text-zinc-300 text-gray-700">

@@ -25,6 +25,7 @@ const FALLBACK_MAX_GD_TIME = 600;
 export function useGroupDiscussion(sessionId, meta, navigate) {
   const { getToken } = useAuth();
   const { user } = useUser();
+  const userName = user?.firstName || "Candidate";
   const { backend_URL } = useContext(AppContext);
   const { resumeData } = useResume();
   const resumeKeywords = getKeywordsFromResume(resumeData);
@@ -34,12 +35,23 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
 
   const userSpeechStartRef = useRef(0);
   const lastConfidenceRef = useRef(1.0);
+  const turnsSinceUserRef = useRef(0);
+  const pressureFiredRef = useRef(false);
 
-  const finalizeSpeech = () => {
+  const [userTurnCount, setUserTurnCount] = useState(0);
+  const [agentTurnCount, setAgentTurnCount] = useState(0);
+  const [agentAddressingUser, setAgentAddressingUser] = useState(null); // { agentName: string } or null
+
+  const finalizeSpeech = async () => {
     if (finalizeTimerRef.current) clearTimeout(finalizeTimerRef.current);
 
     const spoken = deduplicateTranscriptText(finalBufferRef.current.trim());
     if (!spoken) return;
+
+    // Reset user silence tracking
+    turnsSinceUserRef.current = 0;
+    pressureFiredRef.current = false;
+    setUserTurnCount((c) => c + 1);
 
     // Calculate user speaking duration
     const now = Date.now();
@@ -82,6 +94,30 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     ];
     const isUserConcluding = keywords.some((k) => lower.includes(k));
 
+    setTranscript((prev) => {
+      const next = [...prev, userEntry];
+      transcriptRef.current = next;
+      return next;
+    });
+
+    // Always send user message to backend first
+    try {
+      const token = await getTokenRef.current();
+      await axios.post(
+        `${backend_URL}/api/group-discussion/add-user-message`,
+        {
+          sessionId,
+          text: spoken,
+          confidence,
+          duration: durationSec,
+          userName,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    } catch (err) {
+      console.error("Error sending user message:", err);
+    }
+
     if (isUserConcluding && !concludedRef.current) {
       concludedRef.current = true;
       conclusionPendingRef.current = false;
@@ -89,33 +125,14 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       if (silTimRef.current) clearTimeout(silTimRef.current);
 
       toast.success("Conclusion detected. Finalizing discussion...");
-      setTranscript((prev) => {
-        const next = [...prev, userEntry];
-        transcriptRef.current = next;
-        return next;
-      });
-
       setTimeout(async () => {
-        try {
-          const token = await getTokenRef.current();
-          await axios.post(
-            `${backend_URL}/api/group-discussion/add-user-message`,
-            { sessionId, text: spoken, confidence, duration: durationSec },
-            { headers: { Authorization: `Bearer ${token}` } },
-          );
-        } catch (err) {}
         if (aliveRef.current) confirmEndSession();
       }, 1200);
       return;
     }
 
-    setTranscript((prev) => {
-      const next = [...prev, userEntry];
-      transcriptRef.current = next;
-      return next;
-    });
-
     if (!busyRef.current && !silTimRef.current) {
+      const responseDelay = 1200 + Math.random() * 600;
       silTimRef.current = setTimeout(() => {
         if (aliveRef.current) {
           runAgentTurnRef.current({
@@ -125,11 +142,12 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
               proactive: false,
               confidence,
               duration: durationSec,
+              userName,
             },
           });
         }
         silTimRef.current = null;
-      }, 300);
+      }, responseDelay);
     }
   };
 
@@ -148,12 +166,16 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     model: "nova-2",
     language: "en-IN",
     keywords: resumeKeywords,
+    deepgram: {
+      utteranceEndMs: 3000, // Increase to 3 seconds
+    },
     onSpeechStart: () => {
       console.log(
         "%c[STT:GD:VAD] Speech started detected",
         "color: #22c55e; font-weight: bold;",
       );
       userSpeechStartRef.current = Date.now();
+      setAgentAddressingUser(null); // Clear addressing user state when user starts speaking
       if (agentSpeakingRef.current) {
         console.log(
           "[STT:GD:Barge-In] User speech start detected. Stopping agent TTS.",
@@ -166,7 +188,9 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       }
     },
     onSpeechEnd: () => {
-      console.log("[STT:GD] Speech end event received. Waiting for silence buffer.");
+      console.log(
+        "[STT:GD] Speech end event received. Waiting for silence buffer.",
+      );
     },
     onTranscript: ({ transcript: transcriptChunk, isFinal, confidence }) => {
       if (transcriptChunk.trim()) {
@@ -195,7 +219,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
             clearTimeout(openTimerRef.current);
             openTimerRef.current = null;
           }
-          
+
           setTimeout(() => {
             if (aliveRef.current && !isConcludingPhase) {
               setInvigilatorStatus("active");
@@ -229,10 +253,19 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
         );
 
         if (finalizeTimerRef.current) clearTimeout(finalizeTimerRef.current);
-        finalizeTimerRef.current = setTimeout(() => {
-          console.log("[STT:GD] Fallback finalize timer fired.");
-          finalizeSpeech();
-        }, 3500);
+
+        // Increase finalize timers
+        if (isFinal && finalBufferRef.current && !interimTextRef.current) {
+          finalizeTimerRef.current = setTimeout(() => {
+            console.log("[STT:GD] Fast-finalize timer fired.");
+            finalizeSpeech();
+          }, 2000); // Increased from 800ms to 2000ms
+        } else {
+          finalizeTimerRef.current = setTimeout(() => {
+            console.log("[STT:GD] Fallback finalize timer fired.");
+            finalizeSpeech();
+          }, 4000); // Increased from 2200ms to 4000ms
+        }
       }
     },
   });
@@ -328,7 +361,17 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
   const triggerInvigilator = async () => {
     setIsConcludingPhase(true);
     setInvigilatorStatus("concluding");
-    setInvigilatorMessage("Candidates, please conclude the GD now.");
+
+    const hasUserSpoken = userTurnCount > 0 || userInitiatedRef.current;
+    if (!hasUserSpoken) {
+      const name = user?.firstName || "Candidate";
+      setInvigilatorMessage(
+        `${name}, you need to contribute before we conclude.`,
+      );
+    } else {
+      setInvigilatorMessage("Candidates, please conclude the GD now.");
+    }
+
     setInvTimer(45);
     prefetchedTurnRef.current = null;
     prefetchNextTurn(lastSpkRef.current);
@@ -472,6 +515,37 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     const { agent, text } = turnData;
     lastSpkRef.current = agent.name;
 
+    // Check if agent message addresses the user
+    const checkIfAddressesUser = (msg) => {
+      const addressPatterns = [
+        `${userName},`,
+        `${userName}!`,
+        `${userName}?`,
+        `what do you think`,
+        `what's your take`,
+        `your thoughts`,
+        `you should`,
+        `why don't you`,
+        `do you agree`,
+        `what about you`,
+        `your opinion`,
+        `your turn`,
+        `what do you say`,
+        `you add`,
+        `you share`,
+      ];
+      const lowerMsg = msg.toLowerCase();
+      return addressPatterns.some((pattern) =>
+        lowerMsg.includes(pattern.toLowerCase()),
+      );
+    };
+
+    if (checkIfAddressesUser(text)) {
+      setAgentAddressingUser({ agentName: agent.name });
+    } else {
+      setAgentAddressingUser(null);
+    }
+
     const entry = {
       id: Date.now(),
       speaker: agent.name,
@@ -486,11 +560,23 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       return next;
     });
 
+    if (finalEndpoint !== "conclude") {
+      turnsSinceUserRef.current += 1;
+    }
+    setAgentTurnCount((c) => c + 1);
+
     try {
       const token = await getTokenRef.current();
       await axios.post(
         `${backend_URL}/api/group-discussion/add-agent-message`,
-        { sessionId, name: agent.name, text, personality: agent.personality },
+        {
+          sessionId,
+          name: agent.name,
+          text,
+          personality: agent.personality,
+          isPressure: turnData.isPressure,
+          isInterrupt: turnData.isInterrupt,
+        },
         { headers: { Authorization: `Bearer ${token}` } },
       );
     } catch (err) {
@@ -506,16 +592,35 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     hookSetMuted(true);
 
     if (aliveRef.current) {
-      prefetchNextTurn(agent.name);
+      const wordCount = text.split(/\s+/).length;
+      const estimatedDurationMs = (wordCount / 2.5) * 1000; // ~2.5 words/sec
+      const prefetchDelay = Math.max(estimatedDurationMs - 3000, 1000);
+
+      setTimeout(() => {
+        if (aliveRef.current && !userSpeakingRef.current) {
+          prefetchNextTurn(agent.name);
+        }
+      }, prefetchDelay);
     }
 
     try {
+      console.log(
+        "[GD] Attempting to speak text:",
+        text,
+        "for agent:",
+        agent.name,
+      );
       await hookSpeakText(text, agent.name, {
-        onComplete: () => {},
-        onError: (err) => console.error("TTS error:", err),
+        onComplete: () => {
+          console.log("[GD] TTS completed successfully");
+        },
+        onError: (err) => {
+          console.error("[GD] TTS error:", err);
+        },
       });
+      console.log("[GD] TTS promise resolved");
     } catch (speakErr) {
-      console.error("Agent speech execution error:", speakErr);
+      console.error("[GD] Agent speech execution error:", speakErr);
     } finally {
       setSpeakingAgent(null);
       agentSpeakingRef.current = false;
@@ -552,6 +657,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
           lastSpeaker: currentSpeaker,
           proactive: true,
           skipSave: true,
+          userName,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -565,22 +671,66 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
     if (proTimRef.current) clearTimeout(proTimRef.current);
     if (!aliveRef.current) return;
 
+    // Trigger user pressure
+    if (
+      turnsSinceUserRef.current >= 4 &&
+      !pressureFiredRef.current &&
+      !concludedRef.current &&
+      !busyRef.current
+    ) {
+      pressureFiredRef.current = true;
+      runAgentTurnRef.current({
+        endpoint: "next-turn",
+        body: {
+          proactive: true,
+          addressUser: true,
+          userName,
+          lastSpeaker: lastSpkRef.current,
+        },
+      });
+      return;
+    }
+
     const hasPre = !!prefetchedTurnRef.current;
+    const isInterrupt = !delay && Math.random() < 0.05; // Reduce interrupt chance to 5%
+    const userJustSpoke = turnsSinceUserRef.current === 0;
+
     let d =
       delay ??
-      (hasPre ? 2000 + Math.random() * 1000 : 6000 + Math.random() * 5000);
+      (isInterrupt
+        ? 2000 + Math.random() * 1000
+        : userJustSpoke
+          ? hasPre
+            ? 1200 + Math.random() * 800
+            : 2000 + Math.random() * 1000 // Faster when user just spoke
+          : hasPre
+            ? 5000 + Math.random() * 3000
+            : 10000 + Math.random() * 10000);
     if (isConcludingPhase && !delay) {
       d = hasPre ? 3000 + Math.random() * 2000 : 6000 + Math.random() * 3000;
     }
 
     proTimRef.current = setTimeout(() => {
       if (aliveRef.current && !busyRef.current && !userSpeakingRef.current) {
+        // Sometimes just wait longer instead of calling another agent
+        if (
+          !userJustSpoke &&
+          turnsSinceUserRef.current >= 2 &&
+          Math.random() < 0.5
+        ) {
+          scheduleProactive(5000);
+          return;
+        }
         runAgentTurnRef.current({
           endpoint: "next-turn",
-          body: { proactive: true },
+          body: {
+            proactive: true,
+            isInterrupt,
+            lastSpeaker: lastSpkRef.current,
+          },
         });
       } else if (userSpeakingRef.current) {
-        scheduleProactive(3000);
+        scheduleProactive(5000); // Longer delay if user is speaking
       }
     }, d);
   }
@@ -675,7 +825,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       hookSetMuted(false);
     }
 
-    // Start a 5-second window for the user to initiate the discussion
+    // Start a 8-second window for the user to initiate the discussion
     openTimerRef.current = setTimeout(() => {
       if (!aliveRef.current || openedRef.current) return;
       if (userInitiatedRef.current) return;
@@ -697,7 +847,7 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
           );
         }
       }, 10000);
-    }, 5000);
+    }, 8000);
   }, [isConcludingPhase, hookSetMuted]);
 
   // ── Starter Countdown Timer ──────────────────────────────────────────────
@@ -789,6 +939,10 @@ export function useGroupDiscussion(sessionId, meta, navigate) {
       user,
       openedRef: openedRef.current,
       concludedRef: concludedRef.current,
+      userTurnCount,
+      agentTurnCount,
+      turnsSinceUser: turnsSinceUserRef.current,
+      agentAddressingUser,
     },
     refs: {
       endRef,
@@ -824,10 +978,11 @@ const deduplicateTranscriptText = (text) => {
   if (!text) return "";
 
   // Helper to normalize a word for comparison
-  const normalize = (w) => w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
+  const normalize = (w) =>
+    w.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
 
   let words = text.trim().split(/\s+/);
-  
+
   // Phase 1: Clean up consecutive exact word/phrase duplicates (dynamic length 1 to 20)
   let i = 0;
   let cleaned = [];
@@ -835,8 +990,14 @@ const deduplicateTranscriptText = (text) => {
     let matchFound = false;
     for (let len = 20; len >= 1; len--) {
       if (i + len * 2 <= words.length) {
-        const first = words.slice(i, i + len).map(normalize).join(" ");
-        const second = words.slice(i + len, i + len * 2).map(normalize).join(" ");
+        const first = words
+          .slice(i, i + len)
+          .map(normalize)
+          .join(" ");
+        const second = words
+          .slice(i + len, i + len * 2)
+          .map(normalize)
+          .join(" ");
         if (first && first === second) {
           i += len; // Skip first occurrence, keep second
           matchFound = true;
@@ -861,7 +1022,7 @@ const deduplicateTranscriptText = (text) => {
       if (i + len * 2 <= words.length) {
         const firstArr = words.slice(i, i + len).map(normalize);
         const secondArr = words.slice(i + len, i + len * 2).map(normalize);
-        
+
         // Ensure they start with the same normalized word
         if (firstArr[0] === secondArr[0]) {
           let matches = 0;
@@ -869,7 +1030,7 @@ const deduplicateTranscriptText = (text) => {
             if (firstArr[j] === secondArr[j]) matches++;
           }
           const similarity = matches / len;
-          
+
           if (similarity >= 0.8) {
             i += len; // Skip first (uncorrected), keep second
             matchFound = true;
@@ -894,9 +1055,15 @@ const deduplicateTranscriptText = (text) => {
     for (let len = 10; len >= 3; len--) {
       for (let gap = 1; gap <= 3; gap++) {
         if (i + len * 2 + gap <= words.length) {
-          const first = words.slice(i, i + len).map(normalize).join(" ");
-          const second = words.slice(i + len + gap, i + len * 2 + gap).map(normalize).join(" ");
-          
+          const first = words
+            .slice(i, i + len)
+            .map(normalize)
+            .join(" ");
+          const second = words
+            .slice(i + len + gap, i + len * 2 + gap)
+            .map(normalize)
+            .join(" ");
+
           if (first && first === second) {
             i += len; // Skip the first occurrence of the phrase
             matchFound = true;

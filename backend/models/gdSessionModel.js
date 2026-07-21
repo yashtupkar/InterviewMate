@@ -9,6 +9,8 @@ const transcriptEntrySchema = new mongoose.Schema({
   confidence: { type: Number, default: 1.0 },
   duration: { type: Number, default: 0 },
   status: { type: String, enum: ["interim", "final"], default: "final" },
+  isPressure: { type: Boolean, default: false },
+  isInterrupt: { type: Boolean, default: false },
 });
 
 const gdSessionSchema = new mongoose.Schema({
@@ -27,6 +29,8 @@ const gdSessionSchema = new mongoose.Schema({
     {
       name: String,
       personality: String,
+      behaviorHint: String,
+      styleKey: String,
       voiceId: String, // browser speech synthesis voice
       color: String, // UI color
       avatarSeed: String,

@@ -1,7 +1,7 @@
 import React from "react";
 import { FiInfo } from "react-icons/fi";
 
-const GDInvigilator = ({ invigilatorStatus, invigilatorMessage, invTimer }) => {
+const GDInvigilator = ({ invigilatorStatus, invigilatorMessage, invTimer, turnsSinceUser = 0, isConcludingPhase = false }) => {
   return (
     <div
       className={`p-1 rounded-2xl transition-all duration-700 backdrop-blur-xl ${
@@ -56,6 +56,11 @@ const GDInvigilator = ({ invigilatorStatus, invigilatorMessage, invTimer }) => {
           >
             {invigilatorMessage}
           </h2>
+          {turnsSinceUser >= 4 && !isConcludingPhase && (
+            <div className="text-xs text-yellow-400 mt-1 font-bold animate-pulse flex items-center gap-1">
+              💬 You haven't spoken in a while — jump in!
+            </div>
+          )}
         </div>
 
         {invigilatorStatus === "concluding" ? (

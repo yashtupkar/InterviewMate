@@ -99,33 +99,50 @@ Respond ONLY with the sentence.`;
   const text = await callOpenRouter(prompt, 0.85, 25000);
   return (text || "").trim();
 };
+
 /**
  * Get an agent's next spoken response given the full transcript context.
  */
-const getAgentResponse = async (agent, topic, transcriptLines, userLastMessage) => {
-  const transcriptStr = transcriptLines
-    .slice(-20)
-    .map((t) => `${t.speaker}: ${t.text}`)
-    .join("\n");
+const getAgentResponse = async (agent, topic, transcriptLines, userLastMessage, allAgents = [], isInterrupt = false) => {
+  const lastSpeaker = transcriptLines.at(-1)?.speaker || "";
+  const otherAgentNames = allAgents
+    .filter((a) => a.name !== agent.name)
+    .map((a) => a.name)
+    .join(", ");
 
-  const prompt = `You are ${agent.name} participating in a Group Discussion on: "${topic}".
-Current Discussion History:
-${transcriptStr}
+  const connectorRule = isInterrupt
+    ? `Start with an interrupt connector: "Sorry to cut in, but...", "Wait, sorry to interrupt, but...", "Actually, if I could just jump in..."`
+    : `Start with a connector: "I see your point...", "Building on what ${lastSpeaker} said...", "I'd push back here...", "Actually, I think...", "That's true, but..."`;
 
-${userLastMessage ? `User just said: "${userLastMessage}"` : ""}
+  const prompt = `You are ${agent.name} in a Group Discussion on: "${topic}".
+Personality: ${agent.personality}
+Behavior guide:
+${agent.behaviorHint || ""}
 
-TASK: Respond to the current discussion flow with a more detailed point.
-- ACT AS A CANDIDATE: You are a fellow candidate participating in this Group Discussion, not an expert or examiner.
-- LENGTH & SIMPLICITY: Keep your point small, easy to understand, and use basic, easy English. Use 1-2 natural sentences.
-- HUMAN-LIKE: Speak like a real candidate in a GD. Use personality: ${agent.personality}. 
-- FUMBLES & HESITATIONS: Naturally include human fumbles and filler words (e.g., "hm", "uh", "oh", "like") to sound like you are thinking on the spot.
-- AVOID REPETITION: Do NOT repeat points that have already been made by you or others in the history. Bring in a NEW perspective or build upon a previous point with a specific reason.
-- TONE: Natural Indian-English conversation. 
-- FILLERS: Start with natural phrases like "I see your point, but...", "That's an interesting angle, actually...", "If I could add to that...", "To be honest, the way I look at it is...".
-- NO ROBOTIC SUMMARIES: Don't just summarize what others said. Take a stand.
-- CRITICAL: This response is for text to speech so don't add markdowns or any special characters like ** or ##. Make it natural and human like.
+Other participants: ${otherAgentNames}, and the user.
 
-Respond ONLY with your spoken lines.`;
+Recent discussion:
+${transcriptLines.slice(-15).map((t) => `${t.speaker}: ${t.text}`).join("\n")}
+
+${userLastMessage ? `User just said: "${userLastMessage}"` : `Last speaker was ${lastSpeaker}.`}
+
+TASK: React naturally to what was just said.
+
+STRICT RULES:
+- ACT AS A CANDIDATE, not an expert.
+- MENTION THE LAST SPEAKER by name if reacting to them. E.g., "I agree with ${lastSpeaker} on that, but..."
+- 1-2 sentences MAX. Short and punchy.
+- PERSONALITY: ${agent.personality}
+- FUMBLES: Use "uh", "hm", "actually", "like" naturally.
+- DO NOT repeat any point already in the history above.
+- NO markdown, no ** or ##. Plain text only (TTS safe).
+- IF your personality is assertive: push back or add a strong counter.
+- IF your personality is agreeable: validate then add a small new point.
+- IF your personality is analytical: bring in a fact, number, or logical angle.
+
+${connectorRule}
+
+Respond ONLY with your spoken words.`;
 
   const text = await callOpenRouter(prompt, 0.85, 25000);
   return (text || "").trim();
@@ -134,30 +151,73 @@ Respond ONLY with your spoken lines.`;
 /**
  * Proactive agent turn — agent jumps in unprompted with a new angle.
  */
-const getProactiveAgentResponse = async (agent, topic, transcriptLines) => {
-  const transcriptStr = transcriptLines
-    .slice(-15)
-    .map((t) => `${t.speaker}: ${t.text}`)
-    .join("\n");
+const getProactiveAgentResponse = async (agent, topic, transcriptLines, allAgents = []) => {
+  const otherNames = allAgents
+    .filter((a) => a.name !== agent.name)
+    .map((a) => a.name)
+    .join(", ");
 
   const prompt = `You are ${agent.name} in a GD on: "${topic}".
 Personality: ${agent.personality}
+Behavior guide:
+${agent.behaviorHint || ""}
 
-Discussion Summary so far:
-${transcriptStr || "(The discussion just started)"}
+Other candidates in the room: ${otherNames}
 
-TASK: Proactively jump in with a fresh perspective or a counter-argument.
-- ACT AS A CANDIDATE: You are a fellow candidate in this Group Discussion.
-- LENGTH & SIMPLICITY: Keep your point small, easy to understand, and use basic, easy English. 1-2 clear, impactful sentences.
-- HUMAN-LIKE & FUMBLES: Include natural fumbles and fillers (e.g., "uh", "oh", "hm", "like") to sound like a human quickly interrupting.
-- NO REPETITION: Scan the history above. Do NOT say anything that has already been mentioned. If the discussion is stagnating, pivot to a slightly different aspect of the topic.
-- NATURAL INTERRUPTIONS: Use varied starters: "Wait, I think we're missing something critical here...", "Actually, if you look at the industry trends...", "I'd like to bring in another point about...", "Oh, sorry to jump in, but has anyone considered...".
-- STYLE: Direct, opinionated, and conversational. 
-- CRITICAL: This response is for text to speech so don't add markdowns or any special characters like ** or ##. Make it natural and human like.
+Recent discussion:
+${transcriptLines.slice(-12).map((t) => `${t.speaker}: ${t.text}`).join("\n")}
 
-Respond ONLY with your spoken lines.`;
+TASK: Jump in proactively. Choose ONE of these modes based on context:
+- COUNTER: If the last point seems one-sided, challenge it.
+- PIVOT: If the discussion feels repetitive (scan recent messages), introduce a fresh angle.
+- INVITE: If the user hasn't spoken in the last 4-5 turns, say something like 
+  "I'd love to hear what [user] thinks about this too."
+- AGREE+ADD: If a good point was made, validate it and add one new layer.
+
+RULES:
+- 1-2 sentences only.
+- Sound like you just thought of it: "Oh wait, actually...", "Hmm, I want to add something here...",
+  "Sorry to jump in, but has anyone thought about..."
+- Use filler words naturally: "uh", "hm", "like", "actually"
+- NO repetition of points already discussed.
+- NO markdown. Plain text only.
+- Mention another candidate's name if reacting to their specific point.
+
+Respond ONLY with your spoken words.`;
 
   const text = await callOpenRouter(prompt, 0.9, 25000);
+  return (text || "").trim();
+};
+
+/**
+ * NEW: Call out the user directly when they've been silent
+ */
+const getUserPressurePrompt = async (agent, topic, transcriptLines, userName) => {
+  const lastPoint = transcriptLines.at(-1)?.text || "";
+
+  const prompt = `You are ${agent.name} in a GD on: "${topic}".
+Personality: ${agent.personality}
+Behavior guide:
+${agent.behaviorHint || ""}
+
+The user "${userName}" has not spoken in a while.
+
+Last point made: "${lastPoint}"
+
+TASK: Naturally call out ${userName} to share their view. 
+- Sound casual and collegial, not like an examiner.
+- Reference the last point or topic to make it feel natural.
+- If userName is "you" or "User", address them directly in the second person (e.g., "what do you think about this?" or "I'd love to hear your take") without using the word "you" or "User" as a name.
+- Examples:
+  "By the way, ${userName === "you" || userName === "User" ? "what do you think" : `${userName}, what do you think`} about this?"
+  "Hm, we haven't heard from ${userName === "you" || userName === "User" ? "you" : userName} yet — what's your take?"
+  "Actually, do you agree with what was just said?"
+- Keep it 1 sentence only.
+- NO markdown. Plain text only.
+
+Respond ONLY with your spoken line.`;
+
+  const text = await callOpenRouter(prompt, 0.85, 20000);
   return (text || "").trim();
 };
 
@@ -241,7 +301,7 @@ Current Discussion Context:
 ${transcriptStr}
 
 TASK: Synthesize the discussion into a structured, professional, and balanced summary.
-- LENGTH: 3-4 natural sentences.
+- LENGTH: 2-3 natural sentences.
 - STRUCTURE:
   1. Formal Opening: Start with a professional phrase (e.g., "To conclude our discussion on ${topic}...", "As we wrap up this session...", "Summarizing the key points of our discussion...").
   2. Balanced Synthesis: Acknowledge the core themes discussed. Explicitly mention that some participants shared certain views (benefits/pros) while others raised different points (concerns/cons).
@@ -265,5 +325,6 @@ module.exports = {
   getAgentResponse,
   getProactiveAgentResponse,
   getConclusionStatement,
-  analyzeGDTranscript
+  analyzeGDTranscript,
+  getUserPressurePrompt
 };
