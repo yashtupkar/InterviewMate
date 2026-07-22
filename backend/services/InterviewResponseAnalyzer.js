@@ -1,11 +1,9 @@
-const MODELS = [
-  "google/gemini-3.1-flash-lite",
-  "google/gemini-3.1-flash-lite-preview",
-  "google/gemini-2.5-flash-lite",
-  "google/gemini-3-flash-preview",
-  "google/gemini-2.5-flash",
-  "google/gemini-3.1-pro-preview",
-];
+const MODELS = process.env.AI_MODEL_FLASH_PRO
+  ? process.env.AI_MODEL_FLASH_PRO.split(",").map(m => m.trim())
+  : [
+      "google/gemini-2.5-flash",
+      "meta-llama/llama-3.3-70b-instruct",
+    ];
 
 async function callOpenRouter(prompt, temperature, requestTimeoutMs) {
   const API_KEY = process.env.OPENROUTER_API_KEY;

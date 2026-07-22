@@ -3,14 +3,12 @@
  * Uses OpenRouter (same pattern as InterviewResponseAnalyzer)
  */
 
-const MODELS = [
-  "google/gemini-3.1-flash-lite",
-  "google/gemini-3.1-flash-lite-preview", // Fastest 2026 free model
-  "google/gemini-2.5-flash-lite",
-  "google/gemini-2.5-flash",      // High quality free backup
-  // Legacy free backup
-  "meta-llama/llama-3.3-70b-instruct", // Quality fallback
-];
+const MODELS = process.env.AI_MODEL_FLASH_PRO
+  ? process.env.AI_MODEL_FLASH_PRO.split(",").map(m => m.trim())
+  : [
+      "google/gemini-2.5-flash",
+      "meta-llama/llama-3.3-70b-instruct", // fallback
+    ];
 
 async function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();

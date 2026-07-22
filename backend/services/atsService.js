@@ -65,8 +65,13 @@ Resume Content:
 ${resumeText}
 """`;
 
+        // Parse list of models from AI_MODEL_FLASH_PRO, grab the first one (since ATS Scanner currently does not have a fallback loop)
+        const atsModels = process.env.AI_MODEL_FLASH_PRO
+            ? process.env.AI_MODEL_FLASH_PRO.split(",").map(m => m.trim())
+            : ["google/gemini-2.5-flash"];
+        
         const response = await openai.chat.completions.create({
-            model: "google/gemini-2.5-flash", // Excellent for fast structured JSON outputs
+            model: atsModels[0],
             messages: [{ role: "user", content: prompt }],
             response_format: { type: "json_object" }, 
             max_tokens: 3000 // Prevent truncation on large JSON structures

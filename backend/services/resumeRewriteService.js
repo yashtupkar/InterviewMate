@@ -1,8 +1,10 @@
-const MODELS = [
-  "google/gemini-2.0-flash-lite-preview-02-05",
-  "google/gemini-2.0-flash",
-  "meta-llama/llama-3.3-70b-instruct",
-];
+const MODELS = process.env.AI_MODEL_RESUME
+  ? process.env.AI_MODEL_RESUME.split(",").map(m => m.trim())
+  : [
+      "google/gemini-2.0-flash-lite-preview-02-05",
+      "google/gemini-2.0-flash",
+      "meta-llama/llama-3.3-70b-instruct",
+    ];
 const { analyzeJobDescription } = require("./jdAnalysisService");
 
 async function fetchWithTimeout(url, options, timeoutMs) {

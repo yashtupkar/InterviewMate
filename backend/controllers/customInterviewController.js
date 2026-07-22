@@ -459,13 +459,9 @@ const customInterviewController = {
         }
       }
 
-      const chatModels = [
-        "google/gemini-3.1-flash-lite",
-        "google/gemini-3.1-flash-lite-preview",
-        "google/gemini-2.5-flash-lite",
-        "google/gemini-2.5-flash",
-        "meta-llama/llama-3.3-70b-instruct",
-      ];
+      const chatModels = process.env.AI_MODEL_LITE
+        ? process.env.AI_MODEL_LITE.split(",").map(m => m.trim())
+        : ["google/gemini-2.5-flash-lite", "google/gemini-2.5-flash", "meta-llama/llama-3.3-70b-instruct"];
 
       let response = null;
       let lastError = null;
