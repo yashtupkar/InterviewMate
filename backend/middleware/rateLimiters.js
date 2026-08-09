@@ -7,7 +7,7 @@ const keyGenerator = (req) => {
 
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000,
+    max: 3000,
     standardHeaders: true,
     legacyHeaders: false,
     validate: false, // Disable expensive validation

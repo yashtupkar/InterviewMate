@@ -1,4 +1,5 @@
 const Question = require("../models/Question");
+const appCache = require("../utils/cache");
 
 // @desc    Get all questions with filtering and pagination
 // @route   GET /api/questions
@@ -94,19 +95,30 @@ exports.getQuestionById = async (req, res) => {
 // @access  Public
 exports.getFiltersMetadata = async (req, res) => {
   try {
+    const cacheKey = "questions_metadata";
+    const cachedData = appCache.get(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({ success: true, data: cachedData, fromCache: true });
+    }
+
     const [companies, skills, domains] = await Promise.all([
       Question.distinct("companies", { isActive: true }),
       Question.distinct("skills", { isActive: true }),
       Question.distinct("domains", { isActive: true }),
     ]);
 
+    const metadata = {
+      companies: companies.filter(Boolean).sort(),
+      skills: skills.filter(Boolean).sort(),
+      domains: domains.filter(Boolean).sort(),
+    };
+
+    appCache.set(cacheKey, metadata, 86400); // Cache for 24 hours
+
     res.status(200).json({
       success: true,
-      data: {
-        companies: companies.filter(Boolean).sort(),
-        skills: skills.filter(Boolean).sort(),
-        domains: domains.filter(Boolean).sort(),
-      },
+      data: metadata,
+      fromCache: false
     });
   } catch (error) {
     console.error("Error fetching filters:", error);
@@ -119,6 +131,12 @@ exports.getFiltersMetadata = async (req, res) => {
 // @access  Public
 exports.getAggregatedStats = async (req, res) => {
   try {
+    const cacheKey = "questions_aggregated_stats";
+    const cachedData = appCache.get(cacheKey);
+    if (cachedData) {
+      return res.status(200).json({ success: true, data: cachedData, fromCache: true });
+    }
+
     const defaultQuery = { isActive: true };
 
     const [skillsAgg, companiesAgg, behavioralAgg] = await Promise.all([
@@ -163,27 +181,32 @@ exports.getAggregatedStats = async (req, res) => {
       ]),
     ]);
 
+    const statsData = {
+      skills: skillsAgg.map((s) => ({
+        name: s._id,
+        domain: (s.domains || []).filter(Boolean)[0] || null,
+        totalQuestions: s.totalQuestions,
+        codingQuestions: s.codingQuestions,
+      })),
+      companies: companiesAgg.map((c) => ({
+        name: c._id,
+        totalQuestions: c.totalQuestions,
+        codingQuestions: c.codingQuestions,
+      })),
+      behavioral: behavioralAgg
+        .filter((b) => b._id)
+        .map((b) => ({
+          name: b._id,
+          totalQuestions: b.totalQuestions,
+        })),
+    };
+
+    appCache.set(cacheKey, statsData, 86400); // Cache for 24 hours
+
     res.status(200).json({
       success: true,
-      data: {
-        skills: skillsAgg.map((s) => ({
-          name: s._id,
-          domain: (s.domains || []).filter(Boolean)[0] || null,
-          totalQuestions: s.totalQuestions,
-          codingQuestions: s.codingQuestions,
-        })),
-        companies: companiesAgg.map((c) => ({
-          name: c._id,
-          totalQuestions: c.totalQuestions,
-          codingQuestions: c.codingQuestions,
-        })),
-        behavioral: behavioralAgg
-          .filter((b) => b._id)
-          .map((b) => ({
-            name: b._id,
-            totalQuestions: b.totalQuestions,
-          })),
-      },
+      data: statsData,
+      fromCache: false
     });
   } catch (error) {
     console.error("Error fetching aggregated stats:", error);
