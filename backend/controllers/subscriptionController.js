@@ -327,24 +327,43 @@ const verifyPayment = async (req, res) => {
   try {
     const { user, subscription } = await ensureSubscription(req.auth.userId);
 
-    // Find the order
-    const order = await Order.findOne({
-      razorpayOrderId,
-      user: user._id,
-    }).session(session);
-    if (!order) {
-      await session.abortTransaction();
-      return res.status(404).json({ message: "Order not found" });
-    }
+    // Atomically transition the order to prevent webhook race conditions
+    const order = await Order.findOneAndUpdate(
+      {
+        razorpayOrderId,
+        user: user._id,
+        status: "created"
+      },
+      {
+        $set: {
+          status: "paid",
+          razorpayPaymentId,
+          razorpaySignature
+        }
+      },
+      { new: true, session }
+    );
 
-    // Idempotency — already processed
-    if (order.status === "paid") {
-      await session.abortTransaction();
-      return res.json({
-        success: true,
-        tier: subscription.tier,
-        message: "Payment already verified",
-      });
+    if (!order) {
+      // If it failed to find with status: "created", it might already be paid or not exist.
+      const existingOrder = await Order.findOne({
+        razorpayOrderId,
+        user: user._id,
+      }).session(session);
+      
+      if (!existingOrder) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      if (existingOrder.status === "paid") {
+        await session.abortTransaction();
+        return res.json({
+          success: true,
+          tier: subscription.tier,
+          message: "Payment already verified",
+        });
+      }
     }
 
     const plan = PLAN_CONFIG[order.planId];
@@ -353,11 +372,8 @@ const verifyPayment = async (req, res) => {
       return res.status(400).json({ message: "Invalid plan in order" });
     }
 
-    // ── Update Order ──
-    order.razorpayPaymentId = razorpayPaymentId;
-    order.razorpaySignature = razorpaySignature;
-    order.status = "paid";
-    await order.save({ session });
+    // ── Update Order Details ──
+    // Status is already updated atomically above
 
     // ── Update Subscription ──
     await applyPlanToSubscription(subscription, plan);
@@ -440,34 +456,46 @@ const handleRazorpayWebhook = async (req, res) => {
     const razorpayPaymentId = payment.id;
 
     try {
-      const order = await Order.findOne({ razorpayOrderId });
-      if (!order) {
-        console.warn(`[Webhook] Order not found for ${razorpayOrderId}`);
-        return res.status(200).json({ received: true }); // 200 so Razorpay stops retrying
-      }
-
-      // Idempotent — already processed
-      if (order.status === "paid" && order.webhookVerified) {
-        return res.status(200).json({ received: true });
-      }
-
       const session = await mongoose.startSession();
       session.startTransaction();
       try {
-        // Record the prior state to determine if verifyPayment already ran
-        const wasAlreadyPaid = order.status === "paid";
+        const order = await Order.findOneAndUpdate(
+          { razorpayOrderId },
+          { 
+             $set: { 
+               status: "paid", 
+               webhookVerified: true,
+               // Use existing or new payment ID
+             } 
+          },
+          { session } // returns the document BEFORE the update
+        );
 
-        order.razorpayPaymentId = order.razorpayPaymentId || razorpayPaymentId;
-        order.status = "paid";
-        order.webhookVerified = true;
-
-        // ── Fetch & Store Payment Details ──
-        const paymentDetails = await fetchPaymentDetails(razorpayPaymentId);
-        if (paymentDetails) {
-          order.paymentDetails = extractPaymentDetails(paymentDetails);
+        if (!order) {
+          console.warn(`[Webhook] Order not found for ${razorpayOrderId}`);
+          await session.abortTransaction();
+          return res.status(200).json({ received: true }); 
         }
 
-        await order.save({ session });
+        const wasAlreadyPaid = order.status === "paid";
+        const wasWebhookVerified = order.webhookVerified;
+
+        if (wasAlreadyPaid && wasWebhookVerified) {
+          await session.abortTransaction();
+          return res.status(200).json({ received: true });
+        }
+
+        // We still need to update payment details if they are missing
+        if (!order.paymentDetails) {
+          const paymentDetails = await fetchPaymentDetails(razorpayPaymentId);
+          if (paymentDetails) {
+            await Order.updateOne(
+              { _id: order._id },
+              { $set: { paymentDetails: extractPaymentDetails(paymentDetails) } },
+              { session }
+            );
+          }
+        }
 
         // If verifyPayment hasn't run yet, upgrade the subscription here!
         if (!wasAlreadyPaid) {
@@ -555,11 +583,7 @@ const requestRefund = async (req, res) => {
     }
 
     // ── Check: no existing refund ──
-    if (order.refund && order.refund.razorpayRefundId) {
-      return res.status(400).json({
-        message: "A refund has already been initiated for this order.",
-      });
-    }
+    // Handled atomically before Razorpay call now
 
     // ── Check: within 24 hours ──
     const hoursSincePurchase =
@@ -588,26 +612,59 @@ const requestRefund = async (req, res) => {
         .json({ message: "Payment ID not found on order. Contact support." });
     }
 
+    // ── Atomically mark as pending before Razorpay call ──
+    const updatedOrder = await Order.findOneAndUpdate(
+      { 
+        _id: order._id, 
+        "refund.razorpayRefundId": { $exists: false },
+        "refund.status": { $ne: "pending" }
+      },
+      {
+        $set: {
+          "refund.status": "pending",
+          "refund.initiatedAt": new Date(),
+          "refund.reason": "user_request"
+        }
+      },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(400).json({
+        message: "A refund has already been initiated for this order.",
+      });
+    }
+
     // ── Issue Refund via Razorpay API ──
-    const rzpRefund = await issueRefund(order.razorpayPaymentId, order.amount, {
-      reason: "user_request",
-      userId: user._id.toString(),
-      orderId: order._id.toString(),
-    });
+    let rzpRefund;
+    try {
+      rzpRefund = await issueRefund(order.razorpayPaymentId, order.amount, {
+        reason: "user_request",
+        userId: user._id.toString(),
+        orderId: order._id.toString(),
+      });
+    } catch (apiError) {
+      // Revert the pending state if API fails
+      await Order.updateOne(
+        { _id: order._id },
+        { $unset: { refund: "" } }
+      );
+      throw apiError;
+    }
 
     // ── Atomically update Order + Subscription ──
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      order.status = "refunded";
-      order.refund = {
+      updatedOrder.status = "refunded";
+      updatedOrder.refund = {
         razorpayRefundId: rzpRefund.id,
         amount: rzpRefund.amount,
         initiatedAt: new Date(),
         reason: "user_request",
-        status: "pending",
+        status: "pending", // updated later via webhook
       };
-      await order.save({ session });
+      await updatedOrder.save({ session });
 
       // Downgrade to Free
       subscription.tier = "Free";
@@ -692,34 +749,58 @@ const internalDeductCredits = async (clerkId, amount, service) => {
     };
   }
 
-  const totalAvailable =
-    (subscription.credits || 0) + (subscription.topupCredits || 0);
+  const updateResult = await Subscription.collection.findOneAndUpdate(
+    {
+      _id: subscription._id,
+      $expr: {
+        $gte: [
+          { $add: [{ $ifNull: ["$credits", 0] }, { $ifNull: ["$topupCredits", 0] }] },
+          finalAmount,
+        ],
+      },
+    },
+    [
+      {
+        $set: {
+          credits: {
+            $cond: {
+              if: { $gte: [{ $ifNull: ["$credits", 0] }, finalAmount] },
+              then: { $subtract: [{ $ifNull: ["$credits", 0] }, finalAmount] },
+              else: 0,
+            },
+          },
+          topupCredits: {
+            $cond: {
+              if: { $gte: [{ $ifNull: ["$credits", 0] }, finalAmount] },
+              then: { $ifNull: ["$topupCredits", 0] },
+              else: {
+                $subtract: [
+                  { $ifNull: ["$topupCredits", 0] },
+                  { $subtract: [finalAmount, { $ifNull: ["$credits", 0] }] },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ],
+    { returnDocument: "after" }
+  );
 
-  if (totalAvailable < finalAmount) {
+  const updatedSub = updateResult ? updateResult.value || updateResult : null;
+
+  if (!updatedSub) {
     throw Object.assign(
-      new Error(
-        `Insufficient credits for ${normalizedService || "requested service"}. Need ${finalAmount}, have ${totalAvailable.toFixed(1)}`,
-      ),
+      new Error(`Insufficient credits for ${normalizedService || "requested service"}.`),
       { statusCode: 400 },
     );
   }
 
-  // Deduct from main credits first
-  if (subscription.credits >= finalAmount) {
-    subscription.credits -= finalAmount;
-  } else {
-    // Use all main credits and deduct remainder from topup credits
-    const remainder = finalAmount - subscription.credits;
-    subscription.credits = 0;
-    subscription.topupCredits = (subscription.topupCredits || 0) - remainder;
-  }
-
-  await subscription.save();
   return {
     success: true,
     message: "Credits deducted",
-    credits: subscription.credits,
-    topupCredits: subscription.topupCredits,
+    credits: updatedSub.credits,
+    topupCredits: updatedSub.topupCredits,
     deducted: finalAmount,
   };
 };

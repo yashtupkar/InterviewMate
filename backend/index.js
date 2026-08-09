@@ -40,6 +40,11 @@ app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+const { globalLimiter } = require("./middleware/rateLimiters");
+
+// Global API rate limiting
+app.use("/api/", globalLimiter);
+
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/vapi-interview", vapiInterviewRouter);

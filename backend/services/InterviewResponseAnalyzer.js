@@ -1,7 +1,6 @@
 const MODELS = [
-  "google/gemini-3-flash-preview",
-  "google/gemini-2.5-flash",
-  "google/gemini-3.1-pro-preview",
+  process.env.AI_MODEL_PRIMARY || "google/gemini-2.5-flash",
+  process.env.AI_MODEL_FALLBACK || "google/gemini-2.0-flash-lite-001"
 ];
 
 async function callOpenRouter(prompt, temperature, requestTimeoutMs) {

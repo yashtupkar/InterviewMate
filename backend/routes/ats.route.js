@@ -18,8 +18,16 @@ const upload = multer({
     }
 });
 
+const rateLimit = require("express-rate-limit");
+
+const atsRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20, // 20 requests per 15 mins per IP
+  message: { message: "Too many ATS scans, please try again later." },
+});
+
 // Endpoint to score the resume with specialized multer error handling
-router.post('/score', clerkAuth, (req, res, next) => {
+router.post('/score', clerkAuth, atsRateLimit, (req, res, next) => {
     upload.single('resume')(req, res, function (err) {
         if (err instanceof multer.MulterError) {
             // A Multer error occurred when uploading (e.g. LIMIT_FILE_SIZE)

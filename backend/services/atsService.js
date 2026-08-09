@@ -65,12 +65,26 @@ Resume Content:
 ${resumeText}
 """`;
 
-        const response = await openai.chat.completions.create({
-            model: "google/gemini-2.5-flash", // Excellent for fast structured JSON outputs
-            messages: [{ role: "user", content: prompt }],
-            response_format: { type: "json_object" }, 
-            max_tokens: 3000 // Prevent truncation on large JSON structures
-        });
+        const MODELS = [
+            process.env.AI_MODEL_PRIMARY || "google/gemini-2.5-flash",
+            process.env.AI_MODEL_FALLBACK || "google/gemini-2.0-flash-lite-001"
+        ];
+
+        let response = null;
+        for (const model of MODELS) {
+            try {
+                response = await openai.chat.completions.create({
+                    model: model,
+                    messages: [{ role: "user", content: prompt }],
+                    response_format: { type: "json_object" }, 
+                    max_tokens: 3000 // Prevent truncation on large JSON structures
+                });
+                break; // Stop loop if successful
+            } catch (err) {
+                console.warn(`[ATS] Model ${model} failed, trying next...`);
+                if (MODELS.indexOf(model) === MODELS.length - 1) throw err;
+            }
+        }
 
         let content = response.choices[0].message.content;
         

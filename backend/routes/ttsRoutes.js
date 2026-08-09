@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const ttsController = require("../controllers/ttsController");
 const { clerkAuth: userAuth } = require("../middleware/auth");
+const { aiRateLimiter } = require("../middleware/rateLimiters");
 
 /**
  * TTS Routes
@@ -26,21 +27,21 @@ router.post("/ticket", ttsController.generateTicket);
  * Generate TTS audio from text
  * Body: { text, voiceId, engine, sessionId }
  */
-router.post("/generate", ttsController.generateTTS);
+router.post("/generate", aiRateLimiter, ttsController.generateTTS);
 
 /**
  * POST /api/tts/stream
  * Stream TTS audio directly (POST only to prevent URL logs/leakage of text)
  * Body: { text, voiceId, engine, sessionId }
  */
-router.post("/stream", ttsController.streamTTS);
+router.post("/stream", aiRateLimiter, ttsController.streamTTS);
 
 /**
  * POST /api/tts/batch
  * Generate TTS for multiple texts in batch
  * Body: { items: [{ text, voiceId }] }
  */
-router.post("/batch", ttsController.batchGenerateTTS);
+router.post("/batch", aiRateLimiter, ttsController.batchGenerateTTS);
 
 /**
  * GET /api/tts/voices

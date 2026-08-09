@@ -34,9 +34,50 @@ const CreditService = {
 
       const amount = getServiceCost(service, sub.tier);
 
-      const totalAvailable = (sub.credits || 0) + (sub.topupCredits || 0);
+      const updateResult = await Subscription.collection.findOneAndUpdate(
+        {
+          _id: sub._id,
+          $expr: {
+            $gte: [
+              { $add: [{ $ifNull: ["$credits", 0] }, { $ifNull: ["$topupCredits", 0] }] },
+              amount,
+            ],
+          },
+        },
+        [
+          {
+            $set: {
+              credits: {
+                $cond: {
+                  if: { $gte: [{ $ifNull: ["$credits", 0] }, amount] },
+                  then: { $subtract: [{ $ifNull: ["$credits", 0] }, amount] },
+                  else: 0,
+                },
+              },
+              topupCredits: {
+                $cond: {
+                  if: { $gte: [{ $ifNull: ["$credits", 0] }, amount] },
+                  then: { $ifNull: ["$topupCredits", 0] },
+                  else: {
+                    $subtract: [
+                      { $ifNull: ["$topupCredits", 0] },
+                      { $subtract: [amount, { $ifNull: ["$credits", 0] }] },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ],
+        { returnDocument: "after" }
+      );
 
-      if (totalAvailable < amount) {
+      const updatedSub = updateResult ? updateResult.value || updateResult : null;
+
+      if (!updatedSub) {
+        // Fetch to provide accurate remaining amounts if it failed
+        const currentSub = await Subscription.findById(sub._id);
+        const totalAvailable = (currentSub?.credits || 0) + (currentSub?.topupCredits || 0);
         return {
           success: false,
           message: "Insufficient credits",
@@ -44,17 +85,6 @@ const CreditService = {
           available: totalAvailable,
         };
       }
-
-      // Deduct from main credits first
-      if (sub.credits >= amount) {
-        sub.credits -= amount;
-      } else {
-        const remainder = amount - sub.credits;
-        sub.credits = 0;
-        sub.topupCredits = (sub.topupCredits || 0) - remainder;
-      }
-
-      await sub.save();
 
       // Centralized referral reward trigger: once user performs a paid action,
       // mark pending referral as rewarded and credit the referrer.
@@ -68,8 +98,8 @@ const CreditService = {
       return {
         success: true,
         amount,
-        remaining: sub.credits,
-        topupRemaining: sub.topupCredits,
+        remaining: updatedSub.credits,
+        topupRemaining: updatedSub.topupCredits,
       };
     } catch (error) {
       console.error("CreditService Error:", error);

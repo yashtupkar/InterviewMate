@@ -4,11 +4,8 @@
  */
 
 const MODELS = [
-  "google/gemini-3.1-flash-lite-preview", // Fastest 2026 free model
-  "google/gemini-2.5-flash-lite",
-  "google/gemini-2.5-flash",      // High quality free backup
-  // Legacy free backup
-  "meta-llama/llama-3.3-70b-instruct", // Quality fallback
+  process.env.AI_MODEL_PRIMARY || "google/gemini-2.5-flash",
+  process.env.AI_MODEL_FALLBACK || "google/gemini-2.0-flash-lite-001"
 ];
 
 async function fetchWithTimeout(url, options, timeoutMs) {

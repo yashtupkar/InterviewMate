@@ -29,7 +29,11 @@ exports.getAllResumes = async (req, res, next) => {
 exports.getResumeById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const resume = await Resume.findById(id);
+    const clerkId = req.user?.clerkId;
+    if (!clerkId) {
+      return next(new ApiError(401, "Unauthorized."));
+    }
+    const resume = await Resume.findOne({ _id: id, clerkId });
 
     if (!resume) {
       return next(new ApiError(404, "Resume not found."));
@@ -66,14 +70,16 @@ exports.saveResume = async (req, res, next) => {
       });
     }
 
-    let resume;
     if (_id) {
-      // Update existing resume
-      resume = await Resume.findByIdAndUpdate(
-        _id,
+      // Update existing resume, ensuring user owns it
+     let resume = await Resume.findOneAndUpdate(
+        { _id, clerkId },
         { $set: updateData },
         { returnDocument: "after", runValidators: true, context: "query" },
       );
+      if (!resume) {
+        return next(new ApiError(404, "Resume not found or unauthorized."));
+      }
     } else {
       // Create new resume - Check Limit First
       const user = await User.findOne({ clerkId }).populate('subscription');
@@ -104,7 +110,11 @@ exports.saveResume = async (req, res, next) => {
 exports.deleteResume = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const resume = await Resume.findByIdAndDelete(id);
+    const clerkId = req.user?.clerkId;
+    if (!clerkId) {
+       return next(new ApiError(401, "Unauthorized."));
+    }
+    const resume = await Resume.findOneAndDelete({ _id: id, clerkId });
 
     if (!resume) {
       return next(new ApiError(404, "Resume not found."));

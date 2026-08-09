@@ -449,14 +449,31 @@ const customInterviewController = {
         }
       }
 
-      const response = await openai.chat.completions.create({
-        model: "google/gemini-2.0-flash-lite-001", // Highly optimized for low-latency
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...enhancedMessages,
-        ],
-        temperature: 0.7,
-      });
+      const MODELS = [
+        process.env.AI_MODEL_PRIMARY || "google/gemini-2.5-flash",
+        process.env.AI_MODEL_FALLBACK || "google/gemini-2.0-flash-lite-001"
+      ];
+
+      let response = null;
+      const apiMessages = [
+        { role: "system", content: systemPrompt },
+        ...enhancedMessages,
+      ];
+
+      for (const model of MODELS) {
+        try {
+          response = await openai.chat.completions.create({
+            model: model,
+            messages: apiMessages,
+            temperature: 0.7,
+            max_tokens: 350,
+          });
+          break;
+        } catch (err) {
+          console.warn(`[CustomInterview] Model ${model} failed, trying next...`);
+          if (MODELS.indexOf(model) === MODELS.length - 1) throw err;
+        }
+      }
 
       const aiMessage = response.choices[0].message.content;
       res.status(200).json({ text: aiMessage });

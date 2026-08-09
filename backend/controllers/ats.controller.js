@@ -41,6 +41,10 @@ exports.scoreResume = async (req, res, next) => {
       );
     }
 
+    // Enforce strict input budget to prevent AI token cost explosions
+    resumeText = resumeText.substring(0, 15000);
+    const safeJobDescription = jobDescription.substring(0, 5000);
+
     // 1.5 Deduct credits from the authenticated user account.
     if (userId) {
       try {
@@ -60,7 +64,7 @@ exports.scoreResume = async (req, res, next) => {
     }
 
     // 2. Analyze with AI (OpenRouter)
-    const analysisResult = await scoreResumeWithAI(resumeText, jobDescription);
+    const analysisResult = await scoreResumeWithAI(resumeText, safeJobDescription);
 
     // 3. Save to database (if clerkId is provided)
     let savedDisplayData = { ...analysisResult };

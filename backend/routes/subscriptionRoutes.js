@@ -59,9 +59,9 @@ router.get('/pricing-catalog', (req, res) => {
     });
 });
 
-router.post('/create-order',    ClerkExpressRequireAuth(), createOrder);
-router.post('/verify-payment',  ClerkExpressRequireAuth(), verifyPayment);
-router.post('/request-refund',  ClerkExpressRequireAuth(), requestRefund);
+router.post('/create-order',    ClerkExpressRequireAuth(), orderRateLimit, createOrder);
+router.post('/verify-payment',  ClerkExpressRequireAuth(), verifyRateLimit, verifyPayment);
+router.post('/request-refund',  ClerkExpressRequireAuth(), refundRateLimit, requestRefund);
 router.post('/cancel',          ClerkExpressRequireAuth(), cancelSubscription);
 
 router.post('/deduct-credits',   ClerkExpressRequireAuth(), deductCredits);

@@ -123,14 +123,23 @@ const rewardReferrer = async (refereeId) => {
   }
 
   try {
-    // Find the referral record where this user is the referee
-    const referral = await Referral.findOne({
-      referee: refereeId,
-      status: "pending",
-    }).populate("referrer", "_id");
+    // ── Atomically transition referral status to prevent double rewards ──
+    const referral = await Referral.findOneAndUpdate(
+      {
+        referee: refereeId,
+        status: "pending",
+      },
+      {
+        $set: {
+          status: "rewarded",
+          rewardedAt: new Date(),
+        }
+      },
+      { new: true }
+    ).populate("referrer", "_id");
 
     if (!referral) {
-      console.log(`ℹ️  No pending referral found for referee: ${refereeId}`);
+      console.log(`ℹ️  No pending referral found for referee: ${refereeId} or already rewarded.`);
       return;
     }
 
@@ -159,21 +168,18 @@ const rewardReferrer = async (refereeId) => {
         tier: "Free",
       });
     } else {
-      // Add referral credits to existing subscription
-      const previousCredits = referrerSubscription.credits || 0;
-      referrerSubscription.credits = previousCredits + REFERRAL_REWARD;
-      await referrerSubscription.save();
+      // Add referral credits to existing subscription atomically
+      referrerSubscription = await Subscription.findOneAndUpdate(
+        { user: referrerId },
+        { $inc: { credits: REFERRAL_REWARD } },
+        { new: true }
+      );
       console.log(
-        `✓ Credits updated for referrer ${referrerId}: ${previousCredits} → ${referrerSubscription.credits}`,
+        `✓ Credits updated for referrer ${referrerId}. New balance: ${referrerSubscription.credits}`,
       );
     }
 
     await ensureSubscriptionLinked(referrerId, referrerSubscription._id);
-
-    // Update referral status to rewarded
-    referral.status = "rewarded";
-    referral.rewardedAt = new Date();
-    await referral.save();
 
     console.log(
       `✓ Referrer rewarded: ${referrerId} earned ${REFERRAL_REWARD} credits from referee ${refereeId}`,

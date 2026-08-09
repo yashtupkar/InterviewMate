@@ -4,6 +4,7 @@ const multer = require("multer");
 const customInterviewController = require("../controllers/customInterviewController");
 const validateInterviewPayload = require("../middleware/validateInterviewPayload");
 const { clerkAuth: userAuth } = require("../middleware/auth");
+const { aiRateLimiter } = require("../middleware/rateLimiters");
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -21,12 +22,13 @@ const upload = multer({
 router.post(
   "/start",
   userAuth,
+  aiRateLimiter,
   validateInterviewPayload,
   customInterviewController.startCustomSession,
 );
 
 // 2. Get Chat Response (LLM)
-router.post("/chat", userAuth, customInterviewController.getChatResponse);
+router.post("/chat", userAuth, aiRateLimiter, customInterviewController.getChatResponse);
 
 // 3. Save Transcript
 router.post(
@@ -39,6 +41,7 @@ router.post(
 router.post(
   "/parse-resume",
   userAuth,
+  aiRateLimiter,
   (req, res, next) => {
     upload.single("resume")(req, res, (err) => {
       if (err instanceof multer.MulterError) {
