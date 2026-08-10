@@ -122,7 +122,7 @@ export const useCustomInterview = () => {
   const displayInterviewData = isPreview ? MOCK_INTERVIEW_DATA : interviewData;
 
   const SILENCE_THRESHOLD = 2000;
-  const COUNTDOWN_DURATION = 5000; // 5 seconds for user to continue speaking or auto-send
+  const COUNTDOWN_DURATION = 3000; // 3 seconds for user to continue speaking or auto-send
   const PAUSE_DETECT = 500; // Start countdown after 0.5s of silence to give user time to think
   const SUPPORTED_CODING_LANGUAGES = [
     "javascript",
@@ -142,8 +142,8 @@ export const useCustomInterview = () => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const cleanTaskText = (text = "") =>
-    text
+  const cleanTaskText = (text) =>
+    (text || "")
       .replace(/```json/gi, "")
       .replace(/```/g, "")
       .replace(/\[\/?CODE_QUESTION\]/gi, "")
@@ -447,7 +447,7 @@ export const useCustomInterview = () => {
           return;
         }
 
-        const aiText = data.text;
+        const aiText = data.text || "";
         const aiMessage = {
           id: Date.now(),
           role: "assistant",
@@ -1304,7 +1304,7 @@ export const useCustomInterview = () => {
       submitMsg = `I've submitted my solution in ${language}. However, the submission appears to be only the empty template without significant implementation.`;
     } else {
       // For valid code submissions
-      submitMsg = `I've submitted my solution in ${language}:\n\n${code}`;
+      submitMsg = `I've submitted my solution in ${language}:\n\n\[SUBMITTED_CODE language="${language}"\]\n${code}\n\[/SUBMITTED_CODE\]`;
     }
 
     const newMessage = {

@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FiMessageSquare, FiInfo, FiRadio, FiUsers } from "react-icons/fi";
+import { FiMessageSquare, FiInfo, FiRadio, FiUsers, FiSearch, FiChevronDown } from "react-icons/fi";
 import CodingTaskAlert from "./CodingTaskAlert";
+import Editor from "@monaco-editor/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const TranscriptView = ({
   transcript,
@@ -119,24 +122,81 @@ const TranscriptView = ({
   const userInitial =
     user?.firstName?.[0] || user?.fullName?.[0] || user?.username?.[0] || "U";
 
-  return (
-    <div className="flex flex-col bg-zinc-900/40 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.3)] h-[660px]">
-      <div className="p-4 flex items-center justify-between bg-zinc-800 border-b border-white/5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
-            <FiMessageSquare className="text-primary w-3.5 h-3.5" />
+  const renderMessageText = (msg, typedText) => {
+    const textToRender = msg.isAgent && msg.id != null ? (typedText ?? msg.text) : msg.text;
+    if (!textToRender) return null;
+    
+    const codeBlockRegex = /\[SUBMITTED_CODE language="(.*?)"\]([\s\S]*?)\[\/SUBMITTED_CODE\]/i;
+    const match = textToRender.match(codeBlockRegex);
+    
+    if (match) {
+      const beforeText = textToRender.substring(0, match.index);
+      const language = match[1];
+      const code = match[2].trim();
+      const afterText = textToRender.substring(match.index + match[0].length);
+      
+      return (
+        <div className="flex flex-col gap-2">
+          {beforeText && (
+            <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{beforeText}</ReactMarkdown>
+            </div>
+          )}
+          <div className="my-2 rounded-xl overflow-hidden border border-zinc-700 shadow-sm w-full">
+            <div className="bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-400 border-b border-zinc-700 flex justify-between items-center">
+              <span className="uppercase tracking-wider">{language}</span>
+            </div>
+            <div className="relative bg-[#1e1e1e]" style={{ height: '250px' }}>
+              <Editor
+                height="100%"
+                language={language === 'js' ? 'javascript' : language}
+                theme="vs-dark"
+                value={code}
+                options={{
+                  readOnly: true,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  fontSize: 13,
+                  padding: { top: 12, bottom: 12 },
+                  lineNumbers: "on",
+                  folding: false,
+                  wordWrap: "on"
+                }}
+              />
+            </div>
           </div>
-          <div>
-            <h3 className="text-xs font-bold text-white tracking-tight">
-              Transcript
-            </h3>
-          </div>
+          {afterText && (
+            <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{afterText}</ReactMarkdown>
+            </div>
+          )}
         </div>
-        <div className="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1.5">
-          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">
-            {connectionStatus}
-          </span>
+      );
+    }
+    
+    return (
+      <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{textToRender}</ReactMarkdown>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col bg-zinc-900   overflow-hidden h-full">
+      <div className="px-3 py-3 flex items-center justify-between border-b border-white/5 ">
+        <div className="flex items-center gap-3">
+          <h3 className="text-[15px] font-semibold text-white tracking-wide">
+            Transcript
+          </h3>
+        </div>
+        <div className="flex items-center gap-4">
+          <button className="text-zinc-400 hover:text-white transition-colors">
+            <FiSearch className="w-4 h-4" />
+          </button>
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-zinc-800/50 hover:bg-zinc-800 transition-colors">
+            <span className="text-xs font-medium text-white">All</span>
+            <FiChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+          </button>
         </div>
       </div>
 
@@ -170,13 +230,13 @@ const TranscriptView = ({
           transcript.map((msg, i) => (
             <div
               key={i}
-              className={`flex flex-col ${msg.isAgent ? "items-start" : "items-end"} group animate-in fade-in slide-in-from-bottom-2 duration-500`}
+              className={`flex flex-col  group animate-in fade-in slide-in-from-bottom-2 duration-500`}
             >
               <div
-                className={`flex items-center gap-2 mb-1.5 ${msg.isAgent ? "" : "flex-row-reverse"}`}
+                className={`flex items-center gap-2 mb-1.5 `}
               >
                 <div
-                  className={`w-7 h-7 rounded-xl flex items-center justify-center overflow-hidden shadow-lg transition-transform group-hover:scale-105 ${msg.isAgent ? "bg-zinc-800 border border-white/10" : "bg-gradient-to-tr from-primary to-[#a3e14d] border border-white/20"}`}
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center overflow-hidden  transition-transform group-hover:scale-105 `}
                 >
                   {msg.isAgent ? (
                     <img
@@ -197,28 +257,22 @@ const TranscriptView = ({
                   )}
                 </div>
                 <div
-                  className={`flex flex-col ${msg.isAgent ? "items-start" : "items-end"}`}
+                  className={`flex justify-between w-full`}
                 >
-                  <span className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.1em]">
+                  <span className="text-xs font-semibold   uppercase tracking-[0.1em]">
                     {msg.speaker}
                   </span>
                   {msg.timestamp && (
-                    <span className="text-[8px] font-semibold text-zinc-600">
+                    <span className="text-xs font-semibold ">
                       {msg.timestamp}
                     </span>
                   )}
                 </div>
               </div>
               <div
-                className={`relative p-3 rounded-2xl text-[12px] leading-relaxed max-w-[95%] sm:max-w-[90%] shadow-lg transition-all break-words ${
-                  msg.isAgent
-                    ? "bg-zinc-800/80 text-zinc-100 rounded-tl-none border border-white/5"
-                    : "bg-gradient-to-br from-primary to-[#a3e14d] text-black font-semibold rounded-tr-none shadow-primary/10"
-                }`}
+                className={`relative p-3 rounded-xl text-md leading-relaxed transition-all break-words`}
               >
-                {msg.isAgent && msg.id != null
-                  ? (typedAgentText[msg.id] ?? msg.text)
-                  : msg.text}
+                {renderMessageText(msg, typedAgentText[msg.id])}
                 {msg.isAgent &&
                   msg.id != null &&
                   typedAgentText[msg.id] != null &&
@@ -232,58 +286,52 @@ const TranscriptView = ({
         <div ref={localTranscriptEndRef} className="h-10" />
       </div>
 
-      <div className="min-h-[62px] p-3.5 border-t border-white/5 bg-zinc-900/60 text-[9px] text-zinc-400">
+      <div className="p-4 border-t border-white/5 bg-zinc-900/60">
         {countdownActive ? (
-          <div className="rounded-xl border border-amber-400/35 bg-amber-500/10 px-2.5 py-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <FiRadio size={12} className="text-amber-300 animate-pulse" />
-                <p className="font-medium leading-tight text-amber-100">
+          <div className="rounded-xl border border-zinc-600 bg-zinc-800/90 px-4 py-3 shadow-lg">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <FiRadio size={16} className="text-zinc-300 animate-pulse" />
+                <p className="text-sm font-medium leading-tight text-zinc-100">
                   Paused: speak now to continue, or auto-send will trigger.
                 </p>
               </div>
-              <span className="text-[10px] font-bold text-amber-50">
+              <span className="text-xs font-bold text-zinc-300">
                 {Math.ceil(countdownRemaining / 1000)}s
               </span>
             </div>
-            <div className="mt-2 h-1.5 bg-amber-200/20 rounded-full overflow-hidden">
+            <div className="mt-3 h-1.5 bg-zinc-800 rounded-full overflow-hidden border border-zinc-600">
               <div
-                className={`h-full transition-all duration-100 ${
-                  countdownProgress > 33
-                    ? "bg-gradient-to-r from-primary to-[#a3e14d]"
-                    : countdownProgress > 10
-                      ? "bg-yellow-500/70"
-                      : "bg-red-500/80 animate-pulse"
-                }`}
+                className="h-full transition-all duration-100 bg-zinc-300"
                 style={{ width: `${countdownProgress}%` }}
               />
             </div>
           </div>
         ) : isAgentSpeaking ? (
-          <div className="rounded-xl border border-sky-400/30 bg-sky-500/10 px-2.5 py-2 flex items-center gap-2">
-            <FiUsers size={12} className="text-sky-300" />
-            <p className="font-medium leading-tight text-sky-100">
+          <div className="rounded-xl border border-zinc-600 bg-zinc-800/70 px-4 py-3 flex items-center gap-3 shadow-md">
+            <FiUsers size={16} className="text-zinc-300" />
+            <p className="text-sm font-medium leading-tight text-zinc-200">
               Agent is speaking. Listen carefully, your turn starts next.
             </p>
           </div>
         ) : isUserSpeaking ? (
-          <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-2 flex items-center gap-2">
-            <FiRadio size={12} className="text-emerald-300 animate-pulse" />
-            <p className="font-medium leading-tight text-emerald-100">
+          <div className="rounded-xl border border-zinc-500 bg-zinc-700/60 px-4 py-3 flex items-center gap-3 shadow-inner">
+            <FiRadio size={16} className="text-zinc-200 animate-pulse" />
+            <p className="text-sm font-medium leading-tight text-white">
               Listening: keep speaking naturally.
             </p>
           </div>
         ) : isUserTurn ? (
-          <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-2 flex items-center gap-2">
-            <FiInfo size={12} className="text-cyan-300" />
-            <p className="font-medium leading-tight text-cyan-100">
+          <div className="rounded-xl border border-zinc-600 bg-zinc-800/80 px-4 py-3 flex items-center gap-3 shadow-md">
+            <FiInfo size={16} className="text-zinc-300" />
+            <p className="text-sm font-medium leading-tight text-zinc-200">
               Your turn: start speaking now.
             </p>
           </div>
         ) : (
-          <div className="rounded-xl border border-white/10 bg-zinc-800/45 px-2.5 py-2 flex items-center gap-2">
-            <FiInfo size={12} className="text-primary/60" />
-            <p className="font-medium leading-tight text-zinc-300">
+          <div className="rounded-xl border border-white/10 bg-zinc-800/50 px-4 py-3 flex items-center gap-3">
+            <FiInfo size={16} className="text-zinc-400" />
+            <p className="text-sm font-medium leading-tight text-zinc-300">
               AI-generated transcript.
             </p>
           </div>

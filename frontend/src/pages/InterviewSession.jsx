@@ -26,6 +26,7 @@ import { toast } from "react-hot-toast";
 import { useInterview } from "../context/InterviewContext";
 import { AppContext } from "../context/AppContext";
 import { useUser, useAuth } from "@clerk/clerk-react";
+import { Orb } from "orb-ui";
 import CodingSpace from "../components/CodingSpace";
 import ReloadSessionPrompt from "../components/interview/ReloadSessionPrompt";
 import useInterviewReloadProtection from "../hooks/useInterviewReloadProtection";
@@ -33,20 +34,7 @@ import useInterviewReloadProtection from "../hooks/useInterviewReloadProtection"
 import { analyzeCodeSubmission } from "../utils/codeSubmissionUtils";
 
 const vapiSpeechConfig = {
-  responseDelaySeconds: 1.5,
-  startSpeakingPlan: {
-    waitSeconds: 1.2,
-    transcriptionEndpointingPlan: {
-      onPunctuationSeconds: 0.8,
-      onNoPunctuationSeconds: 2.2,
-      onNumberSeconds: 0.8,
-    },
-  },
-  stopSpeakingPlan: {
-    numWords: 3,
-    voiceSeconds: 0.5,
-    backoffSeconds: 2.0,
-  },
+  responseDelaySeconds: 0.4, // Faster response to reduce latency
 };
 
 let globalVapiInstance = null;
@@ -259,7 +247,7 @@ const InterviewSession = () => {
               setCodingPopupTask(taskData);
               return;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
         const fuzzyTask = extractFuzzyTask(text);
         if (fuzzyTask) {
@@ -302,7 +290,7 @@ const InterviewSession = () => {
         console.warn("[CodingQ] vapi.mute() unavailable, trying setMuted:", e);
         try {
           vapi.current.setMuted(true);
-        } catch (e2) {}
+        } catch (e2) { }
       }
       setIsMuted(true);
       setIsMicEnabled(false);
@@ -345,7 +333,7 @@ const InterviewSession = () => {
     if (vapi.current && isMuted) {
       try {
         vapi.current.unmute();
-      } catch (e) {}
+      } catch (e) { }
       setIsMuted(false);
       setIsMicEnabled(true);
     }
@@ -823,8 +811,6 @@ const InterviewSession = () => {
           firstMessage: `Hello! I'm ${displayData.agentName || "Rohan"}, your AI interviewer. Welcome! Let's get started whenever you're ready. Could you please begin by introducing yourself?`,
           firstMessageMode: "assistant-speaks-first",
           responseDelaySeconds: vapiSpeechConfig.responseDelaySeconds,
-          startSpeakingPlan: vapiSpeechConfig.startSpeakingPlan,
-          stopSpeakingPlan: vapiSpeechConfig.stopSpeakingPlan,
           metadata: { sessionId: sessionId },
         });
       } catch (error) {
@@ -957,9 +943,9 @@ const InterviewSession = () => {
   };
 
   useEffect(() => {
-    if (callStatus !== "active" || !pageRootRef.current) return undefined;
+    if (callStatus !== "active") return undefined;
 
-    const el = pageRootRef.current;
+    const el = document.documentElement;
     const requestFullscreen = async () => {
       if (document.fullscreenElement) return;
       if (el.requestFullscreen) return el.requestFullscreen();
@@ -968,7 +954,7 @@ const InterviewSession = () => {
       if (el.msRequestFullscreen) return el.msRequestFullscreen();
     };
 
-    requestFullscreen().catch(() => {});
+    requestFullscreen().catch(() => { });
     return undefined;
   }, [callStatus]);
 
@@ -982,7 +968,7 @@ const InterviewSession = () => {
       if (document.msExitFullscreen) return document.msExitFullscreen();
     };
 
-    exitFullscreen().catch(() => {});
+    exitFullscreen().catch(() => { });
     return undefined;
   }, [hasCallEnded]);
 
@@ -1112,11 +1098,13 @@ const InterviewSession = () => {
                       <div
                         className={`relative w-28 h-28 md:w-32 md:h-32 rounded-full dark:bg-zinc-900/80 bg-gray-100/80 border ${isAgentSpeaking ? "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.6)]" : "dark:border-white/10 border-black/10"} shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden z-10 transition-all duration-300`}
                       >
-                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-indigo-500 border dark:border-white/10 border-black/10 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
-                          <img
-                            src={getAgentImage(displayData.agentName)}
-                            alt={displayData.agentName}
-                            className={`w-full h-full object-cover transition-transform duration-500 ${isAgentSpeaking ? "scale-110" : "scale-100"}`}
+                        <div className="w-full h-full flex items-center justify-center overflow-hidden">
+                          <Orb
+                            state={callStatus === "connecting" ? "connecting" : isAgentSpeaking ? "speaking" : isAiThinking ? "thinking" : isUserSpeaking ? "listening" : "listening"}
+                            theme="cloud"
+                            size={120}
+                            interactive={false}
+                            style={{ '--orb-ui-cloud-control-surround': 'transparent' }}
                           />
                         </div>
                       </div>
@@ -1159,11 +1147,12 @@ const InterviewSession = () => {
                       <div
                         className={`relative w-16 h-16 rounded-full dark:bg-zinc-900/80 bg-gray-100/80 border ${isAgentSpeaking ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "dark:border-white/10 border-black/10"} shadow-xl backdrop-blur-md flex items-center justify-center overflow-hidden z-10 transition-all duration-300`}
                       >
-                        <div className="w-14 h-14 rounded-full bg-indigo-500 border dark:border-white/10 border-black/10 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
-                          <img
-                            src={getAgentImage(displayData.agentName)}
-                            alt={displayData.agentName}
-                            className="w-full h-full object-cover"
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center overflow-hidden">
+                          <Orb
+                            state={callStatus === "connecting" ? "connecting" : isAgentSpeaking ? "speaking" : isAiThinking ? "thinking" : isUserSpeaking ? "listening" : "listening"}
+                            theme="cloud"
+                            size={60}
+                            interactive={false}
                           />
                         </div>
                       </div>
@@ -1434,13 +1423,12 @@ const InterviewSession = () => {
                     <div className="flex items-center gap-1.5 shrink-0">
                       {codingPopupTask.difficulty && (
                         <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                            codingPopupTask.difficulty === "Easy"
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${codingPopupTask.difficulty === "Easy"
                               ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                               : codingPopupTask.difficulty === "Medium"
                                 ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
                                 : "bg-red-500/10 border-red-500/20 text-red-400"
-                          }`}
+                            }`}
                         >
                           {codingPopupTask.difficulty}
                         </span>

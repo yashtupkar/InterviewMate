@@ -5,103 +5,96 @@ import {
   FiVideo,
   FiVideoOff,
   FiPhoneOff,
+  FiVolume2,
+  FiVolumeX,
+  FiSettings,
+  FiChevronDown,
 } from "react-icons/fi";
 
 const ControlBar = ({
-  isUserSpeaking,
-  isAgentSpeaking,
-  isAiThinking,
-  callStatus,
   isMuted,
   isVideoOn,
   toggleMute,
   toggleVideo,
   handleEndCall,
+  isUserSpeaking,
+  isAgentSpeaking,
+  isAiThinking,
+  callStatus,
 }) => {
+  let statusText = "Standby...";
+  let statusColor = "bg-zinc-500";
+  let statusBg = "bg-zinc-500/20 text-zinc-400 border-white/10";
+
+  if (callStatus === "connecting" || callStatus === "loading") {
+    statusText = "Connecting...";
+    statusColor = "bg-blue-500";
+    statusBg = "bg-blue-500/20 text-blue-300 border-blue-500/30";
+  } else if (isAgentSpeaking) {
+    statusText = "Agent Speaking...";
+    statusColor = "bg-sky-500";
+    statusBg = "bg-sky-500/20 text-sky-300 border-sky-500/30";
+  } else if (isAiThinking) {
+    statusText = "Thinking...";
+    statusColor = "bg-amber-500";
+    statusBg = "bg-amber-500/20 text-amber-300 border-amber-500/30";
+  } else if (isUserSpeaking) {
+    statusText = "Listening...";
+    statusColor = "bg-emerald-500";
+    statusBg = "bg-emerald-500/20 text-emerald-300 border-emerald-500/30";
+  } else if (callStatus === "active") {
+    statusText = "Waiting...";
+    statusColor = "bg-zinc-400";
+    statusBg = "bg-zinc-500/20 text-zinc-300 border-white/10";
+  }
+
+  const isPulse = isAgentSpeaking || isAiThinking || isUserSpeaking || callStatus === "connecting";
+
   return (
-    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex items-center justify-between gap-2 sm:gap-3 w-[calc(100%-1rem)] sm:w-auto bg-zinc-900/60 backdrop-blur-2xl p-2 px-3 sm:px-4 rounded-[18px] sm:rounded-[20px] border border-white/10 shadow-[0_15px_40px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-white/20">
-      {/* Dynamic Status Indicator */}
-      <div className="flex items-center gap-2 pr-2 sm:pr-3 border-r border-white/10 mr-1 shrink-0">
-        {isUserSpeaking ? (
-          <div className="flex items-center gap-2 px-2 py-1 bg-primary/10 rounded-full border border-primary/20 animate-in fade-in zoom-in duration-300">
-            <div className="relative flex items-center justify-center w-1.5 h-1.5">
-              <div className="absolute inset-0 bg-primary rounded-full animate-ping opacity-75" />
-              <div className="relative w-1.5 h-1.5 bg-primary rounded-full" />
-            </div>
-            <span className="text-[8px] sm:text-[9px] font-black text-primary uppercase tracking-widest">
-              Listening
-            </span>
-          </div>
-        ) : isAiThinking ? (
-          <div className="flex items-center gap-2 px-2 py-1 bg-amber-500/10 rounded-full border border-amber-500/20 animate-in fade-in zoom-in duration-300">
-            <div className="flex gap-0.5">
-              <div className="w-1 h-1 bg-amber-400 rounded-full animate-bounce" />
-              <div className="w-1 h-1 bg-amber-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-              <div className="w-1 h-1 bg-amber-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-            </div>
-            <span className="text-[8px] sm:text-[9px] font-black text-amber-400 uppercase tracking-widest">
-              Thinking
-            </span>
-          </div>
-        ) : isAgentSpeaking ? (
-          <div className="flex items-center gap-2 px-2 py-1 bg-blue-500/10 rounded-full border border-blue-500/20 animate-in fade-in zoom-in duration-300">
-            <div className="flex gap-0.5 items-end h-1.5">
-              <div className="w-0.5 h-full bg-blue-400 animate-pulse" />
-              <div className="w-0.5 h-2/3 bg-blue-400 animate-pulse delay-75" />
-              <div className="w-0.5 h-full bg-blue-400 animate-pulse delay-150" />
-            </div>
-            <span className="text-[8px] sm:text-[9px] font-black text-blue-400 uppercase tracking-widest">
-              Speaking
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-full border border-white/5 opacity-60">
-            <div className="w-1 h-1 bg-zinc-500 rounded-full" />
-            <span className="text-[8px] sm:text-[9px] font-black text-zinc-500 uppercase tracking-widest">
-              Standby
-            </span>
-          </div>
-        )}
+    <div className="relative flex items-center justify-center w-full h-full gap-3 md:gap-4">
+      
+      {/* Floating Status Indicator */}
+      <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-20">
+        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border backdrop-blur-md shadow-lg ${statusBg}`}>
+          <div className={`w-2 h-2 rounded-full ${statusColor} ${isPulse ? "animate-pulse" : ""}`} />
+          <span className="text-[11px] font-semibold tracking-wide uppercase">{statusText}</span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <button
-          onClick={toggleMute}
-          className={`group relative p-2.5 rounded-xl transition-all duration-300 active:scale-90 ${isMuted ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-zinc-800/50 hover:bg-zinc-700/50 text-white border border-white/5"}`}
-          title={isMuted ? "Unmute" : "Mute"}
-        >
-          {isMuted ? <FiMicOff size={16} /> : <FiMic size={16} />}
-          <div
-            className={`absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-white/10`}
-          >
-            {isMuted ? "Unmute Mic" : "Mute Mic"}
-          </div>
-        </button>
+      {/* Mic Control */}
+      <button
+        onClick={toggleMute}
+        title={isMuted ? "Turn on microphone" : "Turn off microphone"}
+        className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full transition-colors border ${
+          isMuted 
+            ? "bg-red-500 text-white border-red-500 hover:bg-red-600" 
+            : "bg-zinc-900 text-zinc-100 border-white/5 hover:bg-zinc-800"
+        }`}
+      >
+        {isMuted ? <FiMicOff size={20} /> : <FiMic size={20} />}
+      </button>
 
-        <button
-          onClick={toggleVideo}
-          className={`group relative p-2.5 rounded-xl transition-all duration-300 active:scale-90 ${!isVideoOn ? "bg-red-500/10 text-red-500 border border-red-500/20" : "bg-zinc-800/50 hover:bg-zinc-700/50 text-white border border-white/5"}`}
-          title={isVideoOn ? "Turn Camera Off" : "Turn Camera On"}
-        >
-          {!isVideoOn ? <FiVideoOff size={16} /> : <FiVideo size={16} />}
-          <div
-            className={`absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-800 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-white/10`}
-          >
-            {!isVideoOn ? "Start Video" : "Stop Video"}
-          </div>
-        </button>
+      {/* Cam Control */}
+      <button
+        onClick={toggleVideo}
+        title={!isVideoOn ? "Turn on camera" : "Turn off camera"}
+        className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full transition-colors border ${
+          !isVideoOn 
+            ? "bg-red-500 text-white border-red-500 hover:bg-red-600" 
+            : "bg-zinc-900 text-zinc-100 border-white/5 hover:bg-zinc-800"
+        }`}
+      >
+        {!isVideoOn ? <FiVideoOff size={20} /> : <FiVideo size={20} />}
+      </button>
 
-        <button
-          onClick={handleEndCall}
-          className="group relative p-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl shadow-lg shadow-red-900/20 transition-all duration-300 active:scale-90 active:rotate-12 border border-red-400/20"
-          title="End Interview"
-        >
-          <FiPhoneOff size={16} />
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-red-600 text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-red-400/20">
-            End Session
-          </div>
-        </button>
-      </div>
+      {/* End Call */}
+      <button
+        onClick={handleEndCall}
+        title="Leave call"
+        className="w-14 h-10 md:w-16 md:h-12 flex items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-500 transition-colors shadow-lg shadow-red-500/20"
+      >
+        <FiPhoneOff size={22} />
+      </button>
     </div>
   );
 };

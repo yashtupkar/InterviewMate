@@ -442,7 +442,7 @@ const customInterviewController = {
         if (analysis.isCodeSubmission && !analysis.isValid) {
           // Send a hidden system instruction to guide the AI's response for low-quality code
           enhancedMessages.push({
-            role: "system",
+            role: "user",
             content:
               "[SYSTEM_SIGNAL: The candidate submitted an empty or default code template. Acknowledge this gracefully, but DO NOT ask them to resubmit. Immediately proceed to the next technical question to maintain flow.]",
           });
