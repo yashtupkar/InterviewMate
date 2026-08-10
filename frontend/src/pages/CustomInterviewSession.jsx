@@ -93,6 +93,7 @@ const CustomInterviewSession = () => {
     handleAttemptChallenge,
     handleSkipChallenge,
     handleCodingSubmit,
+    handleInteractiveSubmit,
     formatDuration,
     handleSaveAndExit,
     requestEndSession,
@@ -335,6 +336,7 @@ const CustomInterviewSession = () => {
                 countdownRemaining={countdownRemaining}
                 countdownProgress={countdownProgress}
                 countdownMessageId={countdownMessageId}
+                handleInteractiveSubmit={handleInteractiveSubmit}
               />
             </Panel>
           </Group>

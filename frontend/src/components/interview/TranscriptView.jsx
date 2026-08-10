@@ -4,6 +4,8 @@ import CodingTaskAlert from "./CodingTaskAlert";
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import InteractiveMCQ from "./InteractiveMCQ";
+import InteractiveSnippet from "./InteractiveSnippet";
 
 const TranscriptView = ({
   transcript,
@@ -23,6 +25,7 @@ const TranscriptView = ({
   countdownActive = false,
   countdownRemaining = 0,
   countdownProgress = 100,
+  handleInteractiveSubmit,
 }) => {
   const [typedAgentText, setTypedAgentText] = useState({});
   const completedAgentMessageIdsRef = useRef(new Set());
@@ -75,10 +78,12 @@ const TranscriptView = ({
 
     const fullText = latestAgentMessage.text ?? "";
     const totalChars = fullText.length;
+    
+    const isInteractive = fullText.includes("[MCQ]") || fullText.includes("[SNIPPET]");
 
-    if (totalChars === 0) {
+    if (totalChars === 0 || isInteractive) {
       completedAgentMessageIdsRef.current.add(latestAgentMessage.id);
-      setTypedAgentText((prev) => ({ ...prev, [latestAgentMessage.id]: "" }));
+      setTypedAgentText((prev) => ({ ...prev, [latestAgentMessage.id]: fullText }));
       return;
     }
 
@@ -126,6 +131,70 @@ const TranscriptView = ({
     const textToRender = msg.isAgent && msg.id != null ? (typedText ?? msg.text) : msg.text;
     if (!textToRender) return null;
     
+    // Check for MCQ
+    const mcqRegex = /\[MCQ\]([\s\S]*?)\[\/MCQ\]/i;
+    const mcqMatch = textToRender.match(mcqRegex);
+    if (mcqMatch) {
+      try {
+        const data = JSON.parse(mcqMatch[1].trim());
+        const beforeText = textToRender.substring(0, mcqMatch.index);
+        const afterText = textToRender.substring(mcqMatch.index + mcqMatch[0].length);
+        const isLatest = msg.id === transcript[transcript.length - 1]?.id;
+        
+        return (
+          <div className="flex flex-col gap-2 w-full">
+            {beforeText && (
+              <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{beforeText}</ReactMarkdown>
+              </div>
+            )}
+            <InteractiveMCQ data={data} onSubmit={(ans) => {
+               if(isLatest && handleInteractiveSubmit) handleInteractiveSubmit(ans);
+            }} />
+            {afterText && (
+              <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{afterText}</ReactMarkdown>
+              </div>
+            )}
+          </div>
+        );
+      } catch(e) {
+        console.error("Failed to parse MCQ data", e);
+      }
+    }
+
+    // Check for Snippet
+    const snippetRegex = /\[SNIPPET\]([\s\S]*?)\[\/SNIPPET\]/i;
+    const snippetMatch = textToRender.match(snippetRegex);
+    if (snippetMatch) {
+      try {
+        const data = JSON.parse(snippetMatch[1].trim());
+        const beforeText = textToRender.substring(0, snippetMatch.index);
+        const afterText = textToRender.substring(snippetMatch.index + snippetMatch[0].length);
+        const isLatest = msg.id === transcript[transcript.length - 1]?.id;
+        
+        return (
+          <div className="flex flex-col gap-2 w-full">
+            {beforeText && (
+              <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{beforeText}</ReactMarkdown>
+              </div>
+            )}
+            <InteractiveSnippet data={data} onSubmit={(ans) => {
+               if(isLatest && handleInteractiveSubmit) handleInteractiveSubmit(ans);
+            }} />
+            {afterText && (
+              <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{afterText}</ReactMarkdown>
+              </div>
+            )}
+          </div>
+        );
+      } catch(e) {
+        console.error("Failed to parse SNIPPET data", e);
+      }
+    }
+
     const codeBlockRegex = /\[SUBMITTED_CODE language="(.*?)"\]([\s\S]*?)\[\/SUBMITTED_CODE\]/i;
     const match = textToRender.match(codeBlockRegex);
     
@@ -174,9 +243,12 @@ const TranscriptView = ({
       );
     }
     
+    const finalRenderText = textToRender.replace(/\[CODE_QUESTION\][\s\S]*?\[\/CODE_QUESTION\]/gi, "").trim();
+    if (!finalRenderText) return null;
+
     return (
       <div className="prose prose-sm prose-invert max-w-none break-words leading-relaxed text-zinc-100">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{textToRender}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{finalRenderText}</ReactMarkdown>
       </div>
     );
   };

@@ -221,13 +221,23 @@ const startCustomSession = async (req, res) => {
       INTERVIEW TYPE: TECHNICAL
       - Focus on core technical skills, concepts, and problem-solving.
       - You HAVE the ability to give coding questions.
-      - MANDATORY: You MUST ask at least ONE coding question during the interview.
-      - STRATEGY: Mix 1-2 coding questions randomly between verbal technical questions. Do not save them all for the end.
-      - CRITICAL: When giving a coding question, use natural language. Mention the question clearly, specify the programming language, and state a REASONABLE time limit based on complexity (e.g., 3-10 minutes).
-      - DO NOT use JSON formats or code blocks like [CODE_QUESTION].
-      - EXAMPLE: "Here is your coding question. Make a function for reversing an array in JavaScript language. You have a time limit of 3 minutes. Let's start solving coding question, let me know when it's done."
-      - Supported languages: javascript, html, python, java, cpp.
-      - After a coding question, wait for the user to click "Attempt" or for them to let you know they are done.
+      - MANDATORY: You MUST ask at least ONE full coding question during the interview.
+      - CRITICAL: When asking a full coding question, you MUST format the actual question strictly as JSON inside a [CODE_QUESTION] tag. 
+      - Example format: 
+        Here is your coding question. Good luck!
+        [CODE_QUESTION] {"question": "Make a function for reversing an array...", "language": "javascript", "timeLimit": 5} [/CODE_QUESTION]
+      
+      NEW: INTERACTIVE TRANSCRIPT QUESTIONS
+      - For quick knowledge checks or debugging, you can use interactive questions that will appear in the candidate's transcript.
+      - MANDATORY: You MUST ask at least ONE MCQ and at least ONE Snippet question during the interview.
+      - CRITICAL: The timeLimit for interactive questions MUST be 60-90 seconds.
+      - **MCQ Format**: \`[MCQ] {"question": "...", "options": ["A", "B", "C", "D"], "correctOptionIndex": 1, "timeLimit": 60} [/MCQ]\` (where correctOptionIndex is the 0-based index of the correct answer).
+      - **Snippet Format**: \`[SNIPPET] {"question": "What is the output?", "code": "console.log(1);", "language": "javascript", "timeLimit": 90} [/SNIPPET]\`
+      - CRITICAL: You MUST output perfectly valid JSON. Use EXACTLY the keys shown above. Do NOT add extra keys, and always properly close the JSON object and the tag (e.g. [/MCQ] or [/SNIPPET]).
+      - CRITICAL: When the user submits their answer to an interactive question, DO NOT evaluate it (saying correct/incorrect) in your next response. Immediately proceed to ask the next interview question.
+      
+      - Supported full coding languages: javascript, html, python, java, cpp.
+      - After a full coding question, wait for the user to click "Attempt" or for them to let you know they are done.
       
       CRITICAL: Immediately proceed to ask the next technical question after a coding submission. Do NOT loop back requesting more code attempts if the submission is basic or empty.
       `;
@@ -261,11 +271,12 @@ const startCustomSession = async (req, res) => {
       
       Operating Rules:
       1. CRITICAL: Your FIRST message MUST be a warm welcome and an invitation for the candidate to introduce themselves. DO NOT ask technical or behavioral questions in the first message.
-      2. Ask ONE concise question at a time.
-      3. Listen and follow up naturally before switching topics.
-      4. Total interview length: 5-8 questions.
-      5. To finish, say: "The interview is now concluded. Goodbye!"
-      6. CLEAN OUTPUT: DO NOT use markdown symbols like asterisks (**), backticks (\`), or hashes (#). The text will be read aloud by TTS, and symbols like "asterisk" ruin the experience. Speak in plain, natural sentences.
+      2. CRITICAL: Ask ONLY ONE concise question at a time per response. Do NOT ask a coding question and a verbal question in the same response. Wait for the user's answer before asking the next question.
+      3. CRITICAL: Be natural and conversational. DO NOT number your questions (e.g., "Question 4:"). Just ask the question directly.
+      4. Listen and follow up naturally before switching topics.
+      5. Pace the interview appropriately. The number of questions depends on the time available.
+      6. To finish the interview, provide a natural, professional conclusion. Ensure you say a concluding phrase (like "This concludes our interview", "Thank you for your time", or "Have a great day!").
+      7. CLEAN OUTPUT: DO NOT use markdown symbols like asterisks (**), backticks (\`), or hashes (#). The text will be read aloud by TTS, and symbols like "asterisk" ruin the experience. Speak in plain, natural sentences.
       
       Tone: Professional, conversational, and encouraging.
     `;

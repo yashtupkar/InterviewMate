@@ -91,6 +91,7 @@ export const useCustomInterview = () => {
   const hasCallEndedRef = useRef(false);
   const isAiThinkingRef = useRef(false);
   const activeCodingTaskRef = useRef(null);
+  const activeInteractiveTaskRef = useRef(false);
   const agentVolumeCircleRef = useRef(null); // Will be passed to UI
   const lastWordTimeRef = useRef(0);
   const currentVolumeRef = useRef(0);
@@ -303,7 +304,7 @@ export const useCustomInterview = () => {
         normalized,
       );
 
-    return hasLanguage && hasTimeLimit && hasExplicitTask;
+    return hasLanguage && hasExplicitTask;
   };
 
   const normalizeCodingTask = (task, sourceText = "") => {
@@ -434,20 +435,32 @@ export const useCustomInterview = () => {
           }
         }
 
-        const { data } = await axios.post(
-          `${backend_URL}/api/custom-interview/chat`,
-          payload,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        let responseData = null;
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            const { data } = await axios.post(
+              `${backend_URL}/api/custom-interview/chat`,
+              payload,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            responseData = data;
+            break;
+          } catch (err) {
+            retries--;
+            if (retries === 0) throw err;
+            await new Promise(r => setTimeout(r, 2000));
+          }
+        }
 
         if (hasCallEndedRef.current) {
           setIsAiThinking(false);
           return;
         }
 
-        const aiText = data.text || "";
+        const aiText = responseData.text || "";
         const aiMessage = {
           id: Date.now(),
           role: "assistant",
@@ -461,6 +474,10 @@ export const useCustomInterview = () => {
         };
         setContextTranscript((prev) => [...prev, aiMessage]);
         transcriptRef.current.push({ role: "assistant", content: aiText });
+
+        if (aiText.includes("[MCQ]") || aiText.includes("[SNIPPET]")) {
+          activeInteractiveTaskRef.current = true;
+        }
 
         detectCodingQuestion(aiText);
 
@@ -509,7 +526,20 @@ export const useCustomInterview = () => {
         );
         isAiThinkingRef.current = false;
         setIsAiThinking(false);
-        toast.error("AI failed to respond.");
+        toast.error("Network issue detected. AI failed to respond.");
+        
+        // Ensure mic restarts if we are not speaking and call hasn't ended
+        if (
+          !hasCallEndedRef.current &&
+          !activeCodingTaskRef.current &&
+          !activeInteractiveTaskRef.current &&
+          !isAgentSpeakingRef.current &&
+          recognitionRef.current
+        ) {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {}
+        }
       }
     },
     [
@@ -596,6 +626,7 @@ export const useCustomInterview = () => {
         !text?.trim() ||
         isAgentSpeakingRef.current ||
         isAiThinkingRef.current ||
+        activeInteractiveTaskRef.current ||
         hasCallEndedRef.current
       )
         return;
@@ -621,6 +652,7 @@ export const useCustomInterview = () => {
         !isAgentSpeaking &&
         !isAiThinking &&
         !activeCodingTaskRef.current &&
+        !activeInteractiveTaskRef.current &&
         !hasCallEndedRef.current
       ) {
         handleInactivityWarning();
@@ -679,10 +711,29 @@ export const useCustomInterview = () => {
   const playTTS = useCallback(
     async (text) => {
       if (activeCodingTaskRef.current || hasCallEndedRef.current) return;
-      const cleanText = text
+      let cleanText = text
         .replace(/[*_#`~]/g, "")
-        .replace(/\[\/?CODE_QUESTION\]/gi, "")
+        .replace(/\[CODE_QUESTION\][\s\S]*?\[\/CODE_QUESTION\]/gi, "")
         .trim();
+        
+      const mcqRegex = /\[MCQ\]([\s\S]*?)\[\/MCQ\]/i;
+      const mcqMatch = cleanText.match(mcqRegex);
+      if (mcqMatch) {
+        try {
+          const data = JSON.parse(mcqMatch[1].trim());
+          cleanText = cleanText.replace(mcqMatch[0], data.question);
+        } catch(e) {}
+      }
+
+      const snippetRegex = /\[SNIPPET\]([\s\S]*?)\[\/SNIPPET\]/i;
+      const snippetMatch = cleanText.match(snippetRegex);
+      if (snippetMatch) {
+        try {
+          const data = JSON.parse(snippetMatch[1].trim());
+          cleanText = cleanText.replace(snippetMatch[0], data.question);
+        } catch(e) {}
+      }
+        
       if (!cleanText) return;
 
       try {
@@ -708,6 +759,7 @@ export const useCustomInterview = () => {
                   !isAgentSpeaking &&
                   !isAiThinking &&
                   !activeCodingTaskRef.current &&
+                  !activeInteractiveTaskRef.current &&
                   !hasCallEndedRef.current
                 ) {
                   handleFinalInactivityConclusion();
@@ -850,6 +902,7 @@ export const useCustomInterview = () => {
         isAgentSpeakingRef.current ||
         isAiThinkingRef.current ||
         isCoolingDown ||
+        activeInteractiveTaskRef.current ||
         hasCallEndedRef.current
       )
         return;
@@ -1323,6 +1376,27 @@ export const useCustomInterview = () => {
     setTimeout(() => handleAiChat(submitMsg), 100);
   };
 
+  const handleInteractiveSubmit = useCallback((answerText) => {
+    if (hasCallEndedRef.current) return;
+    
+    activeInteractiveTaskRef.current = false;
+    
+    const userMessage = {
+      id: Date.now(),
+      role: "user",
+      speaker: "You",
+      text: answerText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isAgent: false
+    };
+    setContextTranscript(prev => [...prev, userMessage]);
+    transcriptRef.current.push({ role: "user", content: answerText });
+    
+    transcriptRef.current.push({ role: "system", content: "[SYSTEM_SIGNAL: The user has submitted their answer to the interactive question. Do NOT evaluate it or say correct/incorrect. IMMEDIATELY proceed to ask the next interview question.]" });
+
+    handleAiChat();
+  }, [handleAiChat, setContextTranscript]);
+
   return {
     state: {
       timeLeft,
@@ -1362,6 +1436,7 @@ export const useCustomInterview = () => {
       handleAttemptChallenge,
       handleSkipChallenge,
       handleCodingSubmit,
+      handleInteractiveSubmit,
       resetInterview,
       formatDuration,
       handleSaveAndExit,
