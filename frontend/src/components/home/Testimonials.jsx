@@ -3,48 +3,35 @@ import { Star } from 'lucide-react';
 
 const testimonials = [
   {
-    name: "Jillie Bernard",
-    role: "Founder & CEO",
+    name: "Rajkumar Choudhary",
     content: "PlaceMateAI has revolutionized my preparation process. Its intuitive interface and robust features save me so much time, allowing me to focus on my skills rather than stressing about the format. It's like having an extra pair of hands!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie1",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rajkumar",
     rating: 5,
   },
   {
-    name: "David Miller",
-    role: "Lead Software Engineer",
+    name: "Shubham Bavistale",
     content: "The best interview prep tool I've used. PlaceMateAI is a game-changer for engineering candidates. It's intuitive and powerful features have drastically improved my technical responses.",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Shubham",
     rating: 5,
   },
   {
-    name: "Jillie Bernard",
-    role: "Founder & CEO",
+    name: "Bhumika Akotkar",
     content: "Absolutely love PlaceMateAI! The clean design and ease of use are unmatched. The intuitive interface simplifies complex tasks, making it perfect for both beginners and seasoned professionals. A game-changer in digital prep!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie2",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bhumika",
     rating: 5,
   },
   {
-    name: "David Miller",
-    role: "Lead Software Engineer",
+    name: "Mahendra Mulmule",
     content: "The best UI kit I've used for Framer. PlaceMateAI is a game-changer for designers. Its intuitive interface and powerful features have drastically improved my workflow, allowing me to focus more on creativity and less on tedious tasks. It's a game-changer that saves me so much time!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David2",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mahendra",
     rating: 5,
   },
   {
-    name: "Jillie Bernard",
-    role: "Founder & CEO",
+    name: "OmKaran Pal",
     content: "PlaceMateAI has revolutionized my design process. It's intuitive and saves me so much time!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie3",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=OmKaran",
     rating: 5,
-  },
-  {
-    name: "Jillie Bernard",
-    role: "Director of Sales",
-    content: "Absolutely love PlaceMateAI! The clean design and ease of use are unmatched.",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie4",
-    rating: 5,
-  },
-
+  }
 ];
 
 const Testimonials = () => {
@@ -93,9 +80,6 @@ What people are saying about us          </h2>
                   <h4 className="text-white font-bold text-base leading-tight">
                     {t.name}
                   </h4>
-                  <p className="text-gray-500 text-sm font-medium">
-                    {t.role}
-                  </p>
                 </div>
               </div>
             </div>
