@@ -5,33 +5,40 @@ const testimonials = [
   {
     name: "Rajkumar Choudhary",
     content: "PlaceMateAI has revolutionized my preparation process. Its intuitive interface and robust features save me so much time, allowing me to focus on my skills rather than stressing about the format. It's like having an extra pair of hands!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rajkumar",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie1",
     rating: 5,
   },
   {
     name: "Shubham Bavistale",
     content: "The best interview prep tool I've used. PlaceMateAI is a game-changer for engineering candidates. It's intuitive and powerful features have drastically improved my technical responses.",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Shubham",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
     rating: 5,
   },
   {
     name: "Bhumika Akotkar",
     content: "Absolutely love PlaceMateAI! The clean design and ease of use are unmatched. The intuitive interface simplifies complex tasks, making it perfect for both beginners and seasoned professionals. A game-changer in digital prep!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bhumika",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie2",
     rating: 5,
   },
   {
     name: "Mahendra Mulmule",
     content: "The best UI kit I've used for Framer. PlaceMateAI is a game-changer for designers. Its intuitive interface and powerful features have drastically improved my workflow, allowing me to focus more on creativity and less on tedious tasks. It's a game-changer that saves me so much time!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mahendra",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David2",
     rating: 5,
   },
   {
     name: "OmKaran Pal",
     content: "PlaceMateAI has revolutionized my design process. It's intuitive and saves me so much time!",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=OmKaran",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jillie3",
     rating: 5,
-  }
+  },
+  {
+    name: "Chetan Titare",
+    content: "Absolutely love PlaceMateAI! The clean design and ease of use are unmatched.",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Chetan2",
+    rating: 5,
+  },
+
 ];
 
 const Testimonials = () => {
