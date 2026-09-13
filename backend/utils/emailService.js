@@ -11,7 +11,7 @@ const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "PlaceMate AI";
  */
 const sendWaitlistEmail = async (toEmail, templateType = "early_access") => {
   if (!BREVO_API_KEY) {
-    console.warn("BREVO_API_KEY is not set. Email will not be sent to " + toEmail);
+    console.warn("⚠️ BREVO_API_KEY is not set. Email will not be sent to " + toEmail);
     return;
   }
 
@@ -320,10 +320,10 @@ htmlContent: `
         "Content-Type": "application/json",
       },
     });
-    console.log(`Email (${templateType}) successfully sent to ${toEmail}. Message ID: ${response.data.messageId}`);
+    console.log(`✅ Email (${templateType}) successfully sent to ${toEmail}. Message ID: ${response.data.messageId}`);
     return true;
   } catch (error) {
-    console.error(`Failed to send email (${templateType}) to ${toEmail}:`, error?.response?.data || error.message);
+    console.error(`❌ Failed to send email (${templateType}) to ${toEmail}:`, error?.response?.data || error.message);
     return false;
   }
 };
@@ -347,7 +347,7 @@ const sendAdminPromotionEmail = async (toEmail, secretCode) => {
       headers: { "api-key": BREVO_API_KEY, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Failed to send Admin Promotion Email", err.message);
+    console.error("❌ Failed to send Admin Promotion Email", err.message);
   }
 };
 
@@ -369,7 +369,7 @@ const sendAdminOtpEmail = async (toEmail, otp) => {
       headers: { "api-key": BREVO_API_KEY, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Failed to send Admin OTP Email", err.message);
+    console.error("❌ Failed to send Admin OTP Email", err.message);
   }
 };
 
