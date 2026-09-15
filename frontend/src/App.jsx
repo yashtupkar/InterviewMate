@@ -53,6 +53,8 @@ const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/common/ScrollToTop";
+import NotFound from "./pages/NotFound";
+import NoInternet from "./pages/NoInternet";
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -61,6 +63,20 @@ function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [referredBy, setReferredBy] = useState("");
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     // Health check
@@ -139,6 +155,10 @@ function App() {
       window.history.replaceState({}, document.title, newUrl);
     }
   }, []);
+
+  if (!isOnline) {
+    return <NoInternet />;
+  }
 
   return (
     <InterviewProvider>
@@ -431,7 +451,7 @@ function App() {
         <Route path="/signup/*" element={<SignUpPage />} />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </InterviewProvider>
   );
