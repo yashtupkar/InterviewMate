@@ -229,13 +229,22 @@ const PastGDs = () => {
                       {formatCreatedAt(session.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => navigate(`/gd/result/${session._id}`)}
-                        className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#bef264] hover:opacity-80 transition-opacity"
-                      >
-                        View
-                        <FiArrowRight size={13} />
-                      </button>
+                      {getStatusUi(session.status).label === "Pending" ? (
+                        <button
+                          onClick={() => navigate(`/gd/result/${session._id}`)}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider bg-[#bef264] text-black px-3 py-1.5 rounded-md hover:opacity-80 transition-opacity"
+                        >
+                          Generate
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => navigate(`/gd/result/${session._id}`)}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-[#bef264] hover:opacity-80 transition-opacity"
+                        >
+                          View
+                          <FiArrowRight size={13} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

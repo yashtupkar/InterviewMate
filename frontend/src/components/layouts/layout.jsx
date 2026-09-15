@@ -21,6 +21,7 @@ import Logo from "../common/Logo";
 
 import Footer from "./Footer";
 import Background from "../common/Background";
+import TopBanner from "../ui/TopBanner";
 
 const Layout = ({ children }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -117,13 +118,14 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex flex-col min-h-screen relative z-10 w-full">
+      <TopBanner />
       <nav
-        className={`fixed  top-0 left-1/2 -translate-x-1/2 w-full  z-[100] transition-all duration-500 ease-in-out ${
+        className={`sticky top-0 w-full z-[100] transition-all duration-500 ease-in-out ${
           isMobileMenuOpen
             ? "h-screen bg-zinc-900 md:h-auto lg:bg-black/20 lg:backdrop-blur-lg overflow-hidden"
             : isScrolled
-              ? "h-[72px] md:h-auto bg-black/50 lg:bg-zinc-900/50  backdrop-blur-lg shadow-2xl lg:rounded-full"
-              : "h-[72px] md:h-auto bg-transparent  border-transparent "
+              ? "h-[72px] md:h-auto bg-black/50 lg:bg-zinc-900/50 backdrop-blur-lg shadow-2xl lg:rounded-full"
+              : "h-[72px] md:h-auto bg-transparent border-transparent"
         }`}
       >
         {/* Navbar Header (Logo & Actions) */}
